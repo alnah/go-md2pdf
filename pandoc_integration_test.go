@@ -24,7 +24,6 @@ World`
 
 	converter := NewPandocConverter()
 	got, err := converter.ToHTML(path)
-
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -51,7 +50,6 @@ func TestExecRunner_Run(t *testing.T) {
 
 	t.Run("captures stdout", func(t *testing.T) {
 		stdout, stderr, err := runner.Run("echo", "hello")
-
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -65,7 +63,6 @@ func TestExecRunner_Run(t *testing.T) {
 
 	t.Run("captures stderr", func(t *testing.T) {
 		stdout, stderr, err := runner.Run("sh", "-c", "echo error >&2")
-
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
