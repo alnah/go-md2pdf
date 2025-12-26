@@ -1,6 +1,6 @@
 BINARY := md2pdf
 
-.PHONY: help build test test-cover run clean fmt vet lint sec check tools
+.PHONY: help build test test-integration test-cover test-cover-all run clean fmt vet lint sec check check-all tools
 
 .DEFAULT_GOAL := help
 
@@ -14,11 +14,18 @@ tools: ## Install development tools (staticcheck, gosec)
 build: ## Build the binary
 	go build -o $(BINARY) .
 
-test: ## Run tests with verbose output
+test: ## Run unit tests
 	go test -v ./...
 
-test-cover: ## Run tests with coverage report
+test-integration: ## Run integration tests (requires pandoc)
+	go test -v -tags=integration ./...
+
+test-cover: ## Run unit tests with coverage report
 	go test -v -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+
+test-cover-all: ## Run all tests with coverage report (requires pandoc)
+	go test -v -tags=integration -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 
 run: build ## Build and run the shell
@@ -39,4 +46,6 @@ lint: ## Run staticcheck linter
 sec: ## Run gosec security scanner
 	go tool gosec ./...
 
-check: fmt vet lint sec test ## Run all checks
+check: fmt vet lint sec test ## Run all checks (unit tests only)
+
+check-all: fmt vet lint sec test-integration ## Run all checks including integration tests
