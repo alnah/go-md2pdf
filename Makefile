@@ -1,4 +1,4 @@
-BINARY := md2pdf
+BINARY := go-md2pdf
 
 .PHONY: help build test test-integration test-cover test-cover-all run clean fmt vet lint sec check check-all tools
 

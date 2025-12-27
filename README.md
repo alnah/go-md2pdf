@@ -17,13 +17,13 @@ Convert Markdown files to PDF.
 ## Installation
 
 ```bash
-go install github.com/alnah/md2pdf@latest
+go install github.com/alnah/go-md2pdf@latest
 ```
 
 ## Usage
 
 ```bash
-md2pdf input.md output.pdf
+go-md2pdf input.md output.pdf
 ```
 
 ## Development

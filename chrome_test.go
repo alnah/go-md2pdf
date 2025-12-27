@@ -179,8 +179,8 @@ func TestWriteHTMLToTempFile(t *testing.T) {
 	})
 
 	t.Run("file has .html extension pattern", func(t *testing.T) {
-		if !strings.Contains(path, "md2pdf-") || !strings.HasSuffix(path, ".html") {
-			t.Errorf("path %q does not match expected pattern md2pdf-*.html", path)
+		if !strings.Contains(path, "go-md2pdf-") || !strings.HasSuffix(path, ".html") {
+			t.Errorf("path %q does not match expected pattern go-md2pdf-*.html", path)
 		}
 	})
 

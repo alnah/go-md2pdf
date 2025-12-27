@@ -114,7 +114,7 @@ func (c *ChromeConverter) ToPDF(htmlContent, cssContent, outputPath string) erro
 // writeHTMLToTempFile creates a temporary file with HTML content.
 // Returns the file path and a cleanup function to remove the file.
 func writeHTMLToTempFile(html string) (path string, cleanup func(), err error) {
-	tmpFile, err := os.CreateTemp("", "md2pdf-*.html")
+	tmpFile, err := os.CreateTemp("", "go-md2pdf-*.html")
 	if err != nil {
 		return "", nil, fmt.Errorf("creating temp file: %w", err)
 	}

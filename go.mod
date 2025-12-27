@@ -1,4 +1,4 @@
-module github.com/alnah/md2pdf
+module github.com/alnah/go-md2pdf
 
 go 1.25.4
 

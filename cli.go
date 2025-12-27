@@ -8,7 +8,7 @@ import (
 
 // Sentinel errors for CLI operations.
 var (
-	ErrInvalidArgs = errors.New("usage: md2pdf <input.md> <output.pdf> [style.css]")
+	ErrInvalidArgs = errors.New("usage: go-md2pdf <input.md> <output.pdf> [style.css]")
 	ErrReadCSS     = errors.New("failed to read CSS file")
 )
 
