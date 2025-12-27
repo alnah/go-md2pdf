@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"os"
-	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -21,77 +21,42 @@ func (m *MockRunner) Run(name string, args ...string) (string, string, error) {
 
 func TestPandocConverter_ToHTML(t *testing.T) {
 	tests := []struct {
-		name           string
-		path           string
-		createFile     bool
-		mock           *MockRunner
-		wantErr        error
-		wantAnyErr     bool
-		wantOutput     string
-		wantCalledWith []string
+		name       string
+		content    string
+		mock       *MockRunner
+		wantErr    error
+		wantAnyErr bool
+		wantOutput string
 	}{
 		{
-			name:    "empty path returns ErrEmptyPath",
-			path:    "",
+			name:    "empty content returns ErrEmptyContent",
+			content: "",
 			mock:    &MockRunner{},
-			wantErr: ErrEmptyPath,
+			wantErr: ErrEmptyContent,
 		},
 		{
-			name:    "wrong extension .txt returns ErrInvalidExtension",
-			path:    "file.txt",
-			mock:    &MockRunner{},
-			wantErr: ErrInvalidExtension,
-		},
-		{
-			name:    "no extension returns ErrInvalidExtension",
-			path:    "README",
-			mock:    &MockRunner{},
-			wantErr: ErrInvalidExtension,
-		},
-		{
-			name:    "non-existent .md file returns ErrFileNotFound",
-			path:    "does-not-exist.md",
-			mock:    &MockRunner{},
-			wantErr: ErrFileNotFound,
-		},
-		{
-			name:       "pandoc succeeds returns HTML",
-			createFile: true,
+			name:    "pandoc succeeds returns HTML",
+			content: "# Test",
 			mock: &MockRunner{
 				Stdout: "<html><body><h1>Test</h1></body></html>",
 			},
-			wantOutput:     "<html><body><h1>Test</h1></body></html>",
-			wantCalledWith: []string{"pandoc", "", "-t", "html5", "--standalone"},
+			wantOutput: "<html><body><h1>Test</h1></body></html>",
 		},
 		{
-			name:       "pandoc fails returns error with stderr",
-			createFile: true,
+			name:    "pandoc fails returns error with stderr",
+			content: "# Test",
 			mock: &MockRunner{
 				Stderr: "pandoc: unknown option --bad",
 				Err:    errors.New("exit status 1"),
 			},
-			wantAnyErr:     true,
-			wantCalledWith: []string{"pandoc", "", "-t", "html5", "--standalone"},
+			wantAnyErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			path := tt.path
-
-			if tt.createFile {
-				tmpDir := t.TempDir()
-				path = filepath.Join(tmpDir, "test.md")
-				if err := writeTestFile(path, "# Test"); err != nil {
-					t.Fatalf("failed to create test file: %v", err)
-				}
-				if tt.wantCalledWith != nil {
-					tt.wantCalledWith[1] = path
-				}
-			}
-
 			converter := &PandocConverter{Runner: tt.mock}
-			got, err := converter.ToHTML(path)
+			got, err := converter.ToHTML(tt.content)
 
 			if tt.wantAnyErr || tt.wantErr != nil {
 				if err == nil {
@@ -111,26 +76,55 @@ func TestPandocConverter_ToHTML(t *testing.T) {
 				t.Errorf("expected output %q, got %q", tt.wantOutput, got)
 			}
 
-			if tt.wantCalledWith != nil {
-				if len(tt.mock.CalledWith) != len(tt.wantCalledWith) {
-					t.Fatalf("expected %d args, got %d: %v", len(tt.wantCalledWith), len(tt.mock.CalledWith), tt.mock.CalledWith)
-				}
-				for i, want := range tt.wantCalledWith {
-					if tt.mock.CalledWith[i] != want {
-						t.Errorf("arg[%d]: expected %q, got %q", i, want, tt.mock.CalledWith[i])
-					}
-				}
+			// Verify pandoc was called with a temp file
+			if len(tt.mock.CalledWith) < 2 {
+				t.Fatal("expected pandoc to be called with arguments")
+			}
+			if tt.mock.CalledWith[0] != "pandoc" {
+				t.Errorf("expected command 'pandoc', got %q", tt.mock.CalledWith[0])
+			}
+			// Temp file path should contain our prefix
+			if !strings.Contains(tt.mock.CalledWith[1], "go-md2pdf-") {
+				t.Errorf("expected temp file path with 'go-md2pdf-', got %q", tt.mock.CalledWith[1])
 			}
 		})
 	}
 }
 
-func writeTestFile(path, content string) error {
-	f, err := os.Create(path)
+func TestWriteTempMarkdown(t *testing.T) {
+	content := "# Test Markdown"
+
+	path, cleanup, err := writeTempMarkdown(content)
 	if err != nil {
-		return err
+		t.Fatalf("writeTempMarkdown() error = %v", err)
 	}
-	defer f.Close()
-	_, err = f.WriteString(content)
-	return err
+
+	t.Run("file exists", func(t *testing.T) {
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			t.Errorf("temp file does not exist at %s", path)
+		}
+	})
+
+	t.Run("file has .md extension pattern", func(t *testing.T) {
+		if !strings.Contains(path, "go-md2pdf-") || !strings.HasSuffix(path, ".md") {
+			t.Errorf("path %q does not match expected pattern go-md2pdf-*.md", path)
+		}
+	})
+
+	t.Run("file contains expected content", func(t *testing.T) {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("failed to read temp file: %v", err)
+		}
+		if string(data) != content {
+			t.Errorf("file content = %q, want %q", string(data), content)
+		}
+	})
+
+	t.Run("cleanup removes file", func(t *testing.T) {
+		cleanup()
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Errorf("temp file still exists after cleanup at %s", path)
+		}
+	})
 }

@@ -3,27 +3,18 @@
 package main
 
 import (
-	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 )
 
 func TestPandocConverter_ToHTML_Integration(t *testing.T) {
-	tmpDir := t.TempDir()
-	path := filepath.Join(tmpDir, "test.md")
-
 	content := `# Hello
 
 World`
 
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-		t.Fatalf("failed to create test file: %v", err)
-	}
-
 	converter := NewPandocConverter()
-	got, err := converter.ToHTML(path)
+	got, err := converter.ToHTML(content)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
