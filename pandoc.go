@@ -63,8 +63,9 @@ func NewPandocConverter() *PandocConverter {
 }
 
 // ToHTML converts Markdown content to a standalone HTML5 document using Pandoc.
-// Uses -f markdown-fancy_lists to disable automatic conversion of letter markers
-// (A), B), etc.) to numbered lists, preserving the original text.
+// Uses -f markdown-fancy_lists+hard_line_breaks to:
+// - Disable automatic conversion of letter markers (A), B), etc.) to numbered lists
+// - Treat single newlines as hard line breaks (<br>)
 func (c *PandocConverter) ToHTML(content string) (string, error) {
 	if content == "" {
 		return "", ErrEmptyContent
@@ -76,7 +77,7 @@ func (c *PandocConverter) ToHTML(content string) (string, error) {
 	}
 	defer cleanup()
 
-	stdout, stderr, err := c.Runner.Run("pandoc", tmpPath, "-f", "markdown-fancy_lists", "-t", "html5", "--standalone")
+	stdout, stderr, err := c.Runner.Run("pandoc", tmpPath, "-f", "markdown-fancy_lists+hard_line_breaks", "-t", "html5", "--standalone")
 	if err != nil {
 		return "", fmt.Errorf("converting to HTML: %s: %w", stderr, err)
 	}
