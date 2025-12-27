@@ -25,7 +25,7 @@ const (
 
 // run executes the main conversion pipeline.
 // Accepts converters as interfaces to enable testing with mocks.
-func run(args []string, preprocessor MarkdownPreprocessor, htmlConverter HTMLConverter, pdfConverter PDFConverter) error {
+func run(args []string, preprocessor MarkdownPreprocessor, htmlConverter HTMLConverter, cssInjector CSSInjector, pdfConverter PDFConverter) error {
 	if len(args) < minRequiredArgs {
 		return ErrInvalidArgs
 	}
@@ -57,8 +57,11 @@ func run(args []string, preprocessor MarkdownPreprocessor, htmlConverter HTMLCon
 		return err
 	}
 
+	// Inject CSS into HTML
+	htmlContent = cssInjector.InjectCSS(htmlContent, cssContent)
+
 	// Convert HTML to PDF
-	if err := pdfConverter.ToPDF(htmlContent, cssContent, outputPath); err != nil {
+	if err := pdfConverter.ToPDF(htmlContent, outputPath); err != nil {
 		return err
 	}
 

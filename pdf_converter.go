@@ -13,7 +13,7 @@ import (
 
 // PDFConverter abstracts HTML to PDF conversion to allow different backends.
 type PDFConverter interface {
-	ToPDF(htmlContent, cssContent, outputPath string) error
+	ToPDF(htmlContent, outputPath string) error
 }
 
 // Sentinel errors for PDF conversion failures.
@@ -46,14 +46,12 @@ func NewChromeConverter() *ChromeConverter {
 
 // ToPDF converts HTML content to a PDF file using headless Chrome.
 // Uses US Letter format (8.5x11 inches) with 0.5 inch margins.
-func (c *ChromeConverter) ToPDF(htmlContent, cssContent, outputPath string) error {
+func (c *ChromeConverter) ToPDF(htmlContent, outputPath string) error {
 	if err := validateToPDFInputs(htmlContent, outputPath); err != nil {
 		return err
 	}
 
-	fullHTML := InjectCSS(htmlContent, cssContent)
-
-	tmpPath, cleanup, err := writeHTMLToTempFile(fullHTML)
+	tmpPath, cleanup, err := writeHTMLToTempFile(htmlContent)
 	if err != nil {
 		return err
 	}

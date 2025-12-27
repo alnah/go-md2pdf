@@ -134,9 +134,11 @@ func TestInjectCSS(t *testing.T) {
 		},
 	}
 
+	injector := &CSSInjection{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := InjectCSS(tt.html, tt.css)
+			got := injector.InjectCSS(tt.html, tt.css)
 			if got != tt.expected {
 				t.Errorf("InjectCSS() = %q, want %q", got, tt.expected)
 			}

@@ -2,17 +2,18 @@ package main
 
 import "strings"
 
-// SanitizeCSS escapes sequences that could break out of a <style> block.
-// Prevents CSS injection by escaping </style> and similar closing sequences.
-func SanitizeCSS(css string) string {
-	// Escape </ sequences to prevent closing the style tag prematurely
-	return strings.ReplaceAll(css, "</", `<\/`)
+// CSSInjector defines the contract for CSS injection into HTML.
+type CSSInjector interface {
+	InjectCSS(htmlContent, cssContent string) string
 }
+
+// CSSInjection injects CSS as a <style> block into HTML content.
+type CSSInjection struct{}
 
 // InjectCSS inserts a <style> block into HTML content.
 // Tries </head> first, then <body>, then prepends to the HTML.
 // CSS content is sanitized to prevent injection attacks.
-func InjectCSS(htmlContent, cssContent string) string {
+func (s *CSSInjection) InjectCSS(htmlContent, cssContent string) string {
 	if cssContent == "" {
 		return htmlContent
 	}
@@ -38,4 +39,11 @@ func InjectCSS(htmlContent, cssContent string) string {
 
 	// Fallback: prepend
 	return styleBlock + htmlContent
+}
+
+// SanitizeCSS escapes sequences that could break out of a <style> block.
+// Prevents CSS injection by escaping </style> and similar closing sequences.
+func SanitizeCSS(css string) string {
+	// Escape </ sequences to prevent closing the style tag prematurely
+	return strings.ReplaceAll(css, "</", `<\/`)
 }

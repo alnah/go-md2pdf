@@ -68,7 +68,7 @@ func TestChromeConverter_ToPDF_Integration(t *testing.T) {
 </html>`
 
 		converter := NewChromeConverter()
-		err := converter.ToPDF(html, "", outputPath)
+		err := converter.ToPDF(html, outputPath)
 		if err != nil {
 			t.Fatalf("ToPDF() error = %v", err)
 		}
@@ -80,15 +80,18 @@ func TestChromeConverter_ToPDF_Integration(t *testing.T) {
 		tmpDir := t.TempDir()
 		outputPath := filepath.Join(tmpDir, "output.pdf")
 
+		// CSS is now injected before calling ToPDF
+		injector := &CSSInjection{}
 		html := `<!DOCTYPE html>
 <html>
 <head><title>Test</title></head>
 <body><h1>Styled Document</h1></body>
 </html>`
 		css := "h1 { color: blue; font-size: 24px; }"
+		htmlWithCSS := injector.InjectCSS(html, css)
 
 		converter := NewChromeConverter()
-		err := converter.ToPDF(html, css, outputPath)
+		err := converter.ToPDF(htmlWithCSS, outputPath)
 		if err != nil {
 			t.Fatalf("ToPDF() error = %v", err)
 		}
@@ -101,7 +104,7 @@ func TestChromeConverter_ToPDF_Integration(t *testing.T) {
 		outputPath := filepath.Join(tmpDir, "output.pdf")
 
 		converter := NewChromeConverter()
-		err := converter.ToPDF("", "", outputPath)
+		err := converter.ToPDF("", outputPath)
 		if !errors.Is(err, ErrEmptyHTML) {
 			t.Errorf("ToPDF() error = %v, want %v", err, ErrEmptyHTML)
 		}
@@ -109,7 +112,7 @@ func TestChromeConverter_ToPDF_Integration(t *testing.T) {
 
 	t.Run("empty output path returns error", func(t *testing.T) {
 		converter := NewChromeConverter()
-		err := converter.ToPDF("<html></html>", "", "")
+		err := converter.ToPDF("<html></html>", "")
 		if !errors.Is(err, ErrEmptyOutputPath) {
 			t.Errorf("ToPDF() error = %v, want %v", err, ErrEmptyOutputPath)
 		}
@@ -117,7 +120,7 @@ func TestChromeConverter_ToPDF_Integration(t *testing.T) {
 
 	t.Run("invalid output directory returns error", func(t *testing.T) {
 		converter := NewChromeConverter()
-		err := converter.ToPDF("<html></html>", "", "/nonexistent/directory/output.pdf")
+		err := converter.ToPDF("<html></html>", "/nonexistent/directory/output.pdf")
 		if !errors.Is(err, ErrWritePDF) {
 			t.Errorf("ToPDF() error = %v, want wrapped %v", err, ErrWritePDF)
 		}
