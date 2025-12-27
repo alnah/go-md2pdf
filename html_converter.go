@@ -1,4 +1,3 @@
-// Package main provides a CLI tool to convert Markdown files to HTML using Pandoc.
 package main
 
 import (
