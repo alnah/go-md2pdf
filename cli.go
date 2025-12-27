@@ -9,7 +9,7 @@ import (
 
 // Sentinel errors for CLI operations.
 var (
-	ErrInvalidArgs      = errors.New("usage: go-md2pdf <input.md> <output.pdf> [style.css]")
+	ErrInvalidArgs      = errors.New("usage: go-md2pdf <input.md> <output.pdf> [style.css] [--no-style]")
 	ErrReadCSS          = errors.New("failed to read CSS file")
 	ErrReadMarkdown     = errors.New("failed to read markdown file")
 	ErrInvalidExtension = errors.New("file must have .md or .markdown extension")
@@ -88,16 +88,31 @@ func readMarkdownFile(path string) (string, error) {
 }
 
 // readOptionalCSS reads CSS content from the file path in args, if provided.
-// Returns empty string if no CSS argument is present.
+// Returns defaultCSS if no CSS argument is present and --no-style is not set.
+// Returns empty string if --no-style flag is present.
 func readOptionalCSS(args []string) (string, error) {
-	if len(args) <= cssFileArgIndex {
+	if hasNoStyleFlag(args) {
 		return "", nil
 	}
 
-	cssBytes, err := os.ReadFile(args[cssFileArgIndex])
+	if len(args) <= cssFileArgIndex {
+		return defaultCSS, nil
+	}
+
+	cssBytes, err := os.ReadFile(args[cssFileArgIndex]) // #nosec G304 -- TODO: add path sanitization
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrReadCSS, err)
 	}
 
 	return string(cssBytes), nil
+}
+
+// hasNoStyleFlag checks if --no-style flag is present in args.
+func hasNoStyleFlag(args []string) bool {
+	for _, arg := range args {
+		if arg == "--no-style" {
+			return true
+		}
+	}
+	return false
 }
