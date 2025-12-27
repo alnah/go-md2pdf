@@ -20,14 +20,14 @@ func (s *CSSInjection) InjectCSS(htmlContent, cssContent string) string {
 
 	sanitizedCSS := SanitizeCSS(cssContent)
 	styleBlock := "<style>" + sanitizedCSS + "</style>"
+	lowerHTML := strings.ToLower(htmlContent)
 
 	// Try inserting before </head>
-	if idx := strings.Index(strings.ToLower(htmlContent), "</head>"); idx != -1 {
+	if idx := strings.Index(lowerHTML, "</head>"); idx != -1 {
 		return htmlContent[:idx] + styleBlock + htmlContent[idx:]
 	}
 
 	// Try inserting after <body>
-	lowerHTML := strings.ToLower(htmlContent)
 	if idx := strings.Index(lowerHTML, "<body"); idx != -1 {
 		// Find the closing > of <body...>
 		closeIdx := strings.Index(htmlContent[idx:], ">")
