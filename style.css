@@ -33,6 +33,11 @@
   --font-size-small: 0.9em;
   --font-size-tiny: 0.8em;
   --line-height: 1.6;
+
+  /* Component-specific values */
+  --checkbox-offset-top: -2px;
+  --checkbox-offset-left: 2px;
+  --signature-margin-top: 30px;
 }
 
 /* 2. RESET AND BASE STYLES */
@@ -152,11 +157,6 @@ a {
   text-decoration: none;
 }
 
-a:hover {
-  text-decoration: underline;
-  color: var(--heading-red);
-}
-
 /* Horizontal rules */
 hr {
   border: none;
@@ -168,13 +168,42 @@ hr {
 /* 5. COMPONENTS - Blockquotes */
 blockquote {
   margin: var(--spacing-sm) 0;
-  padding: 0 0.8em;
+  padding: 0.5em 0.8em;
   border-left: 4px solid var(--heading-yellow);
   background: rgba(235, 203, 139, 0.15);
   border-radius: 0.5em;
   font-style: italic;
   color: var(--text-primary);
   page-break-inside: avoid;
+  text-align: justify;
+}
+
+/* Reduce spacing for first element in blockquote */
+blockquote > *:first-child {
+  margin-top: 0;
+}
+
+/* Reduce spacing for last element in blockquote */
+blockquote > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Lists inside blockquotes: use dashes instead of bullets */
+blockquote ul {
+  list-style-type: none !important;
+  padding-left: 1.5em !important;
+  margin: 0 !important;
+}
+
+blockquote ul > li {
+  list-style: none !important;
+  position: relative;
+}
+
+blockquote ul > li::before {
+  content: "–";
+  position: absolute;
+  left: -1.2em;
 }
 
 blockquote blockquote {
@@ -198,18 +227,24 @@ li {
   display: list-item;
 }
 
-/* Unordered lists */
+/* Unordered lists: use dashes instead of bullets */
 ul:not(.task-list) {
-  list-style-type: disc;
+  list-style-type: none;
+  padding-left: 1.5em;
+}
+
+ul:not(.task-list) > li {
+  position: relative;
+}
+
+ul:not(.task-list) > li::before {
+  content: "–";
+  position: absolute;
+  left: -1.2em;
 }
 
 ul ul {
-  list-style-type: circle;
   margin: var(--spacing-sm) 0;
-}
-
-ul ul ul {
-  list-style-type: square;
 }
 
 /* Ordered lists */
@@ -256,8 +291,8 @@ li.task-list-item::before {
   content: '✓';
   position: absolute;
   /* Offset to visually center the checkmark within the checkbox */
-  top: -2px;
-  left: 2px;
+  top: var(--checkbox-offset-top);
+  left: var(--checkbox-offset-left);
   color: white;
   font-size: 1em;
   font-weight: bold;
@@ -447,7 +482,7 @@ img {
 /* 10. TEACHER SIGNATURE */
 .signature-block {
   page-break-inside: avoid;
-  margin-top: 30px !important;
+  margin-top: var(--signature-margin-top) !important;
   display: flex !important;
   align-items: center !important;
 }
@@ -479,8 +514,10 @@ img {
     display: inline !important;
   }
 
+  /* All unordered lists use dashes, not bullets */
   ul:not(.task-list) > li {
-    list-style: disc outside !important;
+    list-style: none !important;
+    list-style-type: none !important;
   }
 
   ol > li {
@@ -537,5 +574,11 @@ img {
   ol > li {
     display: list-item !important;
     margin: var(--spacing-sm) 0 !important;
+  }
+
+  /* All unordered lists use dashes, not bullets */
+  ul:not(.task-list) > li {
+    list-style: none !important;
+    list-style-type: none !important;
   }
 }
