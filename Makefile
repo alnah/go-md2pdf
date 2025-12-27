@@ -11,6 +11,9 @@ tools: ## Install development tools (staticcheck, gosec)
 	go get -tool honnef.co/go/tools/cmd/staticcheck
 	go get -tool github.com/securego/gosec/v2/cmd/gosec
 
+deps: ## Install dependencies (chromedp)
+	go get github.com/chromedp/chromedp
+
 build: ## Build the binary
 	go build -o $(BINARY) .
 
