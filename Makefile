@@ -20,7 +20,7 @@ build: ## Build the binary
 test: ## Run unit tests
 	go test -v ./...
 
-test-integration: ## Run integration tests (requires pandoc)
+test-integration: ## Run integration tests (requires pandoc, chrome)
 	go test -v -tags=integration ./...
 
 test-cover: ## Run unit tests with coverage report
