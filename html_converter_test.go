@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"os"
 	"strings"
 	"testing"
 )
@@ -104,77 +103,5 @@ func TestPandocConverter_ToHTML(t *testing.T) {
 				t.Errorf("expected temp file path with 'go-md2pdf-', got %q", tt.mock.CalledWith[1])
 			}
 		})
-	}
-}
-
-func TestWriteTempMarkdown(t *testing.T) {
-	content := "# Test Markdown"
-
-	path, cleanup, err := writeTempMarkdown(content)
-	if err != nil {
-		t.Fatalf("writeTempMarkdown() error = %v", err)
-	}
-
-	t.Run("file exists", func(t *testing.T) {
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			t.Errorf("temp file does not exist at %s", path)
-		}
-	})
-
-	t.Run("file has .md extension pattern", func(t *testing.T) {
-		if !strings.Contains(path, "go-md2pdf-") || !strings.HasSuffix(path, ".md") {
-			t.Errorf("path %q does not match expected pattern go-md2pdf-*.md", path)
-		}
-	})
-
-	t.Run("file contains expected content", func(t *testing.T) {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("failed to read temp file: %v", err)
-		}
-		if string(data) != content {
-			t.Errorf("file content = %q, want %q", string(data), content)
-		}
-	})
-
-	t.Run("cleanup removes file", func(t *testing.T) {
-		cleanup()
-		if _, err := os.Stat(path); !os.IsNotExist(err) {
-			t.Errorf("temp file still exists after cleanup at %s", path)
-		}
-	})
-}
-
-func TestWriteTempMarkdown_Unicode(t *testing.T) {
-	content := "# Bonjour le monde\n\nCeci est un test avec des caracteres speciaux: e, a, u"
-
-	path, cleanup, err := writeTempMarkdown(content)
-	if err != nil {
-		t.Fatalf("writeTempMarkdown() error = %v", err)
-	}
-	defer cleanup()
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("failed to read temp file: %v", err)
-	}
-	if string(data) != content {
-		t.Errorf("unicode content not preserved: got %q, want %q", string(data), content)
-	}
-}
-
-func TestWriteTempMarkdown_EmptyString(t *testing.T) {
-	path, cleanup, err := writeTempMarkdown("")
-	if err != nil {
-		t.Fatalf("writeTempMarkdown() error = %v", err)
-	}
-	defer cleanup()
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("failed to read temp file: %v", err)
-	}
-	if string(data) != "" {
-		t.Errorf("expected empty file, got %q", string(data))
 	}
 }

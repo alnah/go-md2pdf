@@ -1,0 +1,54 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"strings"
+)
+
+// Sentinel errors for temp file extension validation.
+var (
+	ErrExtensionEmpty         = errors.New("extension cannot be empty")
+	ErrExtensionPathTraversal = errors.New("extension contains path separator or null byte")
+)
+
+// writeTempFile creates a temporary file with the given content and extension.
+// Returns the file path and a cleanup function to remove the file.
+func writeTempFile(content, extension string) (path string, cleanup func(), err error) {
+	if err := validateExtension(extension); err != nil {
+		return "", nil, err
+	}
+
+	tmpFile, err := os.CreateTemp("", "go-md2pdf-*."+extension)
+	if err != nil {
+		return "", nil, fmt.Errorf("creating temp file: %w", err)
+	}
+
+	path = tmpFile.Name()
+	cleanup = func() { _ = os.Remove(path) }
+
+	if _, writeErr := tmpFile.WriteString(content); writeErr != nil {
+		_ = tmpFile.Close()
+		cleanup()
+		return "", nil, fmt.Errorf("writing temp file: %w", writeErr)
+	}
+
+	if closeErr := tmpFile.Close(); closeErr != nil {
+		cleanup()
+		return "", nil, fmt.Errorf("closing temp file: %w", closeErr)
+	}
+
+	return path, cleanup, nil
+}
+
+// validateExtension checks that the extension is safe for use in temp file names.
+func validateExtension(extension string) error {
+	if extension == "" {
+		return ErrExtensionEmpty
+	}
+	if strings.ContainsAny(extension, "/\\\x00") {
+		return ErrExtensionPathTraversal
+	}
+	return nil
+}

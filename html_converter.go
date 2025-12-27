@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 )
 
@@ -71,7 +70,7 @@ func (c *PandocConverter) ToHTML(content string) (string, error) {
 		return "", ErrEmptyContent
 	}
 
-	tmpPath, cleanup, err := writeTempMarkdown(content)
+	tmpPath, cleanup, err := writeTempFile(content, "md")
 	if err != nil {
 		return "", err
 	}
@@ -83,29 +82,4 @@ func (c *PandocConverter) ToHTML(content string) (string, error) {
 	}
 
 	return stdout, nil
-}
-
-// writeTempMarkdown creates a temporary file with Markdown content.
-// Returns the file path and a cleanup function to remove the file.
-func writeTempMarkdown(content string) (path string, cleanup func(), err error) {
-	tmpFile, err := os.CreateTemp("", "go-md2pdf-*.md")
-	if err != nil {
-		return "", nil, fmt.Errorf("creating temp file: %w", err)
-	}
-
-	path = tmpFile.Name()
-	cleanup = func() { _ = os.Remove(path) }
-
-	if _, err := tmpFile.WriteString(content); err != nil {
-		_ = tmpFile.Close()
-		cleanup()
-		return "", nil, fmt.Errorf("writing temp file: %w", err)
-	}
-
-	if err := tmpFile.Close(); err != nil {
-		cleanup()
-		return "", nil, fmt.Errorf("closing temp file: %w", err)
-	}
-
-	return path, cleanup, nil
 }

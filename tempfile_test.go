@@ -1,0 +1,173 @@
+package main
+
+import (
+	"errors"
+	"os"
+	"strings"
+	"testing"
+)
+
+func TestValidateExtension(t *testing.T) {
+	tests := []struct {
+		name      string
+		extension string
+		wantErr   error
+	}{
+		{
+			name:      "valid extension md",
+			extension: "md",
+			wantErr:   nil,
+		},
+		{
+			name:      "valid extension html",
+			extension: "html",
+			wantErr:   nil,
+		},
+		{
+			name:      "empty extension",
+			extension: "",
+			wantErr:   ErrExtensionEmpty,
+		},
+		{
+			name:      "forward slash path traversal",
+			extension: "../etc/passwd",
+			wantErr:   ErrExtensionPathTraversal,
+		},
+		{
+			name:      "backslash path traversal",
+			extension: "..\\windows\\system32",
+			wantErr:   ErrExtensionPathTraversal,
+		},
+		{
+			name:      "null byte injection",
+			extension: "html\x00exe",
+			wantErr:   ErrExtensionPathTraversal,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateExtension(tt.extension)
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("validateExtension(%q) = %v, want %v", tt.extension, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestWriteTempFile(t *testing.T) {
+	tests := []struct {
+		name      string
+		content   string
+		extension string
+	}{
+		{
+			name:      "markdown file",
+			content:   "# Test Markdown",
+			extension: "md",
+		},
+		{
+			name:      "html file",
+			content:   "<html><body>Test Content</body></html>",
+			extension: "html",
+		},
+		{
+			name:      "empty content",
+			content:   "",
+			extension: "md",
+		},
+		{
+			name:      "unicode content",
+			content:   "# Bonjour le monde\n\nCeci est un test avec des caracteres speciaux: e, a, u",
+			extension: "md",
+		},
+		{
+			name:      "unicode html content",
+			content:   "<html><body>Bonjour le monde</body></html>",
+			extension: "html",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path, cleanup, err := writeTempFile(tt.content, tt.extension)
+			if err != nil {
+				t.Fatalf("writeTempFile() error = %v", err)
+			}
+			defer cleanup()
+
+			// Verify file exists
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				t.Errorf("temp file does not exist at %s", path)
+			}
+
+			// Verify path pattern
+			if !strings.Contains(path, "go-md2pdf-") {
+				t.Errorf("path %q does not contain prefix 'go-md2pdf-'", path)
+			}
+			if !strings.HasSuffix(path, "."+tt.extension) {
+				t.Errorf("path %q does not have extension .%s", path, tt.extension)
+			}
+
+			// Verify content
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("failed to read temp file: %v", err)
+			}
+			if string(data) != tt.content {
+				t.Errorf("file content = %q, want %q", string(data), tt.content)
+			}
+		})
+	}
+}
+
+func TestWriteTempFile_Cleanup(t *testing.T) {
+	path, cleanup, err := writeTempFile("test content", "md")
+	if err != nil {
+		t.Fatalf("writeTempFile() error = %v", err)
+	}
+
+	// Verify file exists before cleanup
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		t.Fatalf("temp file does not exist at %s", path)
+	}
+
+	// Call cleanup
+	cleanup()
+
+	// Verify file is removed after cleanup
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Errorf("temp file still exists after cleanup at %s", path)
+	}
+}
+
+func TestWriteTempFile_InvalidExtension(t *testing.T) {
+	tests := []struct {
+		name      string
+		extension string
+		wantErr   error
+	}{
+		{
+			name:      "empty extension",
+			extension: "",
+			wantErr:   ErrExtensionEmpty,
+		},
+		{
+			name:      "path traversal",
+			extension: "../foo",
+			wantErr:   ErrExtensionPathTraversal,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, cleanup, err := writeTempFile("content", tt.extension)
+			if cleanup != nil {
+				defer cleanup()
+			}
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("writeTempFile() error = %v, want %v", err, tt.wantErr)
+			}
+		})
+	}
+}

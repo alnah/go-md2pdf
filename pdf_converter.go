@@ -51,7 +51,7 @@ func (c *ChromeConverter) ToPDF(htmlContent, outputPath string) error {
 		return err
 	}
 
-	tmpPath, cleanup, err := writeHTMLToTempFile(htmlContent)
+	tmpPath, cleanup, err := writeTempFile(htmlContent, "html")
 	if err != nil {
 		return err
 	}
@@ -68,31 +68,6 @@ func (c *ChromeConverter) ToPDF(htmlContent, outputPath string) error {
 	}
 
 	return nil
-}
-
-// writeHTMLToTempFile creates a temporary file with HTML content.
-// Returns the file path and a cleanup function to remove the file.
-func writeHTMLToTempFile(html string) (path string, cleanup func(), err error) {
-	tmpFile, err := os.CreateTemp("", "go-md2pdf-*.html")
-	if err != nil {
-		return "", nil, fmt.Errorf("creating temp file: %w", err)
-	}
-
-	path = tmpFile.Name()
-	cleanup = func() { _ = os.Remove(path) }
-
-	if _, err := tmpFile.WriteString(html); err != nil {
-		_ = tmpFile.Close()
-		cleanup()
-		return "", nil, fmt.Errorf("writing temp file: %w", err)
-	}
-
-	if err := tmpFile.Close(); err != nil {
-		cleanup()
-		return "", nil, fmt.Errorf("closing temp file: %w", err)
-	}
-
-	return path, cleanup, nil
 }
 
 // renderPDFFromFile opens a local HTML file in headless Chrome and renders it to PDF.
