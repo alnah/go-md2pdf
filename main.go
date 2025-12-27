@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	if err := run(os.Args, NewPandocConverter(), NewChromeConverter()); err != nil {
+	if err := run(os.Args, &CommonMarkToPandocPreprocessor{}, NewPandocConverter(), NewChromeConverter()); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

@@ -25,7 +25,7 @@ const (
 
 // run executes the main conversion pipeline.
 // Accepts converters as interfaces to enable testing with mocks.
-func run(args []string, htmlConverter HTMLConverter, pdfConverter PDFConverter) error {
+func run(args []string, preprocessor MarkdownPreprocessor, htmlConverter HTMLConverter, pdfConverter PDFConverter) error {
 	if len(args) < minRequiredArgs {
 		return ErrInvalidArgs
 	}
@@ -43,7 +43,7 @@ func run(args []string, htmlConverter HTMLConverter, pdfConverter PDFConverter) 
 	if err != nil {
 		return err
 	}
-	mdContent = PreprocessMarkdown(mdContent)
+	mdContent = preprocessor.PreprocessMarkdown(mdContent)
 
 	// Read optional CSS
 	cssContent, err := readOptionalCSS(args)

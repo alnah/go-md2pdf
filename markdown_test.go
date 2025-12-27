@@ -205,6 +205,11 @@ func TestEnsureBlankBeforeHeaders(t *testing.T) {
 			expected: "```\ncode\n```\n\n# Header",
 		},
 		{
+			name:     "unbalanced code fence treats rest as code",
+			input:    "```\ncode\n# Header inside\nmore code",
+			expected: "```\ncode\n# Header inside\nmore code",
+		},
+		{
 			name:     "header inside indented code block unchanged",
 			input:    "text\n    # indented code\nmore",
 			expected: "text\n    # indented code\nmore",
@@ -509,9 +514,11 @@ func TestPreprocessMarkdown(t *testing.T) {
 		},
 	}
 
+	preprocessor := &CommonMarkToPandocPreprocessor{}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := PreprocessMarkdown(tt.input)
+			got := preprocessor.PreprocessMarkdown(tt.input)
 			if got != tt.expected {
 				t.Errorf("PreprocessMarkdown():\ngot:\n%q\nwant:\n%q", got, tt.expected)
 			}

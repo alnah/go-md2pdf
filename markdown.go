@@ -37,9 +37,18 @@ var (
 	indentedCodeBlock = regexp.MustCompile(`^(    |\t)`)
 )
 
+// MarkdownPreprocessor defines the contract for markdown preprocessing.
+type MarkdownPreprocessor interface {
+	PreprocessMarkdown(content string) string
+}
+
+// CommonMarkToPandocPreprocessor transforms CommonMark content for Pandoc compatibility.
+type CommonMarkToPandocPreprocessor struct{}
+
 // PreprocessMarkdown applies all transformations to prepare Markdown for Pandoc.
 // Order matters: normalize line endings first, then spacing fixes, then syntax conversions.
-func PreprocessMarkdown(content string) string {
+// Makes multiple passes for modularity and clarity; acceptable for typical document sizes.
+func (p *CommonMarkToPandocPreprocessor) PreprocessMarkdown(content string) string {
 	content = NormalizeLineEndings(content)
 	content = EnsureBlankBeforeHeaders(content)
 	content = EnsureBlankBeforeBlockquotes(content)
@@ -119,7 +128,7 @@ func processLinesWithCodeBlockAwareness(content string, process func(prev, curre
 	result := make([]string, 0, len(lines))
 
 	inCodeBlock := false
-	var prev string
+	var previousLine string
 
 	for i, line := range lines {
 		// Track fenced code blocks
@@ -130,18 +139,18 @@ func processLinesWithCodeBlockAwareness(content string, process func(prev, curre
 		// Skip processing inside code blocks or indented code blocks
 		if inCodeBlock || indentedCodeBlock.MatchString(line) {
 			result = append(result, line)
-			prev = line
+			previousLine = line
 			continue
 		}
 
 		// First line has no previous
 		if i == 0 {
 			result = append(result, line)
-			prev = line
+			previousLine = line
 			continue
 		}
 
-		processed := process(prev, line)
+		processed := process(previousLine, line)
 		if strings.HasPrefix(processed, "\n") {
 			// Insert blank line before current line
 			result = append(result, "")
@@ -152,7 +161,7 @@ func processLinesWithCodeBlockAwareness(content string, process func(prev, curre
 
 		// Use original line (not processed) to detect structure in next iteration.
 		// This ensures we match against the original Markdown syntax, not inserted blank lines.
-		prev = line
+		previousLine = line
 	}
 
 	return strings.Join(result, "\n")
