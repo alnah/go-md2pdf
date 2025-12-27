@@ -51,6 +51,22 @@ func TestPandocConverter_ToHTML(t *testing.T) {
 			},
 			wantAnyErr: true,
 		},
+		{
+			name:    "whitespace-only content is valid",
+			content: "   \n\t\n   ",
+			mock: &MockRunner{
+				Stdout: "<html><body></body></html>",
+			},
+			wantOutput: "<html><body></body></html>",
+		},
+		{
+			name:    "unicode content succeeds",
+			content: "# Bonjour le monde",
+			mock: &MockRunner{
+				Stdout: "<html><body><h1>Bonjour le monde</h1></body></html>",
+			},
+			wantOutput: "<html><body><h1>Bonjour le monde</h1></body></html>",
+		},
 	}
 
 	for _, tt := range tests {
@@ -127,4 +143,38 @@ func TestWriteTempMarkdown(t *testing.T) {
 			t.Errorf("temp file still exists after cleanup at %s", path)
 		}
 	})
+}
+
+func TestWriteTempMarkdown_Unicode(t *testing.T) {
+	content := "# Bonjour le monde\n\nCeci est un test avec des caracteres speciaux: e, a, u"
+
+	path, cleanup, err := writeTempMarkdown(content)
+	if err != nil {
+		t.Fatalf("writeTempMarkdown() error = %v", err)
+	}
+	defer cleanup()
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read temp file: %v", err)
+	}
+	if string(data) != content {
+		t.Errorf("unicode content not preserved: got %q, want %q", string(data), content)
+	}
+}
+
+func TestWriteTempMarkdown_EmptyString(t *testing.T) {
+	path, cleanup, err := writeTempMarkdown("")
+	if err != nil {
+		t.Fatalf("writeTempMarkdown() error = %v", err)
+	}
+	defer cleanup()
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read temp file: %v", err)
+	}
+	if string(data) != "" {
+		t.Errorf("expected empty file, got %q", string(data))
+	}
 }

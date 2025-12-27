@@ -38,6 +38,21 @@ func TestSanitizeCSS(t *testing.T) {
 			input:    "</</style>",
 			expected: `<\/<\/style>`,
 		},
+		{
+			name:     "case variation STYLE",
+			input:    "</STYLE>",
+			expected: `<\/STYLE>`,
+		},
+		{
+			name:     "case variation Script",
+			input:    "</Script>",
+			expected: `<\/Script>`,
+		},
+		{
+			name:     "mixed case sTyLe",
+			input:    "</sTyLe>",
+			expected: `<\/sTyLe>`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -104,6 +119,18 @@ func TestInjectCSS(t *testing.T) {
 			html:     "<html><head></head><body>Hello</body></html>",
 			css:      "</style><script>alert('xss')</script>",
 			expected: `<html><head><style><\/style><script>alert('xss')<\/script></style></head><body>Hello</body></html>`,
+		},
+		{
+			name:     "unicode in CSS content property",
+			html:     "<html><head></head><body>Hello</body></html>",
+			css:      `.icon::before { content: ""; }`,
+			expected: `<html><head><style>.icon::before { content: ""; }</style></head><body>Hello</body></html>`,
+		},
+		{
+			name:     "unicode in HTML preserved",
+			html:     "<html><head></head><body>Bonjour le monde</body></html>",
+			css:      "body { color: red; }",
+			expected: "<html><head><style>body { color: red; }</style></head><body>Bonjour le monde</body></html>",
 		},
 	}
 

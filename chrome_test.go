@@ -86,3 +86,21 @@ func TestWriteHTMLToTempFile(t *testing.T) {
 		}
 	})
 }
+
+func TestWriteHTMLToTempFile_Unicode(t *testing.T) {
+	content := "<html><body>Bonjour le monde</body></html>"
+
+	path, cleanup, err := writeHTMLToTempFile(content)
+	if err != nil {
+		t.Fatalf("writeHTMLToTempFile() error = %v", err)
+	}
+	defer cleanup()
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read temp file: %v", err)
+	}
+	if string(data) != content {
+		t.Errorf("unicode content not preserved: got %q, want %q", string(data), content)
+	}
+}
