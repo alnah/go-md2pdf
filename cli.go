@@ -9,7 +9,7 @@ import (
 
 // Sentinel errors for CLI operations.
 var (
-	ErrInvalidArgs      = errors.New("usage: go-md2pdf <input.md> <output.pdf> [style.css] [--no-style]")
+	ErrInvalidArgs      = errors.New("usage: go-md2pdf <input.md> <output.pdf> [style.css]")
 	ErrReadCSS          = errors.New("failed to read CSS file")
 	ErrReadMarkdown     = errors.New("failed to read markdown file")
 	ErrInvalidExtension = errors.New("file must have .md or .markdown extension")
@@ -48,8 +48,8 @@ func run(args []string, service Converter) error {
 		return err
 	}
 
-	// Read optional CSS and determine NoStyle
-	cssContent, noStyle, err := resolveStyleArgs(args)
+	// Read optional CSS
+	cssContent, err := resolveStyleArgs(args)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,6 @@ func run(args []string, service Converter) error {
 		MarkdownContent: mdContent,
 		OutputPath:      outputPath,
 		CSSContent:      cssContent,
-		NoStyle:         noStyle,
 	}
 
 	if err := service.Convert(opts); err != nil {
@@ -89,33 +88,18 @@ func readMarkdownFile(path string) (string, error) {
 }
 
 // resolveStyleArgs parses CSS-related arguments.
-// Returns (cssContent, noStyle, error).
-// - If --no-style is present: returns ("", true, nil)
-// - If CSS file is provided: returns (content, false, nil)
-// - Otherwise: returns ("", false, nil) and service will use default
-func resolveStyleArgs(args []string) (string, bool, error) {
-	if hasNoStyleFlag(args) {
-		return "", true, nil
-	}
-
+// Returns (cssContent, error).
+// - If CSS file is provided: returns (content, nil)
+// - Otherwise: returns ("", nil) for no CSS
+func resolveStyleArgs(args []string) (string, error) {
 	if len(args) <= cssFileArgIndex {
-		return "", false, nil
+		return "", nil
 	}
 
 	cssBytes, err := os.ReadFile(args[cssFileArgIndex]) // #nosec G304 -- TODO: add path sanitization
 	if err != nil {
-		return "", false, fmt.Errorf("%w: %v", ErrReadCSS, err)
+		return "", fmt.Errorf("%w: %v", ErrReadCSS, err)
 	}
 
-	return string(cssBytes), false, nil
-}
-
-// hasNoStyleFlag checks if --no-style flag is present in args.
-func hasNoStyleFlag(args []string) bool {
-	for _, arg := range args {
-		if arg == "--no-style" {
-			return true
-		}
-	}
-	return false
+	return string(cssBytes), nil
 }

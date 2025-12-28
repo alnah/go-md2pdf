@@ -113,26 +113,7 @@ func TestValidateOptions(t *testing.T) {
 			wantErr: ErrEmptyMarkdown,
 		},
 		{
-			name: "conflicting CSS options",
-			opts: ConversionOptions{
-				MarkdownContent: "# Hello",
-				OutputPath:      "out.pdf",
-				NoStyle:         true,
-				CSSContent:      "body { color: red; }",
-			},
-			wantErr: ErrConflictingCSSOptions,
-		},
-		{
-			name: "NoStyle alone is valid",
-			opts: ConversionOptions{
-				MarkdownContent: "# Hello",
-				OutputPath:      "out.pdf",
-				NoStyle:         true,
-			},
-			wantErr: nil,
-		},
-		{
-			name: "CSSContent alone is valid",
+			name: "CSSContent is valid",
 			opts: ConversionOptions{
 				MarkdownContent: "# Hello",
 				OutputPath:      "out.pdf",
@@ -161,19 +142,14 @@ func TestResolveCSS(t *testing.T) {
 		want string
 	}{
 		{
-			name: "NoStyle returns empty string",
-			opts: ConversionOptions{NoStyle: true},
+			name: "empty CSSContent returns empty string",
+			opts: ConversionOptions{},
 			want: "",
 		},
 		{
 			name: "custom CSS returns CSSContent",
 			opts: ConversionOptions{CSSContent: "body { color: red; }"},
 			want: "body { color: red; }",
-		},
-		{
-			name: "no options returns defaultCSS",
-			opts: ConversionOptions{},
-			want: defaultCSS,
 		},
 	}
 
@@ -306,7 +282,7 @@ func TestConvert_PDFConverterError(t *testing.T) {
 	}
 }
 
-func TestConvert_NoStyleSkipsCSS(t *testing.T) {
+func TestConvert_NoCSSByDefault(t *testing.T) {
 	cssInjector := &mockCSSInjector{}
 
 	service := NewConversionServiceWith(
@@ -319,7 +295,6 @@ func TestConvert_NoStyleSkipsCSS(t *testing.T) {
 	opts := ConversionOptions{
 		MarkdownContent: "# Hello",
 		OutputPath:      "out.pdf",
-		NoStyle:         true,
 	}
 
 	err := service.Convert(opts)
@@ -328,32 +303,7 @@ func TestConvert_NoStyleSkipsCSS(t *testing.T) {
 	}
 
 	if cssInjector.inputCSS != "" {
-		t.Errorf("cssInjector should receive empty CSS when NoStyle=true, got %q", cssInjector.inputCSS)
-	}
-}
-
-func TestConvert_DefaultCSSUsed(t *testing.T) {
-	cssInjector := &mockCSSInjector{}
-
-	service := NewConversionServiceWith(
-		&mockPreprocessor{},
-		&mockHTMLConverter{},
-		cssInjector,
-		&mockPDFConverter{},
-	)
-
-	opts := ConversionOptions{
-		MarkdownContent: "# Hello",
-		OutputPath:      "out.pdf",
-	}
-
-	err := service.Convert(opts)
-	if err != nil {
-		t.Fatalf("Convert() unexpected error: %v", err)
-	}
-
-	if cssInjector.inputCSS != defaultCSS {
-		t.Errorf("cssInjector should receive defaultCSS, got %q", cssInjector.inputCSS)
+		t.Errorf("cssInjector should receive empty CSS by default, got %q", cssInjector.inputCSS)
 	}
 }
 

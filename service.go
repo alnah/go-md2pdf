@@ -7,17 +7,15 @@ import (
 
 // Sentinel errors for service operations.
 var (
-	ErrConflictingCSSOptions = errors.New("cannot use both NoStyle and CSSContent")
-	ErrEmptyMarkdown         = errors.New("markdown content cannot be empty")
-	ErrEmptyOutput           = errors.New("output path cannot be empty")
+	ErrEmptyMarkdown = errors.New("markdown content cannot be empty")
+	ErrEmptyOutput   = errors.New("output path cannot be empty")
 )
 
 // ConversionOptions holds all inputs for a conversion.
 type ConversionOptions struct {
 	MarkdownContent string // Raw markdown content (required)
 	OutputPath      string // Path for output PDF (required)
-	CSSContent      string // Custom CSS (empty = use default)
-	NoStyle         bool   // Skip CSS injection entirely
+	CSSContent      string // Custom CSS (empty = no CSS)
 }
 
 // ConversionService orchestrates the markdown-to-PDF pipeline.
@@ -94,7 +92,7 @@ func (s *ConversionService) Convert(opts ConversionOptions) error {
 	return nil
 }
 
-// validateOptions checks that required fields are present and options are consistent.
+// validateOptions checks that required fields are present.
 func (s *ConversionService) validateOptions(opts ConversionOptions) error {
 	if opts.MarkdownContent == "" {
 		return ErrEmptyMarkdown
@@ -102,20 +100,10 @@ func (s *ConversionService) validateOptions(opts ConversionOptions) error {
 	if opts.OutputPath == "" {
 		return ErrEmptyOutput
 	}
-	if opts.NoStyle && opts.CSSContent != "" {
-		return ErrConflictingCSSOptions
-	}
 	return nil
 }
 
-// resolveCSS determines which CSS to use based on options.
-// Assumes validation has already been performed.
+// resolveCSS returns the CSS content from options.
 func (s *ConversionService) resolveCSS(opts ConversionOptions) string {
-	if opts.NoStyle {
-		return ""
-	}
-	if opts.CSSContent != "" {
-		return opts.CSSContent
-	}
-	return defaultCSS
+	return opts.CSSContent
 }
