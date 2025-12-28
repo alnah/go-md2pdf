@@ -23,9 +23,13 @@ const (
 	cssFileArgIndex    = 3
 )
 
-// run executes the main conversion pipeline.
-// Accepts converters as interfaces to enable testing with mocks.
-func run(args []string, preprocessor MarkdownPreprocessor, htmlConverter HTMLConverter, cssInjector CSSInjector, pdfConverter PDFConverter) error {
+// Converter is the interface for the conversion service.
+type Converter interface {
+	Convert(opts ConversionOptions) error
+}
+
+// run parses arguments, reads files, and delegates to the conversion service.
+func run(args []string, service Converter) error {
 	if len(args) < minRequiredArgs {
 		return ErrInvalidArgs
 	}
@@ -38,30 +42,27 @@ func run(args []string, preprocessor MarkdownPreprocessor, htmlConverter HTMLCon
 		return err
 	}
 
-	// Read and preprocess Markdown
+	// Read Markdown file
 	mdContent, err := readMarkdownFile(inputPath)
 	if err != nil {
 		return err
 	}
-	mdContent = preprocessor.PreprocessMarkdown(mdContent)
 
-	// Read optional CSS
-	cssContent, err := readOptionalCSS(args)
+	// Read optional CSS and determine NoStyle
+	cssContent, noStyle, err := resolveStyleArgs(args)
 	if err != nil {
 		return err
 	}
 
-	// Convert Markdown to HTML
-	htmlContent, err := htmlConverter.ToHTML(mdContent)
-	if err != nil {
-		return err
+	// Build options and delegate to service
+	opts := ConversionOptions{
+		MarkdownContent: mdContent,
+		OutputPath:      outputPath,
+		CSSContent:      cssContent,
+		NoStyle:         noStyle,
 	}
 
-	// Inject CSS into HTML
-	htmlContent = cssInjector.InjectCSS(htmlContent, cssContent)
-
-	// Convert HTML to PDF
-	if err := pdfConverter.ToPDF(htmlContent, outputPath); err != nil {
+	if err := service.Convert(opts); err != nil {
 		return err
 	}
 
@@ -87,24 +88,26 @@ func readMarkdownFile(path string) (string, error) {
 	return string(content), nil
 }
 
-// readOptionalCSS reads CSS content from the file path in args, if provided.
-// Returns defaultCSS if no CSS argument is present and --no-style is not set.
-// Returns empty string if --no-style flag is present.
-func readOptionalCSS(args []string) (string, error) {
+// resolveStyleArgs parses CSS-related arguments.
+// Returns (cssContent, noStyle, error).
+// - If --no-style is present: returns ("", true, nil)
+// - If CSS file is provided: returns (content, false, nil)
+// - Otherwise: returns ("", false, nil) and service will use default
+func resolveStyleArgs(args []string) (string, bool, error) {
 	if hasNoStyleFlag(args) {
-		return "", nil
+		return "", true, nil
 	}
 
 	if len(args) <= cssFileArgIndex {
-		return defaultCSS, nil
+		return "", false, nil
 	}
 
 	cssBytes, err := os.ReadFile(args[cssFileArgIndex]) // #nosec G304 -- TODO: add path sanitization
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", ErrReadCSS, err)
+		return "", false, fmt.Errorf("%w: %v", ErrReadCSS, err)
 	}
 
-	return string(cssBytes), nil
+	return string(cssBytes), false, nil
 }
 
 // hasNoStyleFlag checks if --no-style flag is present in args.
