@@ -10,6 +10,12 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
 
+	if cfg.Input.DefaultDir != "" {
+		t.Errorf("Input.DefaultDir = %q, want empty", cfg.Input.DefaultDir)
+	}
+	if cfg.Output.DefaultDir != "" {
+		t.Errorf("Output.DefaultDir = %q, want empty", cfg.Output.DefaultDir)
+	}
 	if cfg.CSS.Style != "" {
 		t.Errorf("CSS.Style = %q, want empty", cfg.CSS.Style)
 	}
@@ -57,6 +63,30 @@ footer:
 		}
 		if cfg.Footer.Position != "center" {
 			t.Errorf("Footer.Position = %q, want %q", cfg.Footer.Position, "center")
+		}
+	})
+
+	t.Run("loads input and output directories", func(t *testing.T) {
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "test.yaml")
+		content := `input:
+  defaultDir: "/path/to/input"
+output:
+  defaultDir: "/path/to/output"
+`
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		cfg, err := LoadConfig(configPath)
+		if err != nil {
+			t.Fatalf("LoadConfig() error = %v", err)
+		}
+		if cfg.Input.DefaultDir != "/path/to/input" {
+			t.Errorf("Input.DefaultDir = %q, want %q", cfg.Input.DefaultDir, "/path/to/input")
+		}
+		if cfg.Output.DefaultDir != "/path/to/output" {
+			t.Errorf("Output.DefaultDir = %q, want %q", cfg.Output.DefaultDir, "/path/to/output")
 		}
 	})
 

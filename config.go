@@ -19,10 +19,22 @@ var (
 
 // Config holds all configuration for document generation.
 type Config struct {
+	Input     InputConfig     `yaml:"input"`
+	Output    OutputConfig    `yaml:"output"`
 	CSS       CSSConfig       `yaml:"css"`
 	Footer    FooterConfig    `yaml:"footer"`
 	Signature SignatureConfig `yaml:"signature"`
 	Assets    AssetsConfig    `yaml:"assets"`
+}
+
+// InputConfig defines input source options.
+type InputConfig struct {
+	DefaultDir string `yaml:"defaultDir"` // Default input directory (empty = must specify)
+}
+
+// OutputConfig defines output destination options.
+type OutputConfig struct {
+	DefaultDir string `yaml:"defaultDir"` // Default output directory (empty = same as source)
 }
 
 // CSSConfig defines CSS styling options.
@@ -64,6 +76,8 @@ type AssetsConfig struct {
 // DefaultConfig returns a neutral configuration with all features disabled.
 func DefaultConfig() *Config {
 	return &Config{
+		Input:     InputConfig{DefaultDir: ""},
+		Output:    OutputConfig{DefaultDir: ""},
 		CSS:       CSSConfig{Style: ""},
 		Footer:    FooterConfig{Enabled: false},
 		Signature: SignatureConfig{Enabled: false},
