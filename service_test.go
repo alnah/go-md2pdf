@@ -72,6 +72,27 @@ func (m *mockPDFConverter) ToPDF(htmlContent, outputPath string) error {
 	return m.err
 }
 
+type mockSignatureInjector struct {
+	called    bool
+	inputHTML string
+	inputData *SignatureData
+	output    string
+	err       error
+}
+
+func (m *mockSignatureInjector) InjectSignature(htmlContent string, data *SignatureData) (string, error) {
+	m.called = true
+	m.inputHTML = htmlContent
+	m.inputData = data
+	if m.err != nil {
+		return "", m.err
+	}
+	if m.output != "" {
+		return m.output, nil
+	}
+	return htmlContent, nil
+}
+
 func TestValidateOptions(t *testing.T) {
 	service := &ConversionService{}
 
@@ -167,9 +188,10 @@ func TestConvert_Success(t *testing.T) {
 	preprocessor := &mockPreprocessor{output: "preprocessed"}
 	htmlConverter := &mockHTMLConverter{output: "<html>converted</html>"}
 	cssInjector := &mockCSSInjector{output: "<html>with-css</html>"}
+	signatureInjector := &mockSignatureInjector{output: "<html>with-sig</html>"}
 	pdfConverter := &mockPDFConverter{}
 
-	service := NewConversionServiceWith(preprocessor, htmlConverter, cssInjector, pdfConverter)
+	service := NewConversionServiceWith(preprocessor, htmlConverter, cssInjector, signatureInjector, pdfConverter)
 
 	opts := ConversionOptions{
 		MarkdownContent: "# Hello",
@@ -207,11 +229,18 @@ func TestConvert_Success(t *testing.T) {
 		t.Errorf("cssInjector inputCSS = %q, want %q", cssInjector.inputCSS, "body {}")
 	}
 
+	if !signatureInjector.called {
+		t.Error("signatureInjector was not called")
+	}
+	if signatureInjector.inputHTML != "<html>with-css</html>" {
+		t.Errorf("signatureInjector inputHTML = %q, want %q", signatureInjector.inputHTML, "<html>with-css</html>")
+	}
+
 	if !pdfConverter.called {
 		t.Error("pdfConverter was not called")
 	}
-	if pdfConverter.inputHTML != "<html>with-css</html>" {
-		t.Errorf("pdfConverter inputHTML = %q, want %q", pdfConverter.inputHTML, "<html>with-css</html>")
+	if pdfConverter.inputHTML != "<html>with-sig</html>" {
+		t.Errorf("pdfConverter inputHTML = %q, want %q", pdfConverter.inputHTML, "<html>with-sig</html>")
 	}
 	if pdfConverter.outputPath != "out.pdf" {
 		t.Errorf("pdfConverter outputPath = %q, want %q", pdfConverter.outputPath, "out.pdf")
@@ -240,6 +269,7 @@ func TestConvert_HTMLConverterError(t *testing.T) {
 		&mockPreprocessor{},
 		htmlConverter,
 		&mockCSSInjector{},
+		&mockSignatureInjector{},
 		&mockPDFConverter{},
 	)
 
@@ -265,6 +295,7 @@ func TestConvert_PDFConverterError(t *testing.T) {
 		&mockPreprocessor{},
 		&mockHTMLConverter{},
 		&mockCSSInjector{},
+		&mockSignatureInjector{},
 		pdfConverter,
 	)
 
@@ -282,6 +313,32 @@ func TestConvert_PDFConverterError(t *testing.T) {
 	}
 }
 
+func TestConvert_SignatureInjectorError(t *testing.T) {
+	sigErr := errors.New("signature template failed")
+	signatureInjector := &mockSignatureInjector{err: sigErr}
+
+	service := NewConversionServiceWith(
+		&mockPreprocessor{},
+		&mockHTMLConverter{},
+		&mockCSSInjector{},
+		signatureInjector,
+		&mockPDFConverter{},
+	)
+
+	opts := ConversionOptions{
+		MarkdownContent: "# Hello",
+		OutputPath:      "out.pdf",
+	}
+
+	err := service.Convert(opts)
+	if err == nil {
+		t.Fatal("Convert() expected error, got nil")
+	}
+	if !errors.Is(err, sigErr) {
+		t.Errorf("Convert() error should wrap %v, got %v", sigErr, err)
+	}
+}
+
 func TestConvert_NoCSSByDefault(t *testing.T) {
 	cssInjector := &mockCSSInjector{}
 
@@ -289,6 +346,7 @@ func TestConvert_NoCSSByDefault(t *testing.T) {
 		&mockPreprocessor{},
 		&mockHTMLConverter{},
 		cssInjector,
+		&mockSignatureInjector{},
 		&mockPDFConverter{},
 	)
 
@@ -311,9 +369,10 @@ func TestNewConversionServiceWith(t *testing.T) {
 	preprocessor := &mockPreprocessor{}
 	htmlConverter := &mockHTMLConverter{}
 	cssInjector := &mockCSSInjector{}
+	signatureInjector := &mockSignatureInjector{}
 	pdfConverter := &mockPDFConverter{}
 
-	service := NewConversionServiceWith(preprocessor, htmlConverter, cssInjector, pdfConverter)
+	service := NewConversionServiceWith(preprocessor, htmlConverter, cssInjector, signatureInjector, pdfConverter)
 
 	if service.preprocessor != preprocessor {
 		t.Error("preprocessor not set correctly")
@@ -324,6 +383,9 @@ func TestNewConversionServiceWith(t *testing.T) {
 	if service.cssInjector != cssInjector {
 		t.Error("cssInjector not set correctly")
 	}
+	if service.signatureInjector != signatureInjector {
+		t.Error("signatureInjector not set correctly")
+	}
 	if service.pdfConverter != pdfConverter {
 		t.Error("pdfConverter not set correctly")
 	}
@@ -331,44 +393,58 @@ func TestNewConversionServiceWith(t *testing.T) {
 
 func TestNewConversionServiceWith_NilDependencies(t *testing.T) {
 	tests := []struct {
-		name          string
-		preprocessor  MarkdownPreprocessor
-		htmlConverter HTMLConverter
-		cssInjector   CSSInjector
-		pdfConverter  PDFConverter
-		wantPanic     string
+		name              string
+		preprocessor      MarkdownPreprocessor
+		htmlConverter     HTMLConverter
+		cssInjector       CSSInjector
+		signatureInjector SignatureInjector
+		pdfConverter      PDFConverter
+		wantPanic         string
 	}{
 		{
-			name:          "nil preprocessor",
-			preprocessor:  nil,
-			htmlConverter: &mockHTMLConverter{},
-			cssInjector:   &mockCSSInjector{},
-			pdfConverter:  &mockPDFConverter{},
-			wantPanic:     "nil preprocessor provided to ConversionService",
+			name:              "nil preprocessor",
+			preprocessor:      nil,
+			htmlConverter:     &mockHTMLConverter{},
+			cssInjector:       &mockCSSInjector{},
+			signatureInjector: &mockSignatureInjector{},
+			pdfConverter:      &mockPDFConverter{},
+			wantPanic:         "nil preprocessor provided to ConversionService",
 		},
 		{
-			name:          "nil htmlConverter",
-			preprocessor:  &mockPreprocessor{},
-			htmlConverter: nil,
-			cssInjector:   &mockCSSInjector{},
-			pdfConverter:  &mockPDFConverter{},
-			wantPanic:     "nil htmlConverter provided to ConversionService",
+			name:              "nil htmlConverter",
+			preprocessor:      &mockPreprocessor{},
+			htmlConverter:     nil,
+			cssInjector:       &mockCSSInjector{},
+			signatureInjector: &mockSignatureInjector{},
+			pdfConverter:      &mockPDFConverter{},
+			wantPanic:         "nil htmlConverter provided to ConversionService",
 		},
 		{
-			name:          "nil cssInjector",
-			preprocessor:  &mockPreprocessor{},
-			htmlConverter: &mockHTMLConverter{},
-			cssInjector:   nil,
-			pdfConverter:  &mockPDFConverter{},
-			wantPanic:     "nil cssInjector provided to ConversionService",
+			name:              "nil cssInjector",
+			preprocessor:      &mockPreprocessor{},
+			htmlConverter:     &mockHTMLConverter{},
+			cssInjector:       nil,
+			signatureInjector: &mockSignatureInjector{},
+			pdfConverter:      &mockPDFConverter{},
+			wantPanic:         "nil cssInjector provided to ConversionService",
 		},
 		{
-			name:          "nil pdfConverter",
-			preprocessor:  &mockPreprocessor{},
-			htmlConverter: &mockHTMLConverter{},
-			cssInjector:   &mockCSSInjector{},
-			pdfConverter:  nil,
-			wantPanic:     "nil pdfConverter provided to ConversionService",
+			name:              "nil signatureInjector",
+			preprocessor:      &mockPreprocessor{},
+			htmlConverter:     &mockHTMLConverter{},
+			cssInjector:       &mockCSSInjector{},
+			signatureInjector: nil,
+			pdfConverter:      &mockPDFConverter{},
+			wantPanic:         "nil signatureInjector provided to ConversionService",
+		},
+		{
+			name:              "nil pdfConverter",
+			preprocessor:      &mockPreprocessor{},
+			htmlConverter:     &mockHTMLConverter{},
+			cssInjector:       &mockCSSInjector{},
+			signatureInjector: &mockSignatureInjector{},
+			pdfConverter:      nil,
+			wantPanic:         "nil pdfConverter provided to ConversionService",
 		},
 	}
 
@@ -383,7 +459,7 @@ func TestNewConversionServiceWith_NilDependencies(t *testing.T) {
 					t.Errorf("panic = %q, want %q", r, tt.wantPanic)
 				}
 			}()
-			NewConversionServiceWith(tt.preprocessor, tt.htmlConverter, tt.cssInjector, tt.pdfConverter)
+			NewConversionServiceWith(tt.preprocessor, tt.htmlConverter, tt.cssInjector, tt.signatureInjector, tt.pdfConverter)
 		})
 	}
 }

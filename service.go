@@ -13,26 +13,29 @@ var (
 
 // ConversionOptions holds all inputs for a conversion.
 type ConversionOptions struct {
-	MarkdownContent string // Raw markdown content (required)
-	OutputPath      string // Path for output PDF (required)
-	CSSContent      string // Custom CSS (empty = no CSS)
+	MarkdownContent string         // Raw markdown content (required)
+	OutputPath      string         // Path for output PDF (required)
+	CSSContent      string         // Custom CSS (empty = no CSS)
+	Signature       *SignatureData // Signature data (nil = no signature)
 }
 
 // ConversionService orchestrates the markdown-to-PDF pipeline.
 type ConversionService struct {
-	preprocessor  MarkdownPreprocessor
-	htmlConverter HTMLConverter
-	cssInjector   CSSInjector
-	pdfConverter  PDFConverter
+	preprocessor      MarkdownPreprocessor
+	htmlConverter     HTMLConverter
+	cssInjector       CSSInjector
+	signatureInjector SignatureInjector
+	pdfConverter      PDFConverter
 }
 
 // NewConversionService creates a service with production dependencies.
 func NewConversionService() *ConversionService {
 	return &ConversionService{
-		preprocessor:  &CommonMarkToPandocPreprocessor{},
-		htmlConverter: NewPandocConverter(),
-		cssInjector:   &CSSInjection{},
-		pdfConverter:  NewChromeConverter(),
+		preprocessor:      &CommonMarkToPandocPreprocessor{},
+		htmlConverter:     NewPandocConverter(),
+		cssInjector:       &CSSInjection{},
+		signatureInjector: NewSignatureInjection(),
+		pdfConverter:      NewChromeConverter(),
 	}
 }
 
@@ -42,6 +45,7 @@ func NewConversionServiceWith(
 	preprocessor MarkdownPreprocessor,
 	htmlConverter HTMLConverter,
 	cssInjector CSSInjector,
+	signatureInjector SignatureInjector,
 	pdfConverter PDFConverter,
 ) *ConversionService {
 	if preprocessor == nil {
@@ -53,14 +57,18 @@ func NewConversionServiceWith(
 	if cssInjector == nil {
 		panic("nil cssInjector provided to ConversionService")
 	}
+	if signatureInjector == nil {
+		panic("nil signatureInjector provided to ConversionService")
+	}
 	if pdfConverter == nil {
 		panic("nil pdfConverter provided to ConversionService")
 	}
 	return &ConversionService{
-		preprocessor:  preprocessor,
-		htmlConverter: htmlConverter,
-		cssInjector:   cssInjector,
-		pdfConverter:  pdfConverter,
+		preprocessor:      preprocessor,
+		htmlConverter:     htmlConverter,
+		cssInjector:       cssInjector,
+		signatureInjector: signatureInjector,
+		pdfConverter:      pdfConverter,
 	}
 }
 
@@ -83,6 +91,12 @@ func (s *ConversionService) Convert(opts ConversionOptions) error {
 
 	// Inject CSS
 	htmlContent = s.cssInjector.InjectCSS(htmlContent, css)
+
+	// Inject signature (if provided)
+	htmlContent, err = s.signatureInjector.InjectSignature(htmlContent, opts.Signature)
+	if err != nil {
+		return fmt.Errorf("injecting signature: %w", err)
+	}
 
 	// Convert to PDF
 	if err := s.pdfConverter.ToPDF(htmlContent, opts.OutputPath); err != nil {
