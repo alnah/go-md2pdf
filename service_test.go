@@ -93,6 +93,23 @@ func (m *mockSignatureInjector) InjectSignature(htmlContent string, data *Signat
 	return htmlContent, nil
 }
 
+type mockFooterInjector struct {
+	called    bool
+	inputHTML string
+	inputData *FooterData
+	output    string
+}
+
+func (m *mockFooterInjector) InjectFooter(htmlContent string, data *FooterData) string {
+	m.called = true
+	m.inputHTML = htmlContent
+	m.inputData = data
+	if m.output != "" {
+		return m.output
+	}
+	return htmlContent
+}
+
 func TestValidateOptions(t *testing.T) {
 	service := &ConversionService{}
 
@@ -188,10 +205,11 @@ func TestConvert_Success(t *testing.T) {
 	preprocessor := &mockPreprocessor{output: "preprocessed"}
 	htmlConverter := &mockHTMLConverter{output: "<html>converted</html>"}
 	cssInjector := &mockCSSInjector{output: "<html>with-css</html>"}
+	footerInjector := &mockFooterInjector{output: "<html>with-footer</html>"}
 	signatureInjector := &mockSignatureInjector{output: "<html>with-sig</html>"}
 	pdfConverter := &mockPDFConverter{}
 
-	service := NewConversionServiceWith(preprocessor, htmlConverter, cssInjector, signatureInjector, pdfConverter)
+	service := NewConversionServiceWith(preprocessor, htmlConverter, cssInjector, footerInjector, signatureInjector, pdfConverter)
 
 	opts := ConversionOptions{
 		MarkdownContent: "# Hello",
@@ -229,11 +247,18 @@ func TestConvert_Success(t *testing.T) {
 		t.Errorf("cssInjector inputCSS = %q, want %q", cssInjector.inputCSS, "body {}")
 	}
 
+	if !footerInjector.called {
+		t.Error("footerInjector was not called")
+	}
+	if footerInjector.inputHTML != "<html>with-css</html>" {
+		t.Errorf("footerInjector inputHTML = %q, want %q", footerInjector.inputHTML, "<html>with-css</html>")
+	}
+
 	if !signatureInjector.called {
 		t.Error("signatureInjector was not called")
 	}
-	if signatureInjector.inputHTML != "<html>with-css</html>" {
-		t.Errorf("signatureInjector inputHTML = %q, want %q", signatureInjector.inputHTML, "<html>with-css</html>")
+	if signatureInjector.inputHTML != "<html>with-footer</html>" {
+		t.Errorf("signatureInjector inputHTML = %q, want %q", signatureInjector.inputHTML, "<html>with-footer</html>")
 	}
 
 	if !pdfConverter.called {
@@ -269,6 +294,7 @@ func TestConvert_HTMLConverterError(t *testing.T) {
 		&mockPreprocessor{},
 		htmlConverter,
 		&mockCSSInjector{},
+		&mockFooterInjector{},
 		&mockSignatureInjector{},
 		&mockPDFConverter{},
 	)
@@ -295,6 +321,7 @@ func TestConvert_PDFConverterError(t *testing.T) {
 		&mockPreprocessor{},
 		&mockHTMLConverter{},
 		&mockCSSInjector{},
+		&mockFooterInjector{},
 		&mockSignatureInjector{},
 		pdfConverter,
 	)
@@ -321,6 +348,7 @@ func TestConvert_SignatureInjectorError(t *testing.T) {
 		&mockPreprocessor{},
 		&mockHTMLConverter{},
 		&mockCSSInjector{},
+		&mockFooterInjector{},
 		signatureInjector,
 		&mockPDFConverter{},
 	)
@@ -346,6 +374,7 @@ func TestConvert_NoCSSByDefault(t *testing.T) {
 		&mockPreprocessor{},
 		&mockHTMLConverter{},
 		cssInjector,
+		&mockFooterInjector{},
 		&mockSignatureInjector{},
 		&mockPDFConverter{},
 	)
@@ -369,10 +398,11 @@ func TestNewConversionServiceWith(t *testing.T) {
 	preprocessor := &mockPreprocessor{}
 	htmlConverter := &mockHTMLConverter{}
 	cssInjector := &mockCSSInjector{}
+	footerInjector := &mockFooterInjector{}
 	signatureInjector := &mockSignatureInjector{}
 	pdfConverter := &mockPDFConverter{}
 
-	service := NewConversionServiceWith(preprocessor, htmlConverter, cssInjector, signatureInjector, pdfConverter)
+	service := NewConversionServiceWith(preprocessor, htmlConverter, cssInjector, footerInjector, signatureInjector, pdfConverter)
 
 	if service.preprocessor != preprocessor {
 		t.Error("preprocessor not set correctly")
@@ -382,6 +412,9 @@ func TestNewConversionServiceWith(t *testing.T) {
 	}
 	if service.cssInjector != cssInjector {
 		t.Error("cssInjector not set correctly")
+	}
+	if service.footerInjector != footerInjector {
+		t.Error("footerInjector not set correctly")
 	}
 	if service.signatureInjector != signatureInjector {
 		t.Error("signatureInjector not set correctly")
@@ -397,6 +430,7 @@ func TestNewConversionServiceWith_NilDependencies(t *testing.T) {
 		preprocessor      MarkdownPreprocessor
 		htmlConverter     HTMLConverter
 		cssInjector       CSSInjector
+		footerInjector    FooterInjector
 		signatureInjector SignatureInjector
 		pdfConverter      PDFConverter
 		wantPanic         string
@@ -406,6 +440,7 @@ func TestNewConversionServiceWith_NilDependencies(t *testing.T) {
 			preprocessor:      nil,
 			htmlConverter:     &mockHTMLConverter{},
 			cssInjector:       &mockCSSInjector{},
+			footerInjector:    &mockFooterInjector{},
 			signatureInjector: &mockSignatureInjector{},
 			pdfConverter:      &mockPDFConverter{},
 			wantPanic:         "nil preprocessor provided to ConversionService",
@@ -415,6 +450,7 @@ func TestNewConversionServiceWith_NilDependencies(t *testing.T) {
 			preprocessor:      &mockPreprocessor{},
 			htmlConverter:     nil,
 			cssInjector:       &mockCSSInjector{},
+			footerInjector:    &mockFooterInjector{},
 			signatureInjector: &mockSignatureInjector{},
 			pdfConverter:      &mockPDFConverter{},
 			wantPanic:         "nil htmlConverter provided to ConversionService",
@@ -424,15 +460,27 @@ func TestNewConversionServiceWith_NilDependencies(t *testing.T) {
 			preprocessor:      &mockPreprocessor{},
 			htmlConverter:     &mockHTMLConverter{},
 			cssInjector:       nil,
+			footerInjector:    &mockFooterInjector{},
 			signatureInjector: &mockSignatureInjector{},
 			pdfConverter:      &mockPDFConverter{},
 			wantPanic:         "nil cssInjector provided to ConversionService",
+		},
+		{
+			name:              "nil footerInjector",
+			preprocessor:      &mockPreprocessor{},
+			htmlConverter:     &mockHTMLConverter{},
+			cssInjector:       &mockCSSInjector{},
+			footerInjector:    nil,
+			signatureInjector: &mockSignatureInjector{},
+			pdfConverter:      &mockPDFConverter{},
+			wantPanic:         "nil footerInjector provided to ConversionService",
 		},
 		{
 			name:              "nil signatureInjector",
 			preprocessor:      &mockPreprocessor{},
 			htmlConverter:     &mockHTMLConverter{},
 			cssInjector:       &mockCSSInjector{},
+			footerInjector:    &mockFooterInjector{},
 			signatureInjector: nil,
 			pdfConverter:      &mockPDFConverter{},
 			wantPanic:         "nil signatureInjector provided to ConversionService",
@@ -442,6 +490,7 @@ func TestNewConversionServiceWith_NilDependencies(t *testing.T) {
 			preprocessor:      &mockPreprocessor{},
 			htmlConverter:     &mockHTMLConverter{},
 			cssInjector:       &mockCSSInjector{},
+			footerInjector:    &mockFooterInjector{},
 			signatureInjector: &mockSignatureInjector{},
 			pdfConverter:      nil,
 			wantPanic:         "nil pdfConverter provided to ConversionService",
@@ -459,7 +508,7 @@ func TestNewConversionServiceWith_NilDependencies(t *testing.T) {
 					t.Errorf("panic = %q, want %q", r, tt.wantPanic)
 				}
 			}()
-			NewConversionServiceWith(tt.preprocessor, tt.htmlConverter, tt.cssInjector, tt.signatureInjector, tt.pdfConverter)
+			NewConversionServiceWith(tt.preprocessor, tt.htmlConverter, tt.cssInjector, tt.footerInjector, tt.signatureInjector, tt.pdfConverter)
 		})
 	}
 }

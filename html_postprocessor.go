@@ -125,3 +125,108 @@ func (s *SignatureInjection) InjectSignature(htmlContent string, data *Signature
 	// Fallback: append to end
 	return htmlContent + signatureHTML, nil
 }
+
+// FooterData holds footer configuration for injection into HTML.
+// Decoupled from FooterConfig to keep service independent of config types.
+type FooterData struct {
+	Position       string // "left", "center", "right" (default: "right")
+	ShowPageNumber bool
+	Date           string
+	Status         string
+	Text           string
+}
+
+// FooterInjector defines the contract for footer injection into HTML.
+type FooterInjector interface {
+	InjectFooter(htmlContent string, data *FooterData) string
+}
+
+// FooterInjection generates @page CSS rules and injects them into HTML.
+type FooterInjection struct{}
+
+// InjectFooter generates CSS @page rules for the footer and injects them.
+// If data is nil, returns htmlContent unchanged.
+func (f *FooterInjection) InjectFooter(htmlContent string, data *FooterData) string {
+	if data == nil {
+		return htmlContent
+	}
+
+	cssContent := f.buildFooterCSS(data)
+	if cssContent == "" {
+		return htmlContent
+	}
+
+	styleBlock := "<style>" + cssContent + "</style>"
+	lowerHTML := strings.ToLower(htmlContent)
+
+	// Try inserting before </head>
+	if idx := strings.Index(lowerHTML, "</head>"); idx != -1 {
+		return htmlContent[:idx] + styleBlock + htmlContent[idx:]
+	}
+
+	// Try inserting after <body>
+	if idx := strings.Index(lowerHTML, "<body"); idx != -1 {
+		closeIdx := strings.Index(htmlContent[idx:], ">")
+		if closeIdx != -1 {
+			insertPos := idx + closeIdx + 1
+			return htmlContent[:insertPos] + styleBlock + htmlContent[insertPos:]
+		}
+	}
+
+	// Fallback: prepend
+	return styleBlock + htmlContent
+}
+
+// buildFooterCSS generates the @page CSS rule for the footer.
+func (f *FooterInjection) buildFooterCSS(data *FooterData) string {
+	content := f.buildFooterContent(data)
+	if content == "" {
+		return ""
+	}
+
+	position := f.resolvePosition(data.Position)
+
+	return fmt.Sprintf(`@page { %s { content: %s; font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; font-size: 10pt; color: #888; } }`, position, content)
+}
+
+// buildFooterContent builds the CSS content value from footer data.
+func (f *FooterInjection) buildFooterContent(data *FooterData) string {
+	var parts []string
+
+	if data.ShowPageNumber {
+		parts = append(parts, "counter(page)")
+	}
+	if data.Date != "" {
+		parts = append(parts, "'"+escapeCSSString(data.Date)+"'")
+	}
+	if data.Status != "" {
+		parts = append(parts, "'"+escapeCSSString(data.Status)+"'")
+	}
+	if data.Text != "" {
+		parts = append(parts, "'"+escapeCSSString(data.Text)+"'")
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+	return strings.Join(parts, " ' - ' ")
+}
+
+// resolvePosition converts position name to CSS @page position.
+func (f *FooterInjection) resolvePosition(position string) string {
+	switch position {
+	case "left":
+		return "@bottom-left"
+	case "center":
+		return "@bottom-center"
+	default:
+		return "@bottom-right"
+	}
+}
+
+// escapeCSSString escapes special characters for use in CSS string literals.
+func escapeCSSString(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "'", "\\'")
+	return s
+}

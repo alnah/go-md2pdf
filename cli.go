@@ -100,8 +100,11 @@ func run(args []string, service Converter) error {
 		return err
 	}
 
+	// Build footer data
+	footerData := buildFooterData(cfg)
+
 	// Convert files
-	results := convertBatch(service, files, cssContent, sigData)
+	results := convertBatch(service, files, cssContent, footerData, sigData)
 
 	// Print results and return appropriate exit code
 	failedCount := printResults(results, flags.quiet, flags.verbose)
@@ -297,8 +300,24 @@ func isURL(s string) bool {
 	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
 }
 
+// buildFooterData creates FooterData from config if footer is enabled.
+// Returns nil if footer is disabled.
+func buildFooterData(cfg *Config) *FooterData {
+	if !cfg.Footer.Enabled {
+		return nil
+	}
+
+	return &FooterData{
+		Position:       cfg.Footer.Position,
+		ShowPageNumber: cfg.Footer.ShowPageNumber,
+		Date:           cfg.Footer.Date,
+		Status:         cfg.Footer.Status,
+		Text:           cfg.Footer.Text,
+	}
+}
+
 // convertBatch processes files concurrently using the service.
-func convertBatch(service Converter, files []FileToConvert, cssContent string, sigData *SignatureData) []ConversionResult {
+func convertBatch(service Converter, files []FileToConvert, cssContent string, footerData *FooterData, sigData *SignatureData) []ConversionResult {
 	if len(files) == 0 {
 		return nil
 	}
@@ -318,7 +337,7 @@ func convertBatch(service Converter, files []FileToConvert, cssContent string, s
 			defer wg.Done()
 			sem <- struct{}{}        // acquire
 			defer func() { <-sem }() // release
-			results[idx] = convertFile(service, f, cssContent, sigData)
+			results[idx] = convertFile(service, f, cssContent, footerData, sigData)
 		}(i, file)
 	}
 
@@ -327,7 +346,7 @@ func convertBatch(service Converter, files []FileToConvert, cssContent string, s
 }
 
 // convertFile processes a single file and returns the result.
-func convertFile(service Converter, f FileToConvert, cssContent string, sigData *SignatureData) ConversionResult {
+func convertFile(service Converter, f FileToConvert, cssContent string, footerData *FooterData, sigData *SignatureData) ConversionResult {
 	start := time.Now()
 	result := ConversionResult{
 		InputPath:  f.InputPath,
@@ -355,6 +374,7 @@ func convertFile(service Converter, f FileToConvert, cssContent string, sigData 
 		MarkdownContent: string(content),
 		OutputPath:      f.OutputPath,
 		CSSContent:      cssContent,
+		Footer:          footerData,
 		Signature:       sigData,
 	})
 

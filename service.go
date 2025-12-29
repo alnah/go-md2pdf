@@ -16,6 +16,7 @@ type ConversionOptions struct {
 	MarkdownContent string         // Raw markdown content (required)
 	OutputPath      string         // Path for output PDF (required)
 	CSSContent      string         // Custom CSS (empty = no CSS)
+	Footer          *FooterData    // Footer data (nil = no footer)
 	Signature       *SignatureData // Signature data (nil = no signature)
 }
 
@@ -24,6 +25,7 @@ type ConversionService struct {
 	preprocessor      MarkdownPreprocessor
 	htmlConverter     HTMLConverter
 	cssInjector       CSSInjector
+	footerInjector    FooterInjector
 	signatureInjector SignatureInjector
 	pdfConverter      PDFConverter
 }
@@ -34,6 +36,7 @@ func NewConversionService() *ConversionService {
 		preprocessor:      &CommonMarkToPandocPreprocessor{},
 		htmlConverter:     NewPandocConverter(),
 		cssInjector:       &CSSInjection{},
+		footerInjector:    &FooterInjection{},
 		signatureInjector: NewSignatureInjection(),
 		pdfConverter:      NewChromeConverter(),
 	}
@@ -45,6 +48,7 @@ func NewConversionServiceWith(
 	preprocessor MarkdownPreprocessor,
 	htmlConverter HTMLConverter,
 	cssInjector CSSInjector,
+	footerInjector FooterInjector,
 	signatureInjector SignatureInjector,
 	pdfConverter PDFConverter,
 ) *ConversionService {
@@ -57,6 +61,9 @@ func NewConversionServiceWith(
 	if cssInjector == nil {
 		panic("nil cssInjector provided to ConversionService")
 	}
+	if footerInjector == nil {
+		panic("nil footerInjector provided to ConversionService")
+	}
 	if signatureInjector == nil {
 		panic("nil signatureInjector provided to ConversionService")
 	}
@@ -67,6 +74,7 @@ func NewConversionServiceWith(
 		preprocessor:      preprocessor,
 		htmlConverter:     htmlConverter,
 		cssInjector:       cssInjector,
+		footerInjector:    footerInjector,
 		signatureInjector: signatureInjector,
 		pdfConverter:      pdfConverter,
 	}
@@ -91,6 +99,9 @@ func (s *ConversionService) Convert(opts ConversionOptions) error {
 
 	// Inject CSS
 	htmlContent = s.cssInjector.InjectCSS(htmlContent, css)
+
+	// Inject footer (if provided)
+	htmlContent = s.footerInjector.InjectFooter(htmlContent, opts.Footer)
 
 	// Inject signature (if provided)
 	htmlContent, err = s.signatureInjector.InjectSignature(htmlContent, opts.Signature)

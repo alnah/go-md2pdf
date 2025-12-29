@@ -526,16 +526,9 @@ img {
   }
 }
 
-/* 12. PRINT SETTINGS AND PAGINATION */
+/* 12. PRINT SETTINGS */
 @page {
   margin: 2cm 2cm 2.5cm 2cm;
-  @bottom-right {
-    content: counter(page) ' - © Alexis Nahan';
-    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial,
-      sans-serif;
-    font-size: 10pt;
-    color: #888;
-  }
 }
 
 @media print {
