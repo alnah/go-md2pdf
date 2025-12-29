@@ -1,0 +1,9 @@
+<div class="signature-block">
+  {{if .ImagePath}}<img src="{{.ImagePath}}" alt="{{.Name}}" style="height: 60px; margin-right: 15px;">{{end}}
+  <div>
+    <strong>{{.Name}}</strong>
+    {{if .Title}}<br><em>{{.Title}}</em>{{end}}
+    {{if .Email}}<br><a href="mailto:{{.Email}}">{{.Email}}</a>{{end}}
+    {{range .Links}}<br><a href="{{.URL}}">{{.Label}}</a>{{end}}
+  </div>
+</div>
