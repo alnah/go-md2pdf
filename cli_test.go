@@ -682,3 +682,75 @@ func TestIsURL(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildFooterData(t *testing.T) {
+	t.Run("footer disabled returns nil", func(t *testing.T) {
+		cfg := &Config{Footer: FooterConfig{
+			Enabled:        false,
+			Position:       "right",
+			ShowPageNumber: true,
+			Text:           "Footer Text",
+		}}
+		got := buildFooterData(cfg)
+		if got != nil {
+			t.Error("expected nil when footer.enabled=false")
+		}
+	})
+
+	t.Run("footer enabled returns FooterData", func(t *testing.T) {
+		cfg := &Config{Footer: FooterConfig{
+			Enabled:        true,
+			Position:       "center",
+			ShowPageNumber: true,
+			Date:           "2025-01-15",
+			Status:         "DRAFT",
+			Text:           "Footer Text",
+		}}
+		got := buildFooterData(cfg)
+		if got == nil {
+			t.Fatal("expected FooterData, got nil")
+		}
+		if got.Position != "center" {
+			t.Errorf("Position = %q, want %q", got.Position, "center")
+		}
+		if !got.ShowPageNumber {
+			t.Error("ShowPageNumber = false, want true")
+		}
+		if got.Date != "2025-01-15" {
+			t.Errorf("Date = %q, want %q", got.Date, "2025-01-15")
+		}
+		if got.Status != "DRAFT" {
+			t.Errorf("Status = %q, want %q", got.Status, "DRAFT")
+		}
+		if got.Text != "Footer Text" {
+			t.Errorf("Text = %q, want %q", got.Text, "Footer Text")
+		}
+	})
+
+	t.Run("footer enabled with minimal config", func(t *testing.T) {
+		cfg := &Config{Footer: FooterConfig{
+			Enabled: true,
+			// All other fields empty/false
+		}}
+		got := buildFooterData(cfg)
+		if got == nil {
+			t.Fatal("expected FooterData, got nil")
+		}
+		// All fields should be zero values
+		if got.Position != "" {
+			t.Errorf("Position = %q, want empty", got.Position)
+		}
+		if got.ShowPageNumber {
+			t.Error("ShowPageNumber = true, want false")
+		}
+		if got.Date != "" {
+			t.Errorf("Date = %q, want empty", got.Date)
+		}
+		if got.Status != "" {
+			t.Errorf("Status = %q, want empty", got.Status)
+		}
+		if got.Text != "" {
+			t.Errorf("Text = %q, want empty", got.Text)
+		}
+	})
+}
