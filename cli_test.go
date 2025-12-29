@@ -272,6 +272,15 @@ func TestResolveOutputPath(t *testing.T) {
 			outputDir: "",
 			want:      "/docs/file.pdf",
 		},
+		{
+			// When filepath.Rel fails (e.g., different drives on Windows),
+			// falls back to flat output in outputDir.
+			name:         "filepath.Rel fallback - unrelated paths",
+			inputPath:    "relative/file.md",
+			outputDir:    "/out",
+			baseInputDir: "/absolute/base",
+			want:         "/out/file.pdf",
+		},
 	}
 
 	for _, tt := range tests {
@@ -415,8 +424,8 @@ func TestDiscoverFiles(t *testing.T) {
 }
 
 func TestResolveCSSContent(t *testing.T) {
-	t.Run("empty file returns empty string", func(t *testing.T) {
-		got, err := resolveCSSContent("")
+	t.Run("empty file and no config returns empty string", func(t *testing.T) {
+		got, err := resolveCSSContent("", nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -433,7 +442,7 @@ func TestResolveCSSContent(t *testing.T) {
 			t.Fatalf("failed to write CSS file: %v", err)
 		}
 
-		got, err := resolveCSSContent(cssPath)
+		got, err := resolveCSSContent(cssPath, nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -443,9 +452,46 @@ func TestResolveCSSContent(t *testing.T) {
 	})
 
 	t.Run("nonexistent file returns error", func(t *testing.T) {
-		_, err := resolveCSSContent("/nonexistent/style.css")
+		_, err := resolveCSSContent("/nonexistent/style.css", nil)
 		if err == nil {
 			t.Error("expected error for nonexistent file")
+		}
+	})
+
+	t.Run("config style loads from embedded assets", func(t *testing.T) {
+		cfg := &Config{CSS: CSSConfig{Style: "default"}}
+		got, err := resolveCSSContent("", cfg)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == "" {
+			t.Error("expected CSS content from embedded assets, got empty string")
+		}
+	})
+
+	t.Run("css flag overrides config style", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cssPath := filepath.Join(tempDir, "override.css")
+		cssContent := "body { color: blue; }"
+		if err := os.WriteFile(cssPath, []byte(cssContent), 0644); err != nil {
+			t.Fatalf("failed to write CSS file: %v", err)
+		}
+
+		cfg := &Config{CSS: CSSConfig{Style: "default"}}
+		got, err := resolveCSSContent(cssPath, cfg)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != cssContent {
+			t.Errorf("got %q, want %q (flag should override config)", got, cssContent)
+		}
+	})
+
+	t.Run("unknown config style returns error", func(t *testing.T) {
+		cfg := &Config{CSS: CSSConfig{Style: "nonexistent"}}
+		_, err := resolveCSSContent("", cfg)
+		if err == nil {
+			t.Error("expected error for unknown style")
 		}
 	})
 }

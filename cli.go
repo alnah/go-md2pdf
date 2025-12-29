@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alnah/go-md2pdf/internal/assets"
 	flag "github.com/spf13/pflag"
 )
 
@@ -86,7 +87,7 @@ func run(args []string, service Converter) error {
 	}
 
 	// Resolve CSS content
-	cssContent, err := resolveCSSContent(flags.cssFile)
+	cssContent, err := resolveCSSContent(flags.cssFile, cfg)
 	if err != nil {
 		return err
 	}
@@ -153,16 +154,25 @@ func resolveOutputDir(flagOutput string, cfg *Config) string {
 	return cfg.Output.DefaultDir
 }
 
-// resolveCSSContent reads CSS from file if specified.
-func resolveCSSContent(cssFile string) (string, error) {
-	if cssFile == "" {
-		return "", nil
+// resolveCSSContent resolves CSS content from CLI flag or config.
+// Priority: 1) --css flag (external file), 2) config.CSS.Style (embedded), 3) none.
+func resolveCSSContent(cssFile string, cfg *Config) (string, error) {
+	// 1. CLI flag overrides everything (for dev/debug)
+	if cssFile != "" {
+		content, err := os.ReadFile(cssFile) // #nosec G304 -- user-provided path
+		if err != nil {
+			return "", fmt.Errorf("%w: %v", ErrReadCSS, err)
+		}
+		return string(content), nil
 	}
-	content, err := os.ReadFile(cssFile) // #nosec G304 -- user-provided path
-	if err != nil {
-		return "", fmt.Errorf("%w: %v", ErrReadCSS, err)
+
+	// 2. Config style reference loads from embedded assets
+	if cfg != nil && cfg.CSS.Style != "" {
+		return assets.LoadStyle(cfg.CSS.Style)
 	}
-	return string(content), nil
+
+	// 3. No CSS
+	return "", nil
 }
 
 // discoverFiles finds all markdown files to convert.
@@ -213,12 +223,16 @@ func resolveOutputPath(inputPath, outputDir, baseInputDir string) string {
 		return filepath.Join(filepath.Dir(inputPath), base+".pdf")
 	}
 
-	// Output looks like a file (has .pdf extension)
+	// Output looks like a file (has .pdf extension).
+	// Note: a directory named "foo.pdf/" would be misdetected as a file,
+	// but this is an unlikely edge case in practice.
 	if strings.HasSuffix(outputDir, ".pdf") {
 		return outputDir
 	}
 
-	// Mirror directory structure if we have a base input dir
+	// Mirror directory structure if we have a base input dir.
+	// If filepath.Rel fails (e.g., paths on different drives on Windows),
+	// fall through to flat output in outputDir.
 	if baseInputDir != "" {
 		relPath, err := filepath.Rel(baseInputDir, inputPath)
 		if err == nil {
@@ -260,46 +274,48 @@ func convertBatch(service Converter, files []FileToConvert, cssContent string) [
 			defer wg.Done()
 			sem <- struct{}{}        // acquire
 			defer func() { <-sem }() // release
-
-			start := time.Now()
-			result := ConversionResult{
-				InputPath:  f.InputPath,
-				OutputPath: f.OutputPath,
-			}
-
-			// Read the markdown file
-			content, err := os.ReadFile(f.InputPath) // #nosec G304 -- discovered path
-			if err != nil {
-				result.Err = fmt.Errorf("%w: %v", ErrReadMarkdown, err)
-				result.Duration = time.Since(start)
-				results[idx] = result
-				return
-			}
-
-			// Ensure output directory exists
-			outDir := filepath.Dir(f.OutputPath)
-			if err := os.MkdirAll(outDir, 0o750); err != nil {
-				result.Err = fmt.Errorf("creating output directory: %w", err)
-				result.Duration = time.Since(start)
-				results[idx] = result
-				return
-			}
-
-			// Convert via service
-			err = service.Convert(ConversionOptions{
-				MarkdownContent: string(content),
-				OutputPath:      f.OutputPath,
-				CSSContent:      cssContent,
-			})
-
-			result.Err = err
-			result.Duration = time.Since(start)
-			results[idx] = result
+			results[idx] = convertFile(service, f, cssContent)
 		}(i, file)
 	}
 
 	wg.Wait()
 	return results
+}
+
+// convertFile processes a single file and returns the result.
+func convertFile(service Converter, f FileToConvert, cssContent string) ConversionResult {
+	start := time.Now()
+	result := ConversionResult{
+		InputPath:  f.InputPath,
+		OutputPath: f.OutputPath,
+	}
+
+	// Read the markdown file
+	content, err := os.ReadFile(f.InputPath) // #nosec G304 -- discovered path
+	if err != nil {
+		result.Err = fmt.Errorf("%w: %v", ErrReadMarkdown, err)
+		result.Duration = time.Since(start)
+		return result
+	}
+
+	// Ensure output directory exists
+	outDir := filepath.Dir(f.OutputPath)
+	if err := os.MkdirAll(outDir, 0o750); err != nil {
+		result.Err = fmt.Errorf("creating output directory: %w", err)
+		result.Duration = time.Since(start)
+		return result
+	}
+
+	// Convert via service
+	err = service.Convert(ConversionOptions{
+		MarkdownContent: string(content),
+		OutputPath:      f.OutputPath,
+		CSSContent:      cssContent,
+	})
+
+	result.Err = err
+	result.Duration = time.Since(start)
+	return result
 }
 
 // printResults outputs conversion results and returns the number of failures.

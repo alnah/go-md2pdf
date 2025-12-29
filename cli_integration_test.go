@@ -222,7 +222,6 @@ func TestBatchConversion_MixedSuccessFailure(t *testing.T) {
 	})
 
 	mock := newMockConverter()
-	badPath := filepath.Join(tempDir, "bad.md")
 
 	// Make converter fail for bad.md
 	mock.convertFunc = func(opts ConversionOptions) error {
@@ -256,8 +255,6 @@ func TestBatchConversion_MixedSuccessFailure(t *testing.T) {
 	if len(calls) != 2 {
 		t.Errorf("expected 2 conversion attempts, got %d", len(calls))
 	}
-
-	_ = badPath // used for clarity
 }
 
 func TestBatchConversion_EmptyDirectory(t *testing.T) {
