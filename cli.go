@@ -17,10 +17,11 @@ import (
 
 // Sentinel errors for CLI operations.
 var (
-	ErrNoInput          = errors.New("no input specified")
-	ErrReadCSS          = errors.New("failed to read CSS file")
-	ErrReadMarkdown     = errors.New("failed to read markdown file")
-	ErrInvalidExtension = errors.New("file must have .md or .markdown extension")
+	ErrNoInput            = errors.New("no input specified")
+	ErrReadCSS            = errors.New("failed to read CSS file")
+	ErrReadMarkdown       = errors.New("failed to read markdown file")
+	ErrInvalidExtension   = errors.New("file must have .md or .markdown extension")
+	ErrSignatureImagePath = errors.New("signature image not found")
 )
 
 // Converter is the interface for the conversion service.
@@ -44,11 +45,12 @@ type ConversionResult struct {
 
 // cliFlags holds parsed command-line flags.
 type cliFlags struct {
-	configName string
-	outputPath string
-	cssFile    string
-	quiet      bool
-	verbose    bool
+	configName  string
+	outputPath  string
+	cssFile     string
+	quiet       bool
+	verbose     bool
+	noSignature bool
 }
 
 // run parses arguments, discovers files, and orchestrates batch conversion.
@@ -92,8 +94,14 @@ func run(args []string, service Converter) error {
 		return err
 	}
 
+	// Build signature data
+	sigData, err := buildSignatureData(cfg, flags.noSignature)
+	if err != nil {
+		return err
+	}
+
 	// Convert files
-	results := convertBatch(service, files, cssContent)
+	results := convertBatch(service, files, cssContent, sigData)
 
 	// Print results and return appropriate exit code
 	failedCount := printResults(results, flags.quiet, flags.verbose)
@@ -115,6 +123,7 @@ func parseFlags(args []string) (*cliFlags, []string, error) {
 	flagSet.StringVar(&flags.cssFile, "css", "", "CSS file for styling")
 	flagSet.BoolVarP(&flags.quiet, "quiet", "q", false, "only show errors")
 	flagSet.BoolVarP(&flags.verbose, "verbose", "v", false, "show detailed timing")
+	flagSet.BoolVar(&flags.noSignature, "no-signature", false, "disable signature injection")
 
 	flagSet.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: go-md2pdf [flags] <input> [flags]\n\n")
@@ -253,8 +262,43 @@ func validateMarkdownExtension(path string) error {
 	return nil
 }
 
+// buildSignatureData creates SignatureData from config if signature is enabled.
+// Returns nil if signature is disabled (via config or --no-signature flag).
+// Returns error if image path is set but file doesn't exist.
+func buildSignatureData(cfg *Config, noSignature bool) (*SignatureData, error) {
+	if noSignature || !cfg.Signature.Enabled {
+		return nil, nil
+	}
+
+	// Validate image path if set (and not a URL)
+	if cfg.Signature.ImagePath != "" && !isURL(cfg.Signature.ImagePath) {
+		if !fileExists(cfg.Signature.ImagePath) {
+			return nil, fmt.Errorf("%w: %s", ErrSignatureImagePath, cfg.Signature.ImagePath)
+		}
+	}
+
+	// Convert config links to SignatureLink
+	links := make([]SignatureLink, len(cfg.Signature.Links))
+	for i, l := range cfg.Signature.Links {
+		links[i] = SignatureLink(l)
+	}
+
+	return &SignatureData{
+		Name:      cfg.Signature.Name,
+		Title:     cfg.Signature.Title,
+		Email:     cfg.Signature.Email,
+		ImagePath: cfg.Signature.ImagePath,
+		Links:     links,
+	}, nil
+}
+
+// isURL returns true if the string looks like a URL.
+func isURL(s string) bool {
+	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
+}
+
 // convertBatch processes files concurrently using the service.
-func convertBatch(service Converter, files []FileToConvert, cssContent string) []ConversionResult {
+func convertBatch(service Converter, files []FileToConvert, cssContent string, sigData *SignatureData) []ConversionResult {
 	if len(files) == 0 {
 		return nil
 	}
@@ -274,7 +318,7 @@ func convertBatch(service Converter, files []FileToConvert, cssContent string) [
 			defer wg.Done()
 			sem <- struct{}{}        // acquire
 			defer func() { <-sem }() // release
-			results[idx] = convertFile(service, f, cssContent)
+			results[idx] = convertFile(service, f, cssContent, sigData)
 		}(i, file)
 	}
 
@@ -283,7 +327,7 @@ func convertBatch(service Converter, files []FileToConvert, cssContent string) [
 }
 
 // convertFile processes a single file and returns the result.
-func convertFile(service Converter, f FileToConvert, cssContent string) ConversionResult {
+func convertFile(service Converter, f FileToConvert, cssContent string, sigData *SignatureData) ConversionResult {
 	start := time.Now()
 	result := ConversionResult{
 		InputPath:  f.InputPath,
@@ -311,6 +355,7 @@ func convertFile(service Converter, f FileToConvert, cssContent string) Conversi
 		MarkdownContent: string(content),
 		OutputPath:      f.OutputPath,
 		CSSContent:      cssContent,
+		Signature:       sigData,
 	})
 
 	result.Err = err

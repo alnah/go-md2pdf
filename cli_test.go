@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -526,4 +527,158 @@ func TestPrintResults(t *testing.T) {
 			t.Errorf("failed = %d, want 0", failed)
 		}
 	})
+}
+
+func TestBuildSignatureData(t *testing.T) {
+	t.Run("noSignature flag returns nil", func(t *testing.T) {
+		cfg := &Config{Signature: SignatureConfig{Enabled: true, Name: "Test"}}
+		got, err := buildSignatureData(cfg, true)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != nil {
+			t.Error("expected nil when noSignature=true")
+		}
+	})
+
+	t.Run("signature disabled in config returns nil", func(t *testing.T) {
+		cfg := &Config{Signature: SignatureConfig{Enabled: false, Name: "Test"}}
+		got, err := buildSignatureData(cfg, false)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != nil {
+			t.Error("expected nil when signature.enabled=false")
+		}
+	})
+
+	t.Run("valid signature config returns SignatureData", func(t *testing.T) {
+		cfg := &Config{Signature: SignatureConfig{
+			Enabled: true,
+			Name:    "John Doe",
+			Title:   "Developer",
+			Email:   "john@example.com",
+			Links: []Link{
+				{Label: "GitHub", URL: "https://github.com/johndoe"},
+			},
+		}}
+		got, err := buildSignatureData(cfg, false)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected SignatureData, got nil")
+		}
+		if got.Name != "John Doe" {
+			t.Errorf("Name = %q, want %q", got.Name, "John Doe")
+		}
+		if got.Title != "Developer" {
+			t.Errorf("Title = %q, want %q", got.Title, "Developer")
+		}
+		if got.Email != "john@example.com" {
+			t.Errorf("Email = %q, want %q", got.Email, "john@example.com")
+		}
+		if len(got.Links) != 1 {
+			t.Fatalf("Links count = %d, want 1", len(got.Links))
+		}
+		if got.Links[0].Label != "GitHub" || got.Links[0].URL != "https://github.com/johndoe" {
+			t.Errorf("Links[0] = %+v, want {GitHub, https://github.com/johndoe}", got.Links[0])
+		}
+	})
+
+	t.Run("URL image path is accepted without file validation", func(t *testing.T) {
+		cfg := &Config{Signature: SignatureConfig{
+			Enabled:   true,
+			Name:      "Test",
+			ImagePath: "https://example.com/logo.png",
+		}}
+		got, err := buildSignatureData(cfg, false)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected SignatureData, got nil")
+		}
+		if got.ImagePath != "https://example.com/logo.png" {
+			t.Errorf("ImagePath = %q, want URL", got.ImagePath)
+		}
+	})
+
+	t.Run("nonexistent local image path returns error", func(t *testing.T) {
+		cfg := &Config{Signature: SignatureConfig{
+			Enabled:   true,
+			Name:      "Test",
+			ImagePath: "/nonexistent/path/to/image.png",
+		}}
+		_, err := buildSignatureData(cfg, false)
+		if err == nil {
+			t.Fatal("expected error for nonexistent image path")
+		}
+		if !errors.Is(err, ErrSignatureImagePath) {
+			t.Errorf("error = %v, want ErrSignatureImagePath", err)
+		}
+	})
+
+	t.Run("existing local image path is accepted", func(t *testing.T) {
+		tempDir := t.TempDir()
+		imagePath := filepath.Join(tempDir, "logo.png")
+		if err := os.WriteFile(imagePath, []byte("fake png"), 0644); err != nil {
+			t.Fatalf("failed to create test image: %v", err)
+		}
+
+		cfg := &Config{Signature: SignatureConfig{
+			Enabled:   true,
+			Name:      "Test",
+			ImagePath: imagePath,
+		}}
+		got, err := buildSignatureData(cfg, false)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected SignatureData, got nil")
+		}
+		if got.ImagePath != imagePath {
+			t.Errorf("ImagePath = %q, want %q", got.ImagePath, imagePath)
+		}
+	})
+
+	t.Run("empty image path is accepted", func(t *testing.T) {
+		cfg := &Config{Signature: SignatureConfig{
+			Enabled:   true,
+			Name:      "Test",
+			ImagePath: "",
+		}}
+		got, err := buildSignatureData(cfg, false)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected SignatureData, got nil")
+		}
+	})
+}
+
+func TestIsURL(t *testing.T) {
+	tests := []struct {
+		input string
+		want  bool
+	}{
+		{"https://example.com", true},
+		{"http://example.com", true},
+		{"https://example.com/path/to/file.png", true},
+		{"/local/path/to/file.png", false},
+		{"relative/path.png", false},
+		{"", false},
+		{"ftp://example.com", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := isURL(tt.input)
+			if got != tt.want {
+				t.Errorf("isURL(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
 }
