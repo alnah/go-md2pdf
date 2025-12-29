@@ -16,12 +16,15 @@ type PDFConverter interface {
 	ToPDF(htmlContent, outputPath string) error
 }
 
+// PDFRenderer abstracts PDF rendering from an HTML file to enable testing without Chrome.
+type PDFRenderer interface {
+	RenderFromFile(filePath string) ([]byte, error)
+}
+
 // Sentinel errors for PDF conversion failures.
 var (
-	ErrEmptyHTML       = errors.New("HTML content cannot be empty")
-	ErrEmptyOutputPath = errors.New("output path cannot be empty")
-	ErrPDFGeneration   = errors.New("PDF generation failed")
-	ErrWritePDF        = errors.New("failed to write PDF file")
+	ErrPDFGeneration = errors.New("PDF generation failed")
+	ErrWritePDF      = errors.New("failed to write PDF file")
 )
 
 // PDF page dimensions in inches (US Letter format).
@@ -32,50 +35,17 @@ const (
 	defaultTimeout    = 30 * time.Second
 )
 
-// ChromeConverter converts HTML to PDF using headless Chrome via chromedp.
-type ChromeConverter struct {
+// ChromeDPRenderer implements PDFRenderer using chromedp.
+type ChromeDPRenderer struct {
 	Timeout time.Duration
 }
 
-// NewChromeConverter creates a ChromeConverter with default settings.
-func NewChromeConverter() *ChromeConverter {
-	return &ChromeConverter{
-		Timeout: defaultTimeout,
-	}
-}
-
-// ToPDF converts HTML content to a PDF file using headless Chrome.
-// Uses US Letter format (8.5x11 inches) with 0.5 inch margins.
-func (c *ChromeConverter) ToPDF(htmlContent, outputPath string) error {
-	if err := validateToPDFInputs(htmlContent, outputPath); err != nil {
-		return err
-	}
-
-	tmpPath, cleanup, err := writeTempFile(htmlContent, "html")
-	if err != nil {
-		return err
-	}
-	defer cleanup()
-
-	pdfBuf, err := c.renderPDFFromFile(tmpPath)
-	if err != nil {
-		return err
-	}
-
-	// #nosec G306 -- PDF output files are intended to be readable
-	if err := os.WriteFile(outputPath, pdfBuf, 0o644); err != nil {
-		return fmt.Errorf("%w: %v", ErrWritePDF, err)
-	}
-
-	return nil
-}
-
-// renderPDFFromFile opens a local HTML file in headless Chrome and renders it to PDF.
-func (c *ChromeConverter) renderPDFFromFile(filePath string) ([]byte, error) {
+// RenderFromFile opens a local HTML file in headless Chrome and renders it to PDF.
+func (r *ChromeDPRenderer) RenderFromFile(filePath string) ([]byte, error) {
 	ctx, cancel := chromedp.NewContext(context.Background())
 	defer cancel()
 
-	ctx, cancelTimeout := context.WithTimeout(ctx, c.Timeout)
+	ctx, cancelTimeout := context.WithTimeout(ctx, r.Timeout)
 	defer cancelTimeout()
 
 	var pdfBuf []byte
@@ -105,13 +75,44 @@ func (c *ChromeConverter) renderPDFFromFile(filePath string) ([]byte, error) {
 	return pdfBuf, nil
 }
 
-// validateToPDFInputs checks that required inputs are non-empty.
-func validateToPDFInputs(htmlContent, outputPath string) error {
-	if htmlContent == "" {
-		return ErrEmptyHTML
+// ChromeConverter converts HTML to PDF using headless Chrome via chromedp.
+type ChromeConverter struct {
+	Renderer PDFRenderer
+}
+
+// NewChromeConverter creates a ChromeConverter with production renderer.
+func NewChromeConverter() *ChromeConverter {
+	return &ChromeConverter{
+		Renderer: &ChromeDPRenderer{Timeout: defaultTimeout},
 	}
-	if outputPath == "" {
-		return ErrEmptyOutputPath
+}
+
+// NewChromeConverterWith creates a ChromeConverter with custom renderer (for testing).
+func NewChromeConverterWith(renderer PDFRenderer) *ChromeConverter {
+	if renderer == nil {
+		panic("nil PDFRenderer in NewChromeConverterWith")
 	}
+	return &ChromeConverter{Renderer: renderer}
+}
+
+// ToPDF converts HTML content to a PDF file using headless Chrome.
+// Uses US Letter format (8.5x11 inches) with 0.5 inch margins.
+func (c *ChromeConverter) ToPDF(htmlContent, outputPath string) error {
+	tmpPath, cleanup, err := writeTempFile(htmlContent, "html")
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	pdfBuf, err := c.Renderer.RenderFromFile(tmpPath)
+	if err != nil {
+		return err
+	}
+
+	// #nosec G306 -- PDF output files are intended to be readable
+	if err := os.WriteFile(outputPath, pdfBuf, 0o644); err != nil {
+		return fmt.Errorf("%w: %v", ErrWritePDF, err)
+	}
+
 	return nil
 }

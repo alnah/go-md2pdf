@@ -99,25 +99,6 @@ func TestChromeConverter_ToPDF_Integration(t *testing.T) {
 		assertValidPDF(t, outputPath)
 	})
 
-	t.Run("empty HTML returns error", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		outputPath := filepath.Join(tmpDir, "output.pdf")
-
-		converter := NewChromeConverter()
-		err := converter.ToPDF("", outputPath)
-		if !errors.Is(err, ErrEmptyHTML) {
-			t.Errorf("ToPDF() error = %v, want %v", err, ErrEmptyHTML)
-		}
-	})
-
-	t.Run("empty output path returns error", func(t *testing.T) {
-		converter := NewChromeConverter()
-		err := converter.ToPDF("<html></html>", "")
-		if !errors.Is(err, ErrEmptyOutputPath) {
-			t.Errorf("ToPDF() error = %v, want %v", err, ErrEmptyOutputPath)
-		}
-	})
-
 	t.Run("invalid output directory returns error", func(t *testing.T) {
 		converter := NewChromeConverter()
 		err := converter.ToPDF("<html></html>", "/nonexistent/directory/output.pdf")

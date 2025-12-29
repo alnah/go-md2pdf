@@ -2,15 +2,9 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"os/exec"
-)
-
-// Sentinel errors for Pandoc conversion failures.
-var (
-	ErrEmptyContent = errors.New("markdown content cannot be empty")
 )
 
 // HTMLConverter abstracts Markdown to HTML conversion to allow different backends.
@@ -65,10 +59,6 @@ func NewPandocConverter() *PandocConverter {
 // - Disable automatic conversion of letter markers (A), B), etc.) to numbered lists
 // - Treat single newlines as hard line breaks (<br>)
 func (c *PandocConverter) ToHTML(content string) (string, error) {
-	if content == "" {
-		return "", ErrEmptyContent
-	}
-
 	tmpPath, cleanup, err := writeTempFile(content, "md")
 	if err != nil {
 		return "", err
@@ -77,7 +67,10 @@ func (c *PandocConverter) ToHTML(content string) (string, error) {
 
 	stdout, stderr, err := c.Runner.Run("pandoc", tmpPath, "-f", "markdown-fancy_lists+hard_line_breaks", "-t", "html5", "--standalone")
 	if err != nil {
-		return "", fmt.Errorf("converting to HTML: %s: %w", stderr, err)
+		if stderr != "" {
+			return "", fmt.Errorf("converting to HTML: %s: %w", stderr, err)
+		}
+		return "", fmt.Errorf("converting to HTML: %w", err)
 	}
 
 	return stdout, nil

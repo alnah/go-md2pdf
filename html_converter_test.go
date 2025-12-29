@@ -28,12 +28,6 @@ func TestPandocConverter_ToHTML(t *testing.T) {
 		wantOutput string
 	}{
 		{
-			name:    "empty content returns ErrEmptyContent",
-			content: "",
-			mock:    &MockRunner{},
-			wantErr: ErrEmptyContent,
-		},
-		{
 			name:    "pandoc succeeds returns HTML",
 			content: "# Test",
 			mock: &MockRunner{
@@ -46,6 +40,15 @@ func TestPandocConverter_ToHTML(t *testing.T) {
 			content: "# Test",
 			mock: &MockRunner{
 				Stderr: "pandoc: unknown option --bad",
+				Err:    errors.New("exit status 1"),
+			},
+			wantAnyErr: true,
+		},
+		{
+			name:    "pandoc fails with empty stderr",
+			content: "# Test",
+			mock: &MockRunner{
+				Stderr: "",
 				Err:    errors.New("exit status 1"),
 			},
 			wantAnyErr: true,
