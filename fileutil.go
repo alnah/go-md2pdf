@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// Sentinel errors for temp file extension validation.
+// Sentinel errors for file utility operations.
 var (
 	ErrExtensionEmpty         = errors.New("extension cannot be empty")
 	ErrExtensionPathTraversal = errors.New("extension contains path separator or null byte")
@@ -51,4 +51,13 @@ func validateExtension(extension string) error {
 		return ErrExtensionPathTraversal
 	}
 	return nil
+}
+
+// fileExists returns true if the path exists and is a regular file.
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return !info.IsDir()
 }

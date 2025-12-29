@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -167,6 +168,86 @@ func TestWriteTempFile_InvalidExtension(t *testing.T) {
 			}
 			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("writeTempFile() error = %v, want %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestWriteTempFile_CreateTempError(t *testing.T) {
+	// Save original TMPDIR and restore after test
+	originalTmpdir := os.Getenv("TMPDIR")
+	defer func() {
+		if originalTmpdir == "" {
+			os.Unsetenv("TMPDIR")
+		} else {
+			os.Setenv("TMPDIR", originalTmpdir)
+		}
+	}()
+
+	// Set TMPDIR to a non-existent directory to trigger CreateTemp failure
+	os.Setenv("TMPDIR", "/nonexistent/path/that/does/not/exist")
+
+	_, cleanup, err := writeTempFile("content", "md")
+	if cleanup != nil {
+		defer cleanup()
+	}
+
+	if err == nil {
+		t.Fatal("writeTempFile() expected error when TMPDIR is invalid, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "creating temp file") {
+		t.Errorf("writeTempFile() error = %q, want error containing 'creating temp file'", err.Error())
+	}
+}
+
+func TestFileExists(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// Create a test file
+	testFile := filepath.Join(tempDir, "test.txt")
+	if err := os.WriteFile(testFile, []byte("content"), 0644); err != nil {
+		t.Fatalf("failed to create test file: %v", err)
+	}
+
+	// Create a test directory
+	testDir := filepath.Join(tempDir, "testdir")
+	if err := os.Mkdir(testDir, 0755); err != nil {
+		t.Fatalf("failed to create test dir: %v", err)
+	}
+
+	tests := []struct {
+		name string
+		path string
+		want bool
+	}{
+		{
+			name: "existing file returns true",
+			path: testFile,
+			want: true,
+		},
+		{
+			name: "directory returns false",
+			path: testDir,
+			want: false,
+		},
+		{
+			name: "nonexistent path returns false",
+			path: filepath.Join(tempDir, "nonexistent"),
+			want: false,
+		},
+		{
+			name: "empty path returns false",
+			path: "",
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := fileExists(tt.path)
+			if got != tt.want {
+				t.Errorf("fileExists(%q) = %v, want %v", tt.path, got, tt.want)
 			}
 		})
 	}
