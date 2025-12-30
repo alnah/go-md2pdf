@@ -460,7 +460,7 @@ func TestResolveCSSContent(t *testing.T) {
 	})
 
 	t.Run("config style loads from embedded assets", func(t *testing.T) {
-		cfg := &Config{CSS: CSSConfig{Style: "default"}}
+		cfg := &Config{CSS: CSSConfig{Style: "fle"}}
 		got, err := resolveCSSContent("", cfg)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -478,7 +478,7 @@ func TestResolveCSSContent(t *testing.T) {
 			t.Fatalf("failed to write CSS file: %v", err)
 		}
 
-		cfg := &Config{CSS: CSSConfig{Style: "default"}}
+		cfg := &Config{CSS: CSSConfig{Style: "fle"}}
 		got, err := resolveCSSContent(cssPath, cfg)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
