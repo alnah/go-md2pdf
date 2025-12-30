@@ -11,10 +11,11 @@ tools: ## Install development tools (staticcheck, gosec)
 	go get -tool honnef.co/go/tools/cmd/staticcheck
 	go get -tool github.com/securego/gosec/v2/cmd/gosec
 
-deps: ## Install dependencies (chromedp, go-yaml, pflag)
+deps: ## Install dependencies (chromedp, go-yaml, pflag, goldmark)
 	go get github.com/chromedp/chromedp
 	go get github.com/goccy/go-yaml
 	go get https://github.com/spf13/pflag
+	go get https://github.com/yuin/goldmark
 
 build: ## Build the binary
 	go build -o $(BINARY) .
