@@ -33,8 +33,8 @@ type ConversionService struct {
 // NewConversionService creates a service with production dependencies.
 func NewConversionService() *ConversionService {
 	return &ConversionService{
-		preprocessor:      &CommonMarkToPandocPreprocessor{},
-		htmlConverter:     NewPandocConverter(),
+		preprocessor:      &CommonMarkPreprocessor{},
+		htmlConverter:     NewGoldmarkConverter(),
 		cssInjector:       &CSSInjection{},
 		footerInjector:    &FooterInjection{},
 		signatureInjector: NewSignatureInjection(),

@@ -3,75 +3,54 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io"
-	"os/exec"
+
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/renderer/html"
 )
 
-// HTMLConverter abstracts Markdown to HTML conversion to allow different backends.
+// htmlTemplate wraps Goldmark's fragment output in a complete HTML5 document.
+const htmlTemplate = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Document</title>
+</head>
+<body>
+%s
+</body>
+</html>`
+
+// HTMLConverter abstracts Markdown to HTML conversion.
 type HTMLConverter interface {
 	ToHTML(content string) (string, error)
 }
 
-// CommandRunner abstracts command execution to enable testing without real subprocesses.
-type CommandRunner interface {
-	Run(name string, args ...string) (stdout string, stderr string, err error)
+// GoldmarkConverter converts Markdown to HTML using goldmark (pure Go).
+type GoldmarkConverter struct {
+	md goldmark.Markdown
 }
 
-// ExecRunner implements CommandRunner using os/exec.
-type ExecRunner struct{}
-
-func (r *ExecRunner) Run(name string, args ...string) (string, string, error) {
-	cmd := exec.Command(name, args...)
-
-	var stdout bytes.Buffer
-	cmd.Stdout = &stdout
-
-	stderrPipe, err := cmd.StderrPipe()
-	if err != nil {
-		return "", "", fmt.Errorf("creating stderr pipe: %w", err)
-	}
-
-	if err := cmd.Start(); err != nil {
-		return "", "", fmt.Errorf("starting command: %w", err)
-	}
-
-	stderrContent, err := io.ReadAll(stderrPipe)
-	if err != nil {
-		return "", "", fmt.Errorf("reading stderr: %w", err)
-	}
-
-	err = cmd.Wait()
-	return stdout.String(), string(stderrContent), err
+// NewGoldmarkConverter creates a GoldmarkConverter with GFM extensions.
+func NewGoldmarkConverter() *GoldmarkConverter {
+	md := goldmark.New(
+		goldmark.WithExtensions(
+			extension.GFM,      // Tables, strikethrough, autolinks, task lists
+			extension.Footnote, // [^1] footnotes
+		),
+		goldmark.WithRendererOptions(
+			html.WithHardWraps(), // Treat newlines as <br>
+			html.WithXHTML(),     // Self-closing tags
+		),
+	)
+	return &GoldmarkConverter{md: md}
 }
 
-// PandocConverter converts Markdown to HTML by invoking the Pandoc CLI.
-type PandocConverter struct {
-	Runner CommandRunner
-}
-
-// NewPandocConverter creates a PandocConverter with a real command runner.
-func NewPandocConverter() *PandocConverter {
-	return &PandocConverter{Runner: &ExecRunner{}}
-}
-
-// ToHTML converts Markdown content to a standalone HTML5 document using Pandoc.
-// Uses -f markdown-fancy_lists+hard_line_breaks to:
-// - Disable automatic conversion of letter markers (A), B), etc.) to numbered lists
-// - Treat single newlines as hard line breaks (<br>)
-func (c *PandocConverter) ToHTML(content string) (string, error) {
-	tmpPath, cleanup, err := writeTempFile(content, "md")
-	if err != nil {
-		return "", err
-	}
-	defer cleanup()
-
-	stdout, stderr, err := c.Runner.Run("pandoc", tmpPath, "-f", "markdown-fancy_lists+hard_line_breaks", "-t", "html5", "--standalone")
-	if err != nil {
-		if stderr != "" {
-			return "", fmt.Errorf("converting to HTML: %s: %w", stderr, err)
-		}
+// ToHTML converts Markdown content to a standalone HTML5 document.
+func (c *GoldmarkConverter) ToHTML(content string) (string, error) {
+	var buf bytes.Buffer
+	if err := c.md.Convert([]byte(content), &buf); err != nil {
 		return "", fmt.Errorf("converting to HTML: %w", err)
 	}
-
-	return stdout, nil
+	return fmt.Sprintf(htmlTemplate, buf.String()), nil
 }

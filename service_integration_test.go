@@ -14,15 +14,15 @@ func TestNewConversionService(t *testing.T) {
 	if service.preprocessor == nil {
 		t.Error("preprocessor is nil")
 	}
-	if _, ok := service.preprocessor.(*CommonMarkToPandocPreprocessor); !ok {
-		t.Errorf("preprocessor type = %T, want *CommonMarkToPandocPreprocessor", service.preprocessor)
+	if _, ok := service.preprocessor.(*CommonMarkPreprocessor); !ok {
+		t.Errorf("preprocessor type = %T, want *CommonMarkPreprocessor", service.preprocessor)
 	}
 
 	if service.htmlConverter == nil {
 		t.Error("htmlConverter is nil")
 	}
-	if _, ok := service.htmlConverter.(*PandocConverter); !ok {
-		t.Errorf("htmlConverter type = %T, want *PandocConverter", service.htmlConverter)
+	if _, ok := service.htmlConverter.(*GoldmarkConverter); !ok {
+		t.Errorf("htmlConverter type = %T, want *GoldmarkConverter", service.htmlConverter)
 	}
 
 	if service.cssInjector == nil {

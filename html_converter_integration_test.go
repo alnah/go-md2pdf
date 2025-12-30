@@ -3,17 +3,16 @@
 package main
 
 import (
-	"runtime"
 	"strings"
 	"testing"
 )
 
-func TestPandocConverter_ToHTML_Integration(t *testing.T) {
+func TestGoldmarkConverter_ToHTML_Integration(t *testing.T) {
 	t.Run("basic markdown", func(t *testing.T) {
 		content := `# Hello
 
 World`
-		converter := NewPandocConverter()
+		converter := NewGoldmarkConverter()
 		got, err := converter.ToHTML(content)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -35,7 +34,7 @@ World`
 
 Ceci est un test avec des caracteres speciaux.`
 
-		converter := NewPandocConverter()
+		converter := NewGoldmarkConverter()
 		got, err := converter.ToHTML(content)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -49,7 +48,7 @@ Ceci est un test avec des caracteres speciaux.`
 	t.Run("code block with special chars", func(t *testing.T) {
 		content := "# Code Example\n\n```go\nfunc main() {\n\tfmt.Println(\"<hello>\")\n}\n```"
 
-		converter := NewPandocConverter()
+		converter := NewGoldmarkConverter()
 		got, err := converter.ToHTML(content)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -68,7 +67,7 @@ Ceci est un test avec des caracteres speciaux.`
 | Alice | 30 |
 | Bob | 25 |`
 
-		converter := NewPandocConverter()
+		converter := NewGoldmarkConverter()
 		got, err := converter.ToHTML(content)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -90,7 +89,7 @@ Ceci est un test avec des caracteres speciaux.`
   - Subitem 1.2
 - Item 2`
 
-		converter := NewPandocConverter()
+		converter := NewGoldmarkConverter()
 		got, err := converter.ToHTML(content)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -107,76 +106,10 @@ Ceci est un test avec des caracteres speciaux.`
 	t.Run("whitespace-only content is valid", func(t *testing.T) {
 		content := "   \n\t\n   "
 
-		converter := NewPandocConverter()
+		converter := NewGoldmarkConverter()
 		_, err := converter.ToHTML(content)
 		if err != nil {
 			t.Fatalf("whitespace-only content should be valid, got error: %v", err)
-		}
-	})
-}
-
-func TestExecRunner_Run(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("skipping on windows: tests use unix commands")
-	}
-
-	runner := &ExecRunner{}
-
-	t.Run("captures stdout", func(t *testing.T) {
-		stdout, stderr, err := runner.Run("echo", "hello")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if strings.TrimSpace(stdout) != "hello" {
-			t.Errorf("expected stdout %q, got %q", "hello", stdout)
-		}
-		if stderr != "" {
-			t.Errorf("expected empty stderr, got %q", stderr)
-		}
-	})
-
-	t.Run("captures stderr", func(t *testing.T) {
-		stdout, stderr, err := runner.Run("sh", "-c", "echo error >&2")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if stdout != "" {
-			t.Errorf("expected empty stdout, got %q", stdout)
-		}
-		if strings.TrimSpace(stderr) != "error" {
-			t.Errorf("expected stderr %q, got %q", "error", stderr)
-		}
-	})
-
-	t.Run("returns error on command failure", func(t *testing.T) {
-		_, stderr, err := runner.Run("sh", "-c", "echo fail >&2; exit 1")
-
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		if strings.TrimSpace(stderr) != "fail" {
-			t.Errorf("expected stderr %q, got %q", "fail", stderr)
-		}
-	})
-
-	t.Run("returns error on non-existent command", func(t *testing.T) {
-		_, _, err := runner.Run("command-that-does-not-exist-12345")
-
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-	})
-
-	t.Run("captures both stdout and stderr simultaneously", func(t *testing.T) {
-		stdout, stderr, err := runner.Run("sh", "-c", "echo out; echo err >&2")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if strings.TrimSpace(stdout) != "out" {
-			t.Errorf("expected stdout %q, got %q", "out", stdout)
-		}
-		if strings.TrimSpace(stderr) != "err" {
-			t.Errorf("expected stderr %q, got %q", "err", stderr)
 		}
 	})
 }
