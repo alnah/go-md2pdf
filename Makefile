@@ -11,11 +11,11 @@ tools: ## Install development tools (staticcheck, gosec)
 	go get -tool honnef.co/go/tools/cmd/staticcheck
 	go get -tool github.com/securego/gosec/v2/cmd/gosec
 
-deps: ## Install dependencies (chromedp, go-yaml, pflag, goldmark)
-	go get github.com/chromedp/chromedp
+deps: ## Install dependencies (go-rod, go-yaml, pflag, goldmark)
+	go get github.com/go-rod/rod
 	go get github.com/goccy/go-yaml
-	go get https://github.com/spf13/pflag
-	go get https://github.com/yuin/goldmark
+	go get github.com/spf13/pflag
+	go get github.com/yuin/goldmark
 
 build: ## Build the binary
 	go build -o $(BINARY) .
@@ -23,7 +23,7 @@ build: ## Build the binary
 test: ## Run unit tests
 	go test -v ./...
 
-test-integration: ## Run integration tests (requires pandoc, chrome)
+test-integration: ## Run integration tests (rod auto-downloads chromium)
 	go test -v -tags=integration ./...
 
 test-cover: ## Run unit tests with coverage report
