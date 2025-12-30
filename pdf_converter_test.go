@@ -19,7 +19,7 @@ func (m *MockRenderer) RenderFromFile(filePath string) ([]byte, error) {
 	return m.Result, m.Err
 }
 
-func TestChromeConverter_ToPDF(t *testing.T) {
+func TestRodConverter_ToPDF(t *testing.T) {
 	tests := []struct {
 		name       string
 		html       string
@@ -38,7 +38,7 @@ func TestChromeConverter_ToPDF(t *testing.T) {
 			name: "renderer error propagates",
 			html: "<html></html>",
 			mock: &MockRenderer{
-				Err: errors.New("chrome crashed"),
+				Err: errors.New("browser crashed"),
 			},
 			wantAnyErr: true,
 		},
@@ -63,7 +63,7 @@ func TestChromeConverter_ToPDF(t *testing.T) {
 			tmpDir := t.TempDir()
 			outputPath := filepath.Join(tmpDir, "output.pdf")
 
-			converter := NewChromeConverterWith(tt.mock)
+			converter := NewRodConverterWith(tt.mock)
 			err := converter.ToPDF(tt.html, outputPath)
 
 			if tt.wantAnyErr || tt.wantErr != nil {
@@ -97,12 +97,12 @@ func TestChromeConverter_ToPDF(t *testing.T) {
 	}
 }
 
-func TestChromeConverter_ToPDF_WriteError(t *testing.T) {
+func TestRodConverter_ToPDF_WriteError(t *testing.T) {
 	mock := &MockRenderer{
 		Result: []byte("%PDF-1.4"),
 	}
 
-	converter := NewChromeConverterWith(mock)
+	converter := NewRodConverterWith(mock)
 	err := converter.ToPDF("<html></html>", "/nonexistent/directory/output.pdf")
 
 	if !errors.Is(err, ErrWritePDF) {
@@ -110,38 +110,38 @@ func TestChromeConverter_ToPDF_WriteError(t *testing.T) {
 	}
 }
 
-func TestNewChromeConverter(t *testing.T) {
-	converter := NewChromeConverter()
+func TestNewRodConverter(t *testing.T) {
+	converter := NewRodConverter()
 
 	if converter.Renderer == nil {
 		t.Fatal("expected non-nil Renderer")
 	}
 
-	// Verify it's a ChromeDPRenderer with correct timeout
-	renderer, ok := converter.Renderer.(*ChromeDPRenderer)
+	// Verify it's a RodRenderer with correct timeout
+	renderer, ok := converter.Renderer.(*RodRenderer)
 	if !ok {
-		t.Fatalf("expected *ChromeDPRenderer, got %T", converter.Renderer)
+		t.Fatalf("expected *RodRenderer, got %T", converter.Renderer)
 	}
 	if renderer.Timeout != defaultTimeout {
 		t.Errorf("expected timeout %v, got %v", defaultTimeout, renderer.Timeout)
 	}
 }
 
-func TestNewChromeConverterWith(t *testing.T) {
+func TestNewRodConverterWith(t *testing.T) {
 	mock := &MockRenderer{}
-	converter := NewChromeConverterWith(mock)
+	converter := NewRodConverterWith(mock)
 
 	if converter.Renderer != mock {
 		t.Error("expected Renderer to be the provided mock")
 	}
 }
 
-func TestNewChromeConverterWith_NilRenderer(t *testing.T) {
+func TestNewRodConverterWith_NilRenderer(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
 			t.Error("expected panic for nil renderer")
 		}
 	}()
 
-	NewChromeConverterWith(nil)
+	NewRodConverterWith(nil)
 }

@@ -38,7 +38,7 @@ func NewConversionService() *ConversionService {
 		cssInjector:       &CSSInjection{},
 		footerInjector:    &FooterInjection{},
 		signatureInjector: NewSignatureInjection(),
-		pdfConverter:      NewChromeConverter(),
+		pdfConverter:      NewRodConverter(),
 	}
 }
 

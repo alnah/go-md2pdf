@@ -6,36 +6,9 @@ import (
 	"bytes"
 	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 )
-
-func requireChrome(t *testing.T) {
-	t.Helper()
-
-	// chromedp looks for these binaries in order
-	chromePaths := []string{
-		"google-chrome",
-		"google-chrome-stable",
-		"chromium",
-		"chromium-browser",
-		"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-	}
-
-	for _, p := range chromePaths {
-		if _, err := exec.LookPath(p); err == nil {
-			return
-		}
-	}
-
-	// Check macOS app bundle directly
-	if _, err := os.Stat("/Applications/Google Chrome.app"); err == nil {
-		return
-	}
-
-	t.Fatal("Chrome not found. Install Chrome or Chromium to run integration tests.")
-}
 
 func assertValidPDF(t *testing.T, path string) {
 	t.Helper()
@@ -54,9 +27,9 @@ func assertValidPDF(t *testing.T, path string) {
 	}
 }
 
-func TestChromeConverter_ToPDF_Integration(t *testing.T) {
-	requireChrome(t)
-
+// TestRodConverter_ToPDF_Integration tests PDF generation using go-rod.
+// Rod automatically downloads Chromium on first run if not found.
+func TestRodConverter_ToPDF_Integration(t *testing.T) {
 	t.Run("valid HTML produces PDF", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		outputPath := filepath.Join(tmpDir, "output.pdf")
@@ -67,7 +40,7 @@ func TestChromeConverter_ToPDF_Integration(t *testing.T) {
 <body><h1>Hello, World!</h1><p>This is a test document.</p></body>
 </html>`
 
-		converter := NewChromeConverter()
+		converter := NewRodConverter()
 		err := converter.ToPDF(html, outputPath)
 		if err != nil {
 			t.Fatalf("ToPDF() error = %v", err)
@@ -90,7 +63,7 @@ func TestChromeConverter_ToPDF_Integration(t *testing.T) {
 		css := "h1 { color: blue; font-size: 24px; }"
 		htmlWithCSS := injector.InjectCSS(html, css)
 
-		converter := NewChromeConverter()
+		converter := NewRodConverter()
 		err := converter.ToPDF(htmlWithCSS, outputPath)
 		if err != nil {
 			t.Fatalf("ToPDF() error = %v", err)
@@ -100,7 +73,7 @@ func TestChromeConverter_ToPDF_Integration(t *testing.T) {
 	})
 
 	t.Run("invalid output directory returns error", func(t *testing.T) {
-		converter := NewChromeConverter()
+		converter := NewRodConverter()
 		err := converter.ToPDF("<html></html>", "/nonexistent/directory/output.pdf")
 		if !errors.Is(err, ErrWritePDF) {
 			t.Errorf("ToPDF() error = %v, want wrapped %v", err, ErrWritePDF)
