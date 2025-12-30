@@ -35,8 +35,8 @@ func TestNewConversionService(t *testing.T) {
 	if service.pdfConverter == nil {
 		t.Error("pdfConverter is nil")
 	}
-	if _, ok := service.pdfConverter.(*ChromeConverter); !ok {
-		t.Errorf("pdfConverter type = %T, want *ChromeConverter", service.pdfConverter)
+	if _, ok := service.pdfConverter.(*RodConverter); !ok {
+		t.Errorf("pdfConverter type = %T, want *RodConverter", service.pdfConverter)
 	}
 }
 
