@@ -41,7 +41,7 @@ func TestRodConverter_ToPDF_Integration(t *testing.T) {
 </html>`
 
 		converter := NewRodConverter()
-		err := converter.ToPDF(html, outputPath)
+		err := converter.ToPDF(html, outputPath, nil)
 		if err != nil {
 			t.Fatalf("ToPDF() error = %v", err)
 		}
@@ -64,7 +64,7 @@ func TestRodConverter_ToPDF_Integration(t *testing.T) {
 		htmlWithCSS := injector.InjectCSS(html, css)
 
 		converter := NewRodConverter()
-		err := converter.ToPDF(htmlWithCSS, outputPath)
+		err := converter.ToPDF(htmlWithCSS, outputPath, nil)
 		if err != nil {
 			t.Fatalf("ToPDF() error = %v", err)
 		}
@@ -74,7 +74,7 @@ func TestRodConverter_ToPDF_Integration(t *testing.T) {
 
 	t.Run("invalid output directory returns error", func(t *testing.T) {
 		converter := NewRodConverter()
-		err := converter.ToPDF("<html></html>", "/nonexistent/directory/output.pdf")
+		err := converter.ToPDF("<html></html>", "/nonexistent/directory/output.pdf", nil)
 		if !errors.Is(err, ErrWritePDF) {
 			t.Errorf("ToPDF() error = %v, want wrapped %v", err, ErrWritePDF)
 		}

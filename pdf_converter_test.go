@@ -12,10 +12,12 @@ type MockRenderer struct {
 	Result     []byte
 	Err        error
 	CalledWith string
+	CalledOpts *PDFOptions
 }
 
-func (m *MockRenderer) RenderFromFile(filePath string) ([]byte, error) {
+func (m *MockRenderer) RenderFromFile(filePath string, opts *PDFOptions) ([]byte, error) {
 	m.CalledWith = filePath
+	m.CalledOpts = opts
 	return m.Result, m.Err
 }
 
@@ -64,7 +66,7 @@ func TestRodConverter_ToPDF(t *testing.T) {
 			outputPath := filepath.Join(tmpDir, "output.pdf")
 
 			converter := NewRodConverterWith(tt.mock)
-			err := converter.ToPDF(tt.html, outputPath)
+			err := converter.ToPDF(tt.html, outputPath, nil)
 
 			if tt.wantAnyErr || tt.wantErr != nil {
 				if err == nil {
@@ -103,7 +105,7 @@ func TestRodConverter_ToPDF_WriteError(t *testing.T) {
 	}
 
 	converter := NewRodConverterWith(mock)
-	err := converter.ToPDF("<html></html>", "/nonexistent/directory/output.pdf")
+	err := converter.ToPDF("<html></html>", "/nonexistent/directory/output.pdf", nil)
 
 	if !errors.Is(err, ErrWritePDF) {
 		t.Errorf("expected ErrWritePDF, got %v", err)
