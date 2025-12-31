@@ -30,6 +30,149 @@ func TestDefaultConfig(t *testing.T) {
 	}
 }
 
+func TestValidateFieldLength(t *testing.T) {
+	tests := []struct {
+		name      string
+		fieldName string
+		value     string
+		maxLength int
+		wantErr   bool
+	}{
+		{
+			name:      "empty value is valid",
+			fieldName: "test",
+			value:     "",
+			maxLength: 10,
+			wantErr:   false,
+		},
+		{
+			name:      "value at limit is valid",
+			fieldName: "test",
+			value:     "1234567890",
+			maxLength: 10,
+			wantErr:   false,
+		},
+		{
+			name:      "value under limit is valid",
+			fieldName: "test",
+			value:     "12345",
+			maxLength: 10,
+			wantErr:   false,
+		},
+		{
+			name:      "value over limit returns error",
+			fieldName: "test.field",
+			value:     "12345678901",
+			maxLength: 10,
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateFieldLength(tt.fieldName, tt.value, tt.maxLength)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !errors.Is(err, ErrFieldTooLong) {
+					t.Errorf("error = %v, want ErrFieldTooLong", err)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestConfig_Validate(t *testing.T) {
+	t.Run("valid config passes validation", func(t *testing.T) {
+		cfg := &Config{
+			Signature: SignatureConfig{
+				Name:  "John Doe",
+				Title: "Developer",
+				Email: "john@example.com",
+				Links: []Link{
+					{Label: "GitHub", URL: "https://github.com/johndoe"},
+				},
+			},
+			Footer: FooterConfig{
+				Date:   "2025-01-15",
+				Status: "FINAL",
+				Text:   "Confidential",
+			},
+		}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("signature.name too long returns error", func(t *testing.T) {
+		cfg := &Config{
+			Signature: SignatureConfig{
+				Name: string(make([]byte, MaxNameLength+1)),
+			},
+		}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("signature.email too long returns error", func(t *testing.T) {
+		cfg := &Config{
+			Signature: SignatureConfig{
+				Email: string(make([]byte, MaxEmailLength+1)),
+			},
+		}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("signature.links[].url too long returns error", func(t *testing.T) {
+		cfg := &Config{
+			Signature: SignatureConfig{
+				Links: []Link{
+					{Label: "Valid", URL: string(make([]byte, MaxURLLength+1))},
+				},
+			},
+		}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("footer.text too long returns error", func(t *testing.T) {
+		cfg := &Config{
+			Footer: FooterConfig{
+				Text: string(make([]byte, MaxTextLength+1)),
+			},
+		}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("footer.status too long returns error", func(t *testing.T) {
+		cfg := &Config{
+			Footer: FooterConfig{
+				Status: string(make([]byte, MaxStatusLength+1)),
+			},
+		}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+}
+
 func TestLoadConfig(t *testing.T) {
 	t.Run("empty name returns ErrEmptyConfigName", func(t *testing.T) {
 		_, err := LoadConfig("")
@@ -124,6 +267,21 @@ unknownField: "should fail"
 		_, err := LoadConfig(configPath)
 		if !errors.Is(err, ErrConfigParse) {
 			t.Errorf("error = %v, want ErrConfigParse", err)
+		}
+	})
+
+	t.Run("field too long returns ErrFieldTooLong", func(t *testing.T) {
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "toolong.yaml")
+		longName := string(make([]byte, MaxNameLength+1))
+		content := "signature:\n  name: \"" + longName + "\"\n"
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		_, err := LoadConfig(configPath)
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
 		}
 	})
 
