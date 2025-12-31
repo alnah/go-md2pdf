@@ -13,6 +13,9 @@ import (
 // Sentinel errors for signature injection.
 var ErrSignatureRender = errors.New("failed to render signature template")
 
+// defaultFontFamily is the standard font stack for PDF footers and generated content.
+const defaultFontFamily = "-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif"
+
 // CSSInjector defines the contract for CSS injection into HTML.
 type CSSInjector interface {
 	InjectCSS(htmlContent, cssContent string) string
@@ -186,7 +189,7 @@ func (f *FooterInjection) buildFooterCSS(data *FooterData) string {
 
 	position := f.resolvePosition(data.Position)
 
-	return fmt.Sprintf(`@page { %s { content: %s; font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; font-size: 10pt; color: #888; } }`, position, content)
+	return fmt.Sprintf(`@page { %s { content: %s; font-family: %s; font-size: 10pt; color: #888; } }`, position, content, defaultFontFamily)
 }
 
 // buildFooterContent builds the CSS content value from footer data.

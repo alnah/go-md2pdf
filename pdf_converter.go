@@ -154,7 +154,7 @@ func buildFooterTemplate(data *FooterData) string {
 		textAlign = "center"
 	}
 
-	return fmt.Sprintf(`<div style="font-size: 10px; font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; color: #aaa; width: 100%%; text-align: %s; padding: 0 0.5in;">%s</div>`, textAlign, content)
+	return fmt.Sprintf(`<div style="font-size: 10px; font-family: %s; color: #aaa; width: 100%%; text-align: %s; padding: 0 0.5in;">%s</div>`, defaultFontFamily, textAlign, content)
 }
 
 // floatPtr returns a pointer to a float64 value.
