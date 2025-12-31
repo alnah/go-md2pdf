@@ -15,6 +15,19 @@ var (
 	ErrConfigNotFound  = errors.New("config file not found")
 	ErrEmptyConfigName = errors.New("config name cannot be empty")
 	ErrConfigParse     = errors.New("failed to parse config")
+	ErrFieldTooLong    = errors.New("field exceeds maximum length")
+)
+
+// Field length limits for multi-tenant safety.
+const (
+	MaxNameLength   = 100  // Full name (generous)
+	MaxTitleLength  = 100  // Professional title
+	MaxEmailLength  = 254  // RFC 5321
+	MaxURLLength    = 2048 // Browser limit
+	MaxStatusLength = 50   // "DRAFT", "FINAL", "v1.2.3"
+	MaxDateLength   = 30   // "2025-12-31" or "December 31, 2025"
+	MaxTextLength   = 500  // Footer/free-form text
+	MaxLabelLength  = 100  // Link label
 )
 
 // Config holds all configuration for document generation.
@@ -73,6 +86,56 @@ type AssetsConfig struct {
 	BasePath string `yaml:"basePath"` // Empty = use embedded assets
 }
 
+// Validate checks field lengths to prevent abuse in multi-tenant scenarios.
+// Called automatically by LoadConfig, but available for consumers
+// who construct Config manually (e.g., API adapters, library users).
+func (c *Config) Validate() error {
+	// Validate signature fields
+	if err := validateFieldLength("signature.name", c.Signature.Name, MaxNameLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("signature.title", c.Signature.Title, MaxTitleLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("signature.email", c.Signature.Email, MaxEmailLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("signature.imagePath", c.Signature.ImagePath, MaxURLLength); err != nil {
+		return err
+	}
+
+	// Validate signature links
+	for i, link := range c.Signature.Links {
+		if err := validateFieldLength(fmt.Sprintf("signature.links[%d].label", i), link.Label, MaxLabelLength); err != nil {
+			return err
+		}
+		if err := validateFieldLength(fmt.Sprintf("signature.links[%d].url", i), link.URL, MaxURLLength); err != nil {
+			return err
+		}
+	}
+
+	// Validate footer fields
+	if err := validateFieldLength("footer.date", c.Footer.Date, MaxDateLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("footer.status", c.Footer.Status, MaxStatusLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("footer.text", c.Footer.Text, MaxTextLength); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateFieldLength checks if a field exceeds its maximum allowed length.
+func validateFieldLength(fieldName, value string, maxLength int) error {
+	if len(value) > maxLength {
+		return fmt.Errorf("%w: %s (%d chars, max %d)", ErrFieldTooLong, fieldName, len(value), maxLength)
+	}
+	return nil
+}
+
 // DefaultConfig returns a neutral configuration with all features disabled.
 func DefaultConfig() *Config {
 	return &Config{
@@ -117,6 +180,10 @@ func LoadConfig(nameOrPath string) (*Config, error) {
 	var cfg Config
 	if err := yamlutil.UnmarshalStrict(data, &cfg); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrConfigParse, err)
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return nil, err
 	}
 
 	return &cfg, nil
