@@ -25,7 +25,6 @@ type ConversionService struct {
 	preprocessor      MarkdownPreprocessor
 	htmlConverter     HTMLConverter
 	cssInjector       CSSInjector
-	footerInjector    FooterInjector
 	signatureInjector SignatureInjector
 	pdfConverter      PDFConverter
 }
@@ -36,7 +35,6 @@ func NewConversionService() *ConversionService {
 		preprocessor:      &CommonMarkPreprocessor{},
 		htmlConverter:     NewGoldmarkConverter(),
 		cssInjector:       &CSSInjection{},
-		footerInjector:    &FooterInjection{},
 		signatureInjector: NewSignatureInjection(),
 		pdfConverter:      NewRodConverter(),
 	}
@@ -48,7 +46,6 @@ func NewConversionServiceWith(
 	preprocessor MarkdownPreprocessor,
 	htmlConverter HTMLConverter,
 	cssInjector CSSInjector,
-	footerInjector FooterInjector,
 	signatureInjector SignatureInjector,
 	pdfConverter PDFConverter,
 ) *ConversionService {
@@ -61,9 +58,6 @@ func NewConversionServiceWith(
 	if cssInjector == nil {
 		panic("nil cssInjector provided to ConversionService")
 	}
-	if footerInjector == nil {
-		panic("nil footerInjector provided to ConversionService")
-	}
 	if signatureInjector == nil {
 		panic("nil signatureInjector provided to ConversionService")
 	}
@@ -74,7 +68,6 @@ func NewConversionServiceWith(
 		preprocessor:      preprocessor,
 		htmlConverter:     htmlConverter,
 		cssInjector:       cssInjector,
-		footerInjector:    footerInjector,
 		signatureInjector: signatureInjector,
 		pdfConverter:      pdfConverter,
 	}
@@ -100,17 +93,19 @@ func (s *ConversionService) Convert(opts ConversionOptions) error {
 	// Inject CSS
 	htmlContent = s.cssInjector.InjectCSS(htmlContent, css)
 
-	// Inject footer (if provided)
-	htmlContent = s.footerInjector.InjectFooter(htmlContent, opts.Footer)
-
 	// Inject signature (if provided)
 	htmlContent, err = s.signatureInjector.InjectSignature(htmlContent, opts.Signature)
 	if err != nil {
 		return fmt.Errorf("injecting signature: %w", err)
 	}
 
-	// Convert to PDF
-	if err := s.pdfConverter.ToPDF(htmlContent, opts.OutputPath); err != nil {
+	// Build PDF options with footer
+	pdfOpts := &PDFOptions{
+		Footer: opts.Footer,
+	}
+
+	// Convert to PDF (footer is handled natively by Chrome)
+	if err := s.pdfConverter.ToPDF(htmlContent, opts.OutputPath, pdfOpts); err != nil {
 		return fmt.Errorf("converting to PDF: %w", err)
 	}
 
