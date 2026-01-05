@@ -51,6 +51,8 @@ type cliFlags struct {
 	quiet       bool
 	verbose     bool
 	noSignature bool
+	noStyle     bool
+	noFooter    bool
 }
 
 // run parses arguments, discovers files, and orchestrates batch conversion.
@@ -89,7 +91,7 @@ func run(args []string, service Converter) error {
 	}
 
 	// Resolve CSS content
-	cssContent, err := resolveCSSContent(flags.cssFile, cfg)
+	cssContent, err := resolveCSSContent(flags.cssFile, cfg, flags.noStyle)
 	if err != nil {
 		return err
 	}
@@ -101,7 +103,7 @@ func run(args []string, service Converter) error {
 	}
 
 	// Build footer data
-	footerData := buildFooterData(cfg)
+	footerData := buildFooterData(cfg, flags.noFooter)
 
 	// Convert files
 	results := convertBatch(service, files, cssContent, footerData, sigData)
@@ -127,6 +129,8 @@ func parseFlags(args []string) (*cliFlags, []string, error) {
 	flagSet.BoolVarP(&flags.quiet, "quiet", "q", false, "only show errors")
 	flagSet.BoolVarP(&flags.verbose, "verbose", "v", false, "show detailed timing")
 	flagSet.BoolVar(&flags.noSignature, "no-signature", false, "disable signature injection")
+	flagSet.BoolVar(&flags.noStyle, "no-style", false, "disable CSS styling")
+	flagSet.BoolVar(&flags.noFooter, "no-footer", false, "disable page footer")
 
 	flagSet.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: go-md2pdf [flags] <input> [flags]\n\n")
@@ -167,8 +171,12 @@ func resolveOutputDir(flagOutput string, cfg *Config) string {
 }
 
 // resolveCSSContent resolves CSS content from CLI flag or config.
-// Priority: 1) --css flag (external file), 2) config.CSS.Style (embedded), 3) none.
-func resolveCSSContent(cssFile string, cfg *Config) (string, error) {
+// Priority: 1) --no-style disables all, 2) --css flag (external file), 3) config.CSS.Style (embedded), 4) none.
+func resolveCSSContent(cssFile string, cfg *Config, noStyle bool) (string, error) {
+	if noStyle {
+		return "", nil
+	}
+
 	// 1. CLI flag overrides everything (for dev/debug)
 	if cssFile != "" {
 		content, err := os.ReadFile(cssFile) // #nosec G304 -- user-provided path
@@ -301,9 +309,9 @@ func isURL(s string) bool {
 }
 
 // buildFooterData creates FooterData from config if footer is enabled.
-// Returns nil if footer is disabled.
-func buildFooterData(cfg *Config) *FooterData {
-	if !cfg.Footer.Enabled {
+// Returns nil if footer is disabled (via config or --no-footer flag).
+func buildFooterData(cfg *Config, noFooter bool) *FooterData {
+	if noFooter || !cfg.Footer.Enabled {
 		return nil
 	}
 

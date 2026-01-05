@@ -9,15 +9,18 @@ import (
 
 func TestParseFlags(t *testing.T) {
 	tests := []struct {
-		name           string
-		args           []string
-		wantConfig     string
-		wantOutput     string
-		wantCSS        string
-		wantQuiet      bool
-		wantVerbose    bool
-		wantPositional []string
-		wantErr        bool
+		name            string
+		args            []string
+		wantConfig      string
+		wantOutput      string
+		wantCSS         string
+		wantQuiet       bool
+		wantVerbose     bool
+		wantNoSignature bool
+		wantNoStyle     bool
+		wantNoFooter    bool
+		wantPositional  []string
+		wantErr         bool
 	}{
 		{
 			name:           "no args",
@@ -96,6 +99,32 @@ func TestParseFlags(t *testing.T) {
 			wantVerbose:    true,
 			wantPositional: []string{"doc.md"},
 		},
+		{
+			name:            "no-signature flag",
+			args:            []string{"go-md2pdf", "--no-signature", "doc.md"},
+			wantNoSignature: true,
+			wantPositional:  []string{"doc.md"},
+		},
+		{
+			name:           "no-style flag",
+			args:           []string{"go-md2pdf", "--no-style", "doc.md"},
+			wantNoStyle:    true,
+			wantPositional: []string{"doc.md"},
+		},
+		{
+			name:           "no-footer flag",
+			args:           []string{"go-md2pdf", "--no-footer", "doc.md"},
+			wantNoFooter:   true,
+			wantPositional: []string{"doc.md"},
+		},
+		{
+			name:            "all disable flags combined",
+			args:            []string{"go-md2pdf", "--no-signature", "--no-style", "--no-footer", "doc.md"},
+			wantNoSignature: true,
+			wantNoStyle:     true,
+			wantNoFooter:    true,
+			wantPositional:  []string{"doc.md"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -127,6 +156,15 @@ func TestParseFlags(t *testing.T) {
 			}
 			if flags.verbose != tt.wantVerbose {
 				t.Errorf("verbose = %v, want %v", flags.verbose, tt.wantVerbose)
+			}
+			if flags.noSignature != tt.wantNoSignature {
+				t.Errorf("noSignature = %v, want %v", flags.noSignature, tt.wantNoSignature)
+			}
+			if flags.noStyle != tt.wantNoStyle {
+				t.Errorf("noStyle = %v, want %v", flags.noStyle, tt.wantNoStyle)
+			}
+			if flags.noFooter != tt.wantNoFooter {
+				t.Errorf("noFooter = %v, want %v", flags.noFooter, tt.wantNoFooter)
 			}
 			if len(positional) != len(tt.wantPositional) {
 				t.Errorf("positional args = %v, want %v", positional, tt.wantPositional)
@@ -426,7 +464,7 @@ func TestDiscoverFiles(t *testing.T) {
 
 func TestResolveCSSContent(t *testing.T) {
 	t.Run("empty file and no config returns empty string", func(t *testing.T) {
-		got, err := resolveCSSContent("", nil)
+		got, err := resolveCSSContent("", nil, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -443,7 +481,7 @@ func TestResolveCSSContent(t *testing.T) {
 			t.Fatalf("failed to write CSS file: %v", err)
 		}
 
-		got, err := resolveCSSContent(cssPath, nil)
+		got, err := resolveCSSContent(cssPath, nil, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -453,7 +491,7 @@ func TestResolveCSSContent(t *testing.T) {
 	})
 
 	t.Run("nonexistent file returns error", func(t *testing.T) {
-		_, err := resolveCSSContent("/nonexistent/style.css", nil)
+		_, err := resolveCSSContent("/nonexistent/style.css", nil, false)
 		if err == nil {
 			t.Error("expected error for nonexistent file")
 		}
@@ -461,7 +499,7 @@ func TestResolveCSSContent(t *testing.T) {
 
 	t.Run("config style loads from embedded assets", func(t *testing.T) {
 		cfg := &Config{CSS: CSSConfig{Style: "fle"}}
-		got, err := resolveCSSContent("", cfg)
+		got, err := resolveCSSContent("", cfg, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -479,7 +517,7 @@ func TestResolveCSSContent(t *testing.T) {
 		}
 
 		cfg := &Config{CSS: CSSConfig{Style: "fle"}}
-		got, err := resolveCSSContent(cssPath, cfg)
+		got, err := resolveCSSContent(cssPath, cfg, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -490,9 +528,36 @@ func TestResolveCSSContent(t *testing.T) {
 
 	t.Run("unknown config style returns error", func(t *testing.T) {
 		cfg := &Config{CSS: CSSConfig{Style: "nonexistent"}}
-		_, err := resolveCSSContent("", cfg)
+		_, err := resolveCSSContent("", cfg, false)
 		if err == nil {
 			t.Error("expected error for unknown style")
+		}
+	})
+
+	t.Run("noStyle flag returns empty even with config style", func(t *testing.T) {
+		cfg := &Config{CSS: CSSConfig{Style: "fle"}}
+		got, err := resolveCSSContent("", cfg, true)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != "" {
+			t.Errorf("got %q, want empty string (noStyle should disable CSS)", got)
+		}
+	})
+
+	t.Run("noStyle flag returns empty even with css file", func(t *testing.T) {
+		tempDir := t.TempDir()
+		cssPath := filepath.Join(tempDir, "style.css")
+		if err := os.WriteFile(cssPath, []byte("body { color: red; }"), 0644); err != nil {
+			t.Fatalf("failed to write CSS file: %v", err)
+		}
+
+		got, err := resolveCSSContent(cssPath, nil, true)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != "" {
+			t.Errorf("got %q, want empty string (noStyle should disable CSS)", got)
 		}
 	})
 }
@@ -691,7 +756,7 @@ func TestBuildFooterData(t *testing.T) {
 			ShowPageNumber: true,
 			Text:           "Footer Text",
 		}}
-		got := buildFooterData(cfg)
+		got := buildFooterData(cfg, false)
 		if got != nil {
 			t.Error("expected nil when footer.enabled=false")
 		}
@@ -706,7 +771,7 @@ func TestBuildFooterData(t *testing.T) {
 			Status:         "DRAFT",
 			Text:           "Footer Text",
 		}}
-		got := buildFooterData(cfg)
+		got := buildFooterData(cfg, false)
 		if got == nil {
 			t.Fatal("expected FooterData, got nil")
 		}
@@ -732,7 +797,7 @@ func TestBuildFooterData(t *testing.T) {
 			Enabled: true,
 			// All other fields empty/false
 		}}
-		got := buildFooterData(cfg)
+		got := buildFooterData(cfg, false)
 		if got == nil {
 			t.Fatal("expected FooterData, got nil")
 		}
@@ -751,6 +816,19 @@ func TestBuildFooterData(t *testing.T) {
 		}
 		if got.Text != "" {
 			t.Errorf("Text = %q, want empty", got.Text)
+		}
+	})
+
+	t.Run("noFooter flag returns nil even when enabled in config", func(t *testing.T) {
+		cfg := &Config{Footer: FooterConfig{
+			Enabled:        true,
+			Position:       "center",
+			ShowPageNumber: true,
+			Text:           "Footer Text",
+		}}
+		got := buildFooterData(cfg, true)
+		if got != nil {
+			t.Error("expected nil when noFooter=true, got FooterData")
 		}
 	})
 }
