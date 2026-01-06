@@ -12,27 +12,30 @@ type Service struct {
 	htmlConverter     htmlConverter
 	cssInjector       cssInjector
 	signatureInjector signatureInjector
-	pdfConverter      *rodConverter
+	pdfConverter      pdfConverter
 }
 
 // New creates a Service with default configuration.
 // Use options to customize behavior (e.g., WithTimeout).
 func New(opts ...Option) *Service {
-	cfg := serviceConfig{
-		timeout: defaultTimeout,
-	}
-	for _, opt := range opts {
-		opt(&cfg)
-	}
-
-	return &Service{
-		cfg:               cfg,
+	s := &Service{
+		cfg:               serviceConfig{timeout: defaultTimeout},
 		preprocessor:      &commonMarkPreprocessor{},
 		htmlConverter:     newGoldmarkConverter(),
 		cssInjector:       &cssInjection{},
 		signatureInjector: newSignatureInjection(),
-		pdfConverter:      newRodConverter(cfg.timeout),
 	}
+
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	// Create PDF converter if not injected (e.g., by tests)
+	if s.pdfConverter == nil {
+		s.pdfConverter = newRodConverter(s.cfg.timeout)
+	}
+
+	return s
 }
 
 // Convert runs the full pipeline and returns the PDF as bytes.

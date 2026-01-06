@@ -105,68 +105,36 @@ func (m *mockSignatureInjector) InjectSignature(ctx context.Context, htmlContent
 	return htmlContent, nil
 }
 
-// testableService wraps Service to allow mock PDF converter.
-type testableService struct {
-	preprocessor      markdownPreprocessor
-	htmlConverter     htmlConverter
-	cssInjector       cssInjector
-	signatureInjector signatureInjector
-	pdfConverter      *mockPDFConverter
+// Test options for dependency injection (not exported).
+
+func withPreprocessor(p markdownPreprocessor) Option {
+	return func(s *Service) {
+		s.preprocessor = p
+	}
 }
 
-func (s *testableService) Convert(ctx context.Context, input Input) ([]byte, error) {
-	if input.Markdown == "" {
-		return nil, ErrEmptyMarkdown
+func withHTMLConverter(c htmlConverter) Option {
+	return func(s *Service) {
+		s.htmlConverter = c
 	}
+}
 
-	// Preprocess markdown
-	mdContent := s.preprocessor.PreprocessMarkdown(ctx, input.Markdown)
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
+func withCSSInjector(c cssInjector) Option {
+	return func(s *Service) {
+		s.cssInjector = c
 	}
+}
 
-	// Convert to HTML
-	htmlContent, err := s.htmlConverter.ToHTML(ctx, mdContent)
-	if err != nil {
-		return nil, err
+func withSignatureInjector(i signatureInjector) Option {
+	return func(s *Service) {
+		s.signatureInjector = i
 	}
+}
 
-	// Inject CSS
-	htmlContent = s.cssInjector.InjectCSS(ctx, htmlContent, input.CSS)
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
+func withPDFConverter(c pdfConverter) Option {
+	return func(s *Service) {
+		s.pdfConverter = c
 	}
-
-	// Inject signature
-	var sigData *signatureData
-	if input.Signature != nil {
-		sigData = &signatureData{
-			Name:      input.Signature.Name,
-			Title:     input.Signature.Title,
-			Email:     input.Signature.Email,
-			ImagePath: input.Signature.ImagePath,
-		}
-	}
-	htmlContent, err = s.signatureInjector.InjectSignature(ctx, htmlContent, sigData)
-	if err != nil {
-		return nil, err
-	}
-
-	// Build PDF options
-	var footData *footerData
-	if input.Footer != nil {
-		footData = &footerData{
-			Position:       input.Footer.Position,
-			ShowPageNumber: input.Footer.ShowPageNumber,
-			Date:           input.Footer.Date,
-			Status:         input.Footer.Status,
-			Text:           input.Footer.Text,
-		}
-	}
-	pdfOpts := &pdfOptions{Footer: footData}
-
-	// Convert to PDF
-	return s.pdfConverter.ToPDF(ctx, htmlContent, pdfOpts)
 }
 
 func TestValidateInput(t *testing.T) {
@@ -207,18 +175,19 @@ func TestValidateInput(t *testing.T) {
 
 func TestConvert_Success(t *testing.T) {
 	preprocessor := &mockPreprocessor{output: "preprocessed"}
-	htmlConverter := &mockHTMLConverter{output: "<html>converted</html>"}
-	cssInjector := &mockCSSInjector{output: "<html>with-css</html>"}
-	signatureInjector := &mockSignatureInjector{output: "<html>with-sig</html>"}
-	pdfConverter := &mockPDFConverter{output: []byte("%PDF-1.4 test")}
+	htmlConv := &mockHTMLConverter{output: "<html>converted</html>"}
+	cssInj := &mockCSSInjector{output: "<html>with-css</html>"}
+	sigInjector := &mockSignatureInjector{output: "<html>with-sig</html>"}
+	pdfConv := &mockPDFConverter{output: []byte("%PDF-1.4 test")}
 
-	service := &testableService{
-		preprocessor:      preprocessor,
-		htmlConverter:     htmlConverter,
-		cssInjector:       cssInjector,
-		signatureInjector: signatureInjector,
-		pdfConverter:      pdfConverter,
-	}
+	service := New(
+		withPreprocessor(preprocessor),
+		withHTMLConverter(htmlConv),
+		withCSSInjector(cssInj),
+		withSignatureInjector(sigInjector),
+		withPDFConverter(pdfConv),
+	)
+	defer service.Close()
 
 	input := Input{
 		Markdown: "# Hello",
@@ -243,35 +212,35 @@ func TestConvert_Success(t *testing.T) {
 		t.Errorf("preprocessor input = %q, want %q", preprocessor.input, "# Hello")
 	}
 
-	if !htmlConverter.called {
+	if !htmlConv.called {
 		t.Error("htmlConverter was not called")
 	}
-	if htmlConverter.input != "preprocessed" {
-		t.Errorf("htmlConverter input = %q, want %q", htmlConverter.input, "preprocessed")
+	if htmlConv.input != "preprocessed" {
+		t.Errorf("htmlConverter input = %q, want %q", htmlConv.input, "preprocessed")
 	}
 
-	if !cssInjector.called {
+	if !cssInj.called {
 		t.Error("cssInjector was not called")
 	}
-	if cssInjector.inputHTML != "<html>converted</html>" {
-		t.Errorf("cssInjector inputHTML = %q, want %q", cssInjector.inputHTML, "<html>converted</html>")
+	if cssInj.inputHTML != "<html>converted</html>" {
+		t.Errorf("cssInjector inputHTML = %q, want %q", cssInj.inputHTML, "<html>converted</html>")
 	}
-	if cssInjector.inputCSS != "body {}" {
-		t.Errorf("cssInjector inputCSS = %q, want %q", cssInjector.inputCSS, "body {}")
+	if cssInj.inputCSS != "body {}" {
+		t.Errorf("cssInjector inputCSS = %q, want %q", cssInj.inputCSS, "body {}")
 	}
 
-	if !signatureInjector.called {
+	if !sigInjector.called {
 		t.Error("signatureInjector was not called")
 	}
-	if signatureInjector.inputHTML != "<html>with-css</html>" {
-		t.Errorf("signatureInjector inputHTML = %q, want %q", signatureInjector.inputHTML, "<html>with-css</html>")
+	if sigInjector.inputHTML != "<html>with-css</html>" {
+		t.Errorf("signatureInjector inputHTML = %q, want %q", sigInjector.inputHTML, "<html>with-css</html>")
 	}
 
-	if !pdfConverter.called {
+	if !pdfConv.called {
 		t.Error("pdfConverter was not called")
 	}
-	if pdfConverter.inputHTML != "<html>with-sig</html>" {
-		t.Errorf("pdfConverter inputHTML = %q, want %q", pdfConverter.inputHTML, "<html>with-sig</html>")
+	if pdfConv.inputHTML != "<html>with-sig</html>" {
+		t.Errorf("pdfConverter inputHTML = %q, want %q", pdfConv.inputHTML, "<html>with-sig</html>")
 	}
 }
 
@@ -290,13 +259,14 @@ func TestConvert_ValidationError(t *testing.T) {
 func TestConvert_HTMLConverterError(t *testing.T) {
 	htmlErr := errors.New("pandoc failed")
 
-	service := &testableService{
-		preprocessor:      &mockPreprocessor{},
-		htmlConverter:     &mockHTMLConverter{err: htmlErr},
-		cssInjector:       &mockCSSInjector{},
-		signatureInjector: &mockSignatureInjector{},
-		pdfConverter:      &mockPDFConverter{},
-	}
+	service := New(
+		withPreprocessor(&mockPreprocessor{}),
+		withHTMLConverter(&mockHTMLConverter{err: htmlErr}),
+		withCSSInjector(&mockCSSInjector{}),
+		withSignatureInjector(&mockSignatureInjector{}),
+		withPDFConverter(&mockPDFConverter{}),
+	)
+	defer service.Close()
 
 	ctx := context.Background()
 	_, err := service.Convert(ctx, Input{Markdown: "# Hello"})
@@ -312,13 +282,14 @@ func TestConvert_HTMLConverterError(t *testing.T) {
 func TestConvert_PDFConverterError(t *testing.T) {
 	pdfErr := errors.New("chrome failed")
 
-	service := &testableService{
-		preprocessor:      &mockPreprocessor{},
-		htmlConverter:     &mockHTMLConverter{},
-		cssInjector:       &mockCSSInjector{},
-		signatureInjector: &mockSignatureInjector{},
-		pdfConverter:      &mockPDFConverter{err: pdfErr},
-	}
+	service := New(
+		withPreprocessor(&mockPreprocessor{}),
+		withHTMLConverter(&mockHTMLConverter{}),
+		withCSSInjector(&mockCSSInjector{}),
+		withSignatureInjector(&mockSignatureInjector{}),
+		withPDFConverter(&mockPDFConverter{err: pdfErr}),
+	)
+	defer service.Close()
 
 	ctx := context.Background()
 	_, err := service.Convert(ctx, Input{Markdown: "# Hello"})
@@ -334,13 +305,14 @@ func TestConvert_PDFConverterError(t *testing.T) {
 func TestConvert_SignatureInjectorError(t *testing.T) {
 	sigErr := errors.New("signature template failed")
 
-	service := &testableService{
-		preprocessor:      &mockPreprocessor{},
-		htmlConverter:     &mockHTMLConverter{},
-		cssInjector:       &mockCSSInjector{},
-		signatureInjector: &mockSignatureInjector{err: sigErr},
-		pdfConverter:      &mockPDFConverter{},
-	}
+	service := New(
+		withPreprocessor(&mockPreprocessor{}),
+		withHTMLConverter(&mockHTMLConverter{}),
+		withCSSInjector(&mockCSSInjector{}),
+		withSignatureInjector(&mockSignatureInjector{err: sigErr}),
+		withPDFConverter(&mockPDFConverter{}),
+	)
+	defer service.Close()
 
 	ctx := context.Background()
 	_, err := service.Convert(ctx, Input{Markdown: "# Hello"})
@@ -354,15 +326,16 @@ func TestConvert_SignatureInjectorError(t *testing.T) {
 }
 
 func TestConvert_NoCSSByDefault(t *testing.T) {
-	cssInjector := &mockCSSInjector{}
+	cssInj := &mockCSSInjector{}
 
-	service := &testableService{
-		preprocessor:      &mockPreprocessor{},
-		htmlConverter:     &mockHTMLConverter{},
-		cssInjector:       cssInjector,
-		signatureInjector: &mockSignatureInjector{},
-		pdfConverter:      &mockPDFConverter{},
-	}
+	service := New(
+		withPreprocessor(&mockPreprocessor{}),
+		withHTMLConverter(&mockHTMLConverter{}),
+		withCSSInjector(cssInj),
+		withSignatureInjector(&mockSignatureInjector{}),
+		withPDFConverter(&mockPDFConverter{}),
+	)
+	defer service.Close()
 
 	ctx := context.Background()
 	_, err := service.Convert(ctx, Input{Markdown: "# Hello"})
@@ -371,8 +344,8 @@ func TestConvert_NoCSSByDefault(t *testing.T) {
 		t.Fatalf("Convert() unexpected error: %v", err)
 	}
 
-	if cssInjector.inputCSS != "" {
-		t.Errorf("cssInjector should receive empty CSS by default, got %q", cssInjector.inputCSS)
+	if cssInj.inputCSS != "" {
+		t.Errorf("cssInjector should receive empty CSS by default, got %q", cssInj.inputCSS)
 	}
 }
 

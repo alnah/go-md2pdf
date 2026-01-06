@@ -35,7 +35,7 @@ type Link struct {
 }
 
 // Option configures a Service.
-type Option func(*serviceConfig)
+type Option func(*Service)
 
 // serviceConfig holds internal configuration for Service.
 type serviceConfig struct {
@@ -47,7 +47,7 @@ const defaultTimeout = 30 * time.Second
 
 // WithTimeout sets the conversion timeout.
 func WithTimeout(d time.Duration) Option {
-	return func(c *serviceConfig) {
-		c.timeout = d
+	return func(s *Service) {
+		s.cfg.timeout = d
 	}
 }
