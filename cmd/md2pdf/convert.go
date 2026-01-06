@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -11,7 +12,9 @@ import (
 	"sync"
 	"time"
 
+	md2pdf "github.com/alnah/go-md2pdf"
 	"github.com/alnah/go-md2pdf/internal/assets"
+	"github.com/alnah/go-md2pdf/internal/config"
 	flag "github.com/spf13/pflag"
 )
 
@@ -20,13 +23,14 @@ var (
 	ErrNoInput            = errors.New("no input specified")
 	ErrReadCSS            = errors.New("failed to read CSS file")
 	ErrReadMarkdown       = errors.New("failed to read markdown file")
+	ErrWritePDF           = errors.New("failed to write PDF file")
 	ErrInvalidExtension   = errors.New("file must have .md or .markdown extension")
 	ErrSignatureImagePath = errors.New("signature image not found")
 )
 
 // Converter is the interface for the conversion service.
 type Converter interface {
-	Convert(opts ConversionOptions) error
+	Convert(ctx context.Context, input md2pdf.Input) ([]byte, error)
 }
 
 // FileToConvert represents a single file to process.
@@ -63,9 +67,9 @@ func run(args []string, service Converter) error {
 	}
 
 	// Load configuration
-	cfg := DefaultConfig()
+	cfg := config.DefaultConfig()
 	if flags.configName != "" {
-		cfg, err = LoadConfig(flags.configName)
+		cfg, err = config.LoadConfig(flags.configName)
 		if err != nil {
 			return fmt.Errorf("loading config: %w", err)
 		}
@@ -120,7 +124,7 @@ func run(args []string, service Converter) error {
 // parseFlags parses command-line flags and returns remaining positional arguments.
 // Supports GNU-style flags (--flag, -f) and flags after positional arguments.
 func parseFlags(args []string) (*cliFlags, []string, error) {
-	flagSet := flag.NewFlagSet("go-md2pdf", flag.ContinueOnError)
+	flagSet := flag.NewFlagSet("md2pdf", flag.ContinueOnError)
 
 	flags := &cliFlags{}
 	flagSet.StringVarP(&flags.configName, "config", "c", "", "config name or path")
@@ -133,7 +137,7 @@ func parseFlags(args []string) (*cliFlags, []string, error) {
 	flagSet.BoolVar(&flags.noFooter, "no-footer", false, "disable page footer")
 
 	flagSet.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: go-md2pdf [flags] <input> [flags]\n\n")
+		fmt.Fprintf(os.Stderr, "Usage: md2pdf [flags] <input> [flags]\n\n")
 		fmt.Fprintf(os.Stderr, "Converts Markdown files to PDF.\n\n")
 		fmt.Fprintf(os.Stderr, "Arguments:\n")
 		fmt.Fprintf(os.Stderr, "  input    Markdown file or directory (optional if config has input.defaultDir)\n\n")
@@ -152,7 +156,7 @@ func parseFlags(args []string) (*cliFlags, []string, error) {
 }
 
 // resolveInputPath determines the input path from args or config.
-func resolveInputPath(args []string, cfg *Config) (string, error) {
+func resolveInputPath(args []string, cfg *config.Config) (string, error) {
 	if len(args) > 0 {
 		return args[0], nil
 	}
@@ -163,7 +167,7 @@ func resolveInputPath(args []string, cfg *Config) (string, error) {
 }
 
 // resolveOutputDir determines the output directory from flag or config.
-func resolveOutputDir(flagOutput string, cfg *Config) string {
+func resolveOutputDir(flagOutput string, cfg *config.Config) string {
 	if flagOutput != "" {
 		return flagOutput
 	}
@@ -172,7 +176,7 @@ func resolveOutputDir(flagOutput string, cfg *Config) string {
 
 // resolveCSSContent resolves CSS content from CLI flag or config.
 // Priority: 1) --no-style disables all, 2) --css flag (external file), 3) config.CSS.Style (embedded), 4) none.
-func resolveCSSContent(cssFile string, cfg *Config, noStyle bool) (string, error) {
+func resolveCSSContent(cssFile string, cfg *config.Config, noStyle bool) (string, error) {
 	if noStyle {
 		return "", nil
 	}
@@ -273,28 +277,28 @@ func validateMarkdownExtension(path string) error {
 	return nil
 }
 
-// buildSignatureData creates SignatureData from config if signature is enabled.
+// buildSignatureData creates md2pdf.Signature from config if signature is enabled.
 // Returns nil if signature is disabled (via config or --no-signature flag).
 // Returns error if image path is set but file doesn't exist.
-func buildSignatureData(cfg *Config, noSignature bool) (*SignatureData, error) {
+func buildSignatureData(cfg *config.Config, noSignature bool) (*md2pdf.Signature, error) {
 	if noSignature || !cfg.Signature.Enabled {
 		return nil, nil
 	}
 
 	// Validate image path if set (and not a URL)
 	if cfg.Signature.ImagePath != "" && !isURL(cfg.Signature.ImagePath) {
-		if !fileExists(cfg.Signature.ImagePath) {
+		if !md2pdf.FileExists(cfg.Signature.ImagePath) {
 			return nil, fmt.Errorf("%w: %s", ErrSignatureImagePath, cfg.Signature.ImagePath)
 		}
 	}
 
-	// Convert config links to SignatureLink
-	links := make([]SignatureLink, len(cfg.Signature.Links))
+	// Convert config links to md2pdf.Link
+	links := make([]md2pdf.Link, len(cfg.Signature.Links))
 	for i, l := range cfg.Signature.Links {
-		links[i] = SignatureLink(l)
+		links[i] = md2pdf.Link{Label: l.Label, URL: l.URL}
 	}
 
-	return &SignatureData{
+	return &md2pdf.Signature{
 		Name:      cfg.Signature.Name,
 		Title:     cfg.Signature.Title,
 		Email:     cfg.Signature.Email,
@@ -308,14 +312,14 @@ func isURL(s string) bool {
 	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
 }
 
-// buildFooterData creates FooterData from config if footer is enabled.
+// buildFooterData creates md2pdf.Footer from config if footer is enabled.
 // Returns nil if footer is disabled (via config or --no-footer flag).
-func buildFooterData(cfg *Config, noFooter bool) *FooterData {
+func buildFooterData(cfg *config.Config, noFooter bool) *md2pdf.Footer {
 	if noFooter || !cfg.Footer.Enabled {
 		return nil
 	}
 
-	return &FooterData{
+	return &md2pdf.Footer{
 		Position:       cfg.Footer.Position,
 		ShowPageNumber: cfg.Footer.ShowPageNumber,
 		Date:           cfg.Footer.Date,
@@ -325,7 +329,7 @@ func buildFooterData(cfg *Config, noFooter bool) *FooterData {
 }
 
 // convertBatch processes files concurrently using the service.
-func convertBatch(service Converter, files []FileToConvert, cssContent string, footerData *FooterData, sigData *SignatureData) []ConversionResult {
+func convertBatch(service Converter, files []FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature) []ConversionResult {
 	if len(files) == 0 {
 		return nil
 	}
@@ -354,7 +358,7 @@ func convertBatch(service Converter, files []FileToConvert, cssContent string, f
 }
 
 // convertFile processes a single file and returns the result.
-func convertFile(service Converter, f FileToConvert, cssContent string, footerData *FooterData, sigData *SignatureData) ConversionResult {
+func convertFile(service Converter, f FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature) ConversionResult {
 	start := time.Now()
 	result := ConversionResult{
 		InputPath:  f.InputPath,
@@ -377,16 +381,27 @@ func convertFile(service Converter, f FileToConvert, cssContent string, footerDa
 		return result
 	}
 
-	// Convert via service
-	err = service.Convert(ConversionOptions{
-		MarkdownContent: string(content),
-		OutputPath:      f.OutputPath,
-		CSSContent:      cssContent,
-		Footer:          footerData,
-		Signature:       sigData,
+	// Convert via service (returns []byte)
+	pdfBytes, err := service.Convert(context.Background(), md2pdf.Input{
+		Markdown:  string(content),
+		CSS:       cssContent,
+		Footer:    footerData,
+		Signature: sigData,
 	})
+	if err != nil {
+		result.Err = err
+		result.Duration = time.Since(start)
+		return result
+	}
 
-	result.Err = err
+	// Write PDF to file (0644 is appropriate for shareable documents)
+	// #nosec G306 -- PDFs are meant to be readable
+	if err := os.WriteFile(f.OutputPath, pdfBytes, 0o644); err != nil {
+		result.Err = fmt.Errorf("%w: %v", ErrWritePDF, err)
+		result.Duration = time.Since(start)
+		return result
+	}
+
 	result.Duration = time.Since(start)
 	return result
 }

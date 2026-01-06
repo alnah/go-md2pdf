@@ -1,6 +1,7 @@
-package main
+package md2pdf
 
 import (
+	"context"
 	"errors"
 	"testing"
 )
@@ -13,7 +14,7 @@ type mockPreprocessor struct {
 	output string
 }
 
-func (m *mockPreprocessor) PreprocessMarkdown(content string) string {
+func (m *mockPreprocessor) PreprocessMarkdown(ctx context.Context, content string) string {
 	m.called = true
 	m.input = content
 	if m.output != "" {
@@ -29,7 +30,7 @@ type mockHTMLConverter struct {
 	err    error
 }
 
-func (m *mockHTMLConverter) ToHTML(content string) (string, error) {
+func (m *mockHTMLConverter) ToHTML(ctx context.Context, content string) (string, error) {
 	m.called = true
 	m.input = content
 	if m.err != nil {
@@ -48,7 +49,7 @@ type mockCSSInjector struct {
 	output    string
 }
 
-func (m *mockCSSInjector) InjectCSS(htmlContent, cssContent string) string {
+func (m *mockCSSInjector) InjectCSS(ctx context.Context, htmlContent, cssContent string) string {
 	m.called = true
 	m.inputHTML = htmlContent
 	m.inputCSS = cssContent
@@ -59,30 +60,39 @@ func (m *mockCSSInjector) InjectCSS(htmlContent, cssContent string) string {
 }
 
 type mockPDFConverter struct {
-	called     bool
-	inputHTML  string
-	outputPath string
-	inputOpts  *PDFOptions
-	err        error
+	called    bool
+	inputHTML string
+	inputOpts *pdfOptions
+	output    []byte
+	err       error
 }
 
-func (m *mockPDFConverter) ToPDF(htmlContent, outputPath string, opts *PDFOptions) error {
+func (m *mockPDFConverter) ToPDF(ctx context.Context, htmlContent string, opts *pdfOptions) ([]byte, error) {
 	m.called = true
 	m.inputHTML = htmlContent
-	m.outputPath = outputPath
 	m.inputOpts = opts
-	return m.err
+	if m.err != nil {
+		return nil, m.err
+	}
+	if m.output != nil {
+		return m.output, nil
+	}
+	return []byte("%PDF-1.4 mock"), nil
+}
+
+func (m *mockPDFConverter) Close() error {
+	return nil
 }
 
 type mockSignatureInjector struct {
 	called    bool
 	inputHTML string
-	inputData *SignatureData
+	inputData *signatureData
 	output    string
 	err       error
 }
 
-func (m *mockSignatureInjector) InjectSignature(htmlContent string, data *SignatureData) (string, error) {
+func (m *mockSignatureInjector) InjectSignature(ctx context.Context, htmlContent string, data *signatureData) (string, error) {
 	m.called = true
 	m.inputHTML = htmlContent
 	m.inputData = data
@@ -95,92 +105,101 @@ func (m *mockSignatureInjector) InjectSignature(htmlContent string, data *Signat
 	return htmlContent, nil
 }
 
-func TestValidateOptions(t *testing.T) {
-	service := &ConversionService{}
+// testableService wraps Service to allow mock PDF converter.
+type testableService struct {
+	preprocessor      markdownPreprocessor
+	htmlConverter     htmlConverter
+	cssInjector       cssInjector
+	signatureInjector signatureInjector
+	pdfConverter      *mockPDFConverter
+}
+
+func (s *testableService) Convert(ctx context.Context, input Input) ([]byte, error) {
+	if input.Markdown == "" {
+		return nil, ErrEmptyMarkdown
+	}
+
+	// Preprocess markdown
+	mdContent := s.preprocessor.PreprocessMarkdown(ctx, input.Markdown)
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
+	// Convert to HTML
+	htmlContent, err := s.htmlConverter.ToHTML(ctx, mdContent)
+	if err != nil {
+		return nil, err
+	}
+
+	// Inject CSS
+	htmlContent = s.cssInjector.InjectCSS(ctx, htmlContent, input.CSS)
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
+	// Inject signature
+	var sigData *signatureData
+	if input.Signature != nil {
+		sigData = &signatureData{
+			Name:      input.Signature.Name,
+			Title:     input.Signature.Title,
+			Email:     input.Signature.Email,
+			ImagePath: input.Signature.ImagePath,
+		}
+	}
+	htmlContent, err = s.signatureInjector.InjectSignature(ctx, htmlContent, sigData)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build PDF options
+	var footData *footerData
+	if input.Footer != nil {
+		footData = &footerData{
+			Position:       input.Footer.Position,
+			ShowPageNumber: input.Footer.ShowPageNumber,
+			Date:           input.Footer.Date,
+			Status:         input.Footer.Status,
+			Text:           input.Footer.Text,
+		}
+	}
+	pdfOpts := &pdfOptions{Footer: footData}
+
+	// Convert to PDF
+	return s.pdfConverter.ToPDF(ctx, htmlContent, pdfOpts)
+}
+
+func TestValidateInput(t *testing.T) {
+	service := New()
+	defer service.Close()
 
 	tests := []struct {
 		name    string
-		opts    ConversionOptions
+		input   Input
 		wantErr error
 	}{
 		{
-			name: "valid options",
-			opts: ConversionOptions{
-				MarkdownContent: "# Hello",
-				OutputPath:      "out.pdf",
-			},
+			name:    "valid input",
+			input:   Input{Markdown: "# Hello"},
 			wantErr: nil,
 		},
 		{
-			name: "empty markdown",
-			opts: ConversionOptions{
-				MarkdownContent: "",
-				OutputPath:      "out.pdf",
-			},
+			name:    "empty markdown",
+			input:   Input{Markdown: ""},
 			wantErr: ErrEmptyMarkdown,
 		},
 		{
-			name: "empty output path",
-			opts: ConversionOptions{
-				MarkdownContent: "# Hello",
-				OutputPath:      "",
-			},
-			wantErr: ErrEmptyOutput,
-		},
-		{
-			name: "both empty returns ErrEmptyMarkdown first",
-			opts: ConversionOptions{
-				MarkdownContent: "",
-				OutputPath:      "",
-			},
-			wantErr: ErrEmptyMarkdown,
-		},
-		{
-			name: "CSSContent is valid",
-			opts: ConversionOptions{
-				MarkdownContent: "# Hello",
-				OutputPath:      "out.pdf",
-				CSSContent:      "body { color: red; }",
-			},
+			name:    "with CSS",
+			input:   Input{Markdown: "# Hello", CSS: "body { color: red; }"},
 			wantErr: nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := service.validateOptions(tt.opts)
+			err := service.validateInput(tt.input)
 			if !errors.Is(err, tt.wantErr) {
-				t.Errorf("validateOptions() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestResolveCSS(t *testing.T) {
-	service := &ConversionService{}
-
-	tests := []struct {
-		name string
-		opts ConversionOptions
-		want string
-	}{
-		{
-			name: "empty CSSContent returns empty string",
-			opts: ConversionOptions{},
-			want: "",
-		},
-		{
-			name: "custom CSS returns CSSContent",
-			opts: ConversionOptions{CSSContent: "body { color: red; }"},
-			want: "body { color: red; }",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := service.resolveCSS(tt.opts)
-			if got != tt.want {
-				t.Errorf("resolveCSS() = %q, want %q", got, tt.want)
+				t.Errorf("validateInput() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -191,19 +210,29 @@ func TestConvert_Success(t *testing.T) {
 	htmlConverter := &mockHTMLConverter{output: "<html>converted</html>"}
 	cssInjector := &mockCSSInjector{output: "<html>with-css</html>"}
 	signatureInjector := &mockSignatureInjector{output: "<html>with-sig</html>"}
-	pdfConverter := &mockPDFConverter{}
+	pdfConverter := &mockPDFConverter{output: []byte("%PDF-1.4 test")}
 
-	service := NewConversionServiceWith(preprocessor, htmlConverter, cssInjector, signatureInjector, pdfConverter)
-
-	opts := ConversionOptions{
-		MarkdownContent: "# Hello",
-		OutputPath:      "out.pdf",
-		CSSContent:      "body {}",
+	service := &testableService{
+		preprocessor:      preprocessor,
+		htmlConverter:     htmlConverter,
+		cssInjector:       cssInjector,
+		signatureInjector: signatureInjector,
+		pdfConverter:      pdfConverter,
 	}
 
-	err := service.Convert(opts)
+	input := Input{
+		Markdown: "# Hello",
+		CSS:      "body {}",
+	}
+
+	ctx := context.Background()
+	result, err := service.Convert(ctx, input)
 	if err != nil {
 		t.Fatalf("Convert() unexpected error: %v", err)
+	}
+
+	if string(result) != "%PDF-1.4 test" {
+		t.Errorf("Convert() result = %q, want %q", result, "%PDF-1.4 test")
 	}
 
 	// Verify pipeline was called in order with correct inputs
@@ -244,20 +273,15 @@ func TestConvert_Success(t *testing.T) {
 	if pdfConverter.inputHTML != "<html>with-sig</html>" {
 		t.Errorf("pdfConverter inputHTML = %q, want %q", pdfConverter.inputHTML, "<html>with-sig</html>")
 	}
-	if pdfConverter.outputPath != "out.pdf" {
-		t.Errorf("pdfConverter outputPath = %q, want %q", pdfConverter.outputPath, "out.pdf")
-	}
 }
 
 func TestConvert_ValidationError(t *testing.T) {
-	service := &ConversionService{}
+	service := New()
+	defer service.Close()
 
-	opts := ConversionOptions{
-		MarkdownContent: "",
-		OutputPath:      "out.pdf",
-	}
+	ctx := context.Background()
+	_, err := service.Convert(ctx, Input{Markdown: ""})
 
-	err := service.Convert(opts)
 	if !errors.Is(err, ErrEmptyMarkdown) {
 		t.Errorf("Convert() error = %v, want %v", err, ErrEmptyMarkdown)
 	}
@@ -265,22 +289,18 @@ func TestConvert_ValidationError(t *testing.T) {
 
 func TestConvert_HTMLConverterError(t *testing.T) {
 	htmlErr := errors.New("pandoc failed")
-	htmlConverter := &mockHTMLConverter{err: htmlErr}
 
-	service := NewConversionServiceWith(
-		&mockPreprocessor{},
-		htmlConverter,
-		&mockCSSInjector{},
-		&mockSignatureInjector{},
-		&mockPDFConverter{},
-	)
-
-	opts := ConversionOptions{
-		MarkdownContent: "# Hello",
-		OutputPath:      "out.pdf",
+	service := &testableService{
+		preprocessor:      &mockPreprocessor{},
+		htmlConverter:     &mockHTMLConverter{err: htmlErr},
+		cssInjector:       &mockCSSInjector{},
+		signatureInjector: &mockSignatureInjector{},
+		pdfConverter:      &mockPDFConverter{},
 	}
 
-	err := service.Convert(opts)
+	ctx := context.Background()
+	_, err := service.Convert(ctx, Input{Markdown: "# Hello"})
+
 	if err == nil {
 		t.Fatal("Convert() expected error, got nil")
 	}
@@ -291,22 +311,18 @@ func TestConvert_HTMLConverterError(t *testing.T) {
 
 func TestConvert_PDFConverterError(t *testing.T) {
 	pdfErr := errors.New("chrome failed")
-	pdfConverter := &mockPDFConverter{err: pdfErr}
 
-	service := NewConversionServiceWith(
-		&mockPreprocessor{},
-		&mockHTMLConverter{},
-		&mockCSSInjector{},
-		&mockSignatureInjector{},
-		pdfConverter,
-	)
-
-	opts := ConversionOptions{
-		MarkdownContent: "# Hello",
-		OutputPath:      "out.pdf",
+	service := &testableService{
+		preprocessor:      &mockPreprocessor{},
+		htmlConverter:     &mockHTMLConverter{},
+		cssInjector:       &mockCSSInjector{},
+		signatureInjector: &mockSignatureInjector{},
+		pdfConverter:      &mockPDFConverter{err: pdfErr},
 	}
 
-	err := service.Convert(opts)
+	ctx := context.Background()
+	_, err := service.Convert(ctx, Input{Markdown: "# Hello"})
+
 	if err == nil {
 		t.Fatal("Convert() expected error, got nil")
 	}
@@ -317,22 +333,18 @@ func TestConvert_PDFConverterError(t *testing.T) {
 
 func TestConvert_SignatureInjectorError(t *testing.T) {
 	sigErr := errors.New("signature template failed")
-	signatureInjector := &mockSignatureInjector{err: sigErr}
 
-	service := NewConversionServiceWith(
-		&mockPreprocessor{},
-		&mockHTMLConverter{},
-		&mockCSSInjector{},
-		signatureInjector,
-		&mockPDFConverter{},
-	)
-
-	opts := ConversionOptions{
-		MarkdownContent: "# Hello",
-		OutputPath:      "out.pdf",
+	service := &testableService{
+		preprocessor:      &mockPreprocessor{},
+		htmlConverter:     &mockHTMLConverter{},
+		cssInjector:       &mockCSSInjector{},
+		signatureInjector: &mockSignatureInjector{err: sigErr},
+		pdfConverter:      &mockPDFConverter{},
 	}
 
-	err := service.Convert(opts)
+	ctx := context.Background()
+	_, err := service.Convert(ctx, Input{Markdown: "# Hello"})
+
 	if err == nil {
 		t.Fatal("Convert() expected error, got nil")
 	}
@@ -344,20 +356,17 @@ func TestConvert_SignatureInjectorError(t *testing.T) {
 func TestConvert_NoCSSByDefault(t *testing.T) {
 	cssInjector := &mockCSSInjector{}
 
-	service := NewConversionServiceWith(
-		&mockPreprocessor{},
-		&mockHTMLConverter{},
-		cssInjector,
-		&mockSignatureInjector{},
-		&mockPDFConverter{},
-	)
-
-	opts := ConversionOptions{
-		MarkdownContent: "# Hello",
-		OutputPath:      "out.pdf",
+	service := &testableService{
+		preprocessor:      &mockPreprocessor{},
+		htmlConverter:     &mockHTMLConverter{},
+		cssInjector:       cssInjector,
+		signatureInjector: &mockSignatureInjector{},
+		pdfConverter:      &mockPDFConverter{},
 	}
 
-	err := service.Convert(opts)
+	ctx := context.Background()
+	_, err := service.Convert(ctx, Input{Markdown: "# Hello"})
+
 	if err != nil {
 		t.Fatalf("Convert() unexpected error: %v", err)
 	}
@@ -367,101 +376,125 @@ func TestConvert_NoCSSByDefault(t *testing.T) {
 	}
 }
 
-func TestNewConversionServiceWith(t *testing.T) {
-	preprocessor := &mockPreprocessor{}
-	htmlConverter := &mockHTMLConverter{}
-	cssInjector := &mockCSSInjector{}
-	signatureInjector := &mockSignatureInjector{}
-	pdfConverter := &mockPDFConverter{}
+func TestNew(t *testing.T) {
+	service := New()
+	defer service.Close()
 
-	service := NewConversionServiceWith(preprocessor, htmlConverter, cssInjector, signatureInjector, pdfConverter)
-
-	if service.preprocessor != preprocessor {
-		t.Error("preprocessor not set correctly")
+	if service.preprocessor == nil {
+		t.Error("preprocessor is nil")
 	}
-	if service.htmlConverter != htmlConverter {
-		t.Error("htmlConverter not set correctly")
+	if service.htmlConverter == nil {
+		t.Error("htmlConverter is nil")
 	}
-	if service.cssInjector != cssInjector {
-		t.Error("cssInjector not set correctly")
+	if service.cssInjector == nil {
+		t.Error("cssInjector is nil")
 	}
-	if service.signatureInjector != signatureInjector {
-		t.Error("signatureInjector not set correctly")
+	if service.signatureInjector == nil {
+		t.Error("signatureInjector is nil")
 	}
-	if service.pdfConverter != pdfConverter {
-		t.Error("pdfConverter not set correctly")
+	if service.pdfConverter == nil {
+		t.Error("pdfConverter is nil")
 	}
 }
 
-func TestNewConversionServiceWith_NilDependencies(t *testing.T) {
-	tests := []struct {
-		name              string
-		preprocessor      MarkdownPreprocessor
-		htmlConverter     HTMLConverter
-		cssInjector       CSSInjector
-		signatureInjector SignatureInjector
-		pdfConverter      PDFConverter
-		wantPanic         string
-	}{
-		{
-			name:              "nil preprocessor",
-			preprocessor:      nil,
-			htmlConverter:     &mockHTMLConverter{},
-			cssInjector:       &mockCSSInjector{},
-			signatureInjector: &mockSignatureInjector{},
-			pdfConverter:      &mockPDFConverter{},
-			wantPanic:         "nil preprocessor provided to ConversionService",
-		},
-		{
-			name:              "nil htmlConverter",
-			preprocessor:      &mockPreprocessor{},
-			htmlConverter:     nil,
-			cssInjector:       &mockCSSInjector{},
-			signatureInjector: &mockSignatureInjector{},
-			pdfConverter:      &mockPDFConverter{},
-			wantPanic:         "nil htmlConverter provided to ConversionService",
-		},
-		{
-			name:              "nil cssInjector",
-			preprocessor:      &mockPreprocessor{},
-			htmlConverter:     &mockHTMLConverter{},
-			cssInjector:       nil,
-			signatureInjector: &mockSignatureInjector{},
-			pdfConverter:      &mockPDFConverter{},
-			wantPanic:         "nil cssInjector provided to ConversionService",
-		},
-		{
-			name:              "nil signatureInjector",
-			preprocessor:      &mockPreprocessor{},
-			htmlConverter:     &mockHTMLConverter{},
-			cssInjector:       &mockCSSInjector{},
-			signatureInjector: nil,
-			pdfConverter:      &mockPDFConverter{},
-			wantPanic:         "nil signatureInjector provided to ConversionService",
-		},
-		{
-			name:              "nil pdfConverter",
-			preprocessor:      &mockPreprocessor{},
-			htmlConverter:     &mockHTMLConverter{},
-			cssInjector:       &mockCSSInjector{},
-			signatureInjector: &mockSignatureInjector{},
-			pdfConverter:      nil,
-			wantPanic:         "nil pdfConverter provided to ConversionService",
-		},
+func TestWithTimeout(t *testing.T) {
+	service := New(WithTimeout(60 * defaultTimeout))
+	defer service.Close()
+
+	if service.cfg.timeout != 60*defaultTimeout {
+		t.Errorf("timeout = %v, want %v", service.cfg.timeout, 60*defaultTimeout)
+	}
+}
+
+func TestService_Close(t *testing.T) {
+	service := New()
+
+	// Close should not error
+	if err := service.Close(); err != nil {
+		t.Errorf("Close() error = %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			defer func() {
-				r := recover()
-				if r == nil {
-					t.Fatal("expected panic, got none")
-				}
-				if r != tt.wantPanic {
-					t.Errorf("panic = %q, want %q", r, tt.wantPanic)
-				}
-			}()
-			NewConversionServiceWith(tt.preprocessor, tt.htmlConverter, tt.cssInjector, tt.signatureInjector, tt.pdfConverter)
-		})
+	// Double close should also not error
+	if err := service.Close(); err != nil {
+		t.Errorf("Close() second call error = %v", err)
 	}
+}
+
+func TestToSignatureData(t *testing.T) {
+	t.Run("nil returns nil", func(t *testing.T) {
+		result := toSignatureData(nil)
+		if result != nil {
+			t.Error("expected nil for nil input")
+		}
+	})
+
+	t.Run("converts all fields", func(t *testing.T) {
+		sig := &Signature{
+			Name:      "John Doe",
+			Title:     "Developer",
+			Email:     "john@example.com",
+			ImagePath: "/path/to/image.png",
+			Links: []Link{
+				{Label: "GitHub", URL: "https://github.com/john"},
+			},
+		}
+
+		result := toSignatureData(sig)
+
+		if result.Name != sig.Name {
+			t.Errorf("Name = %q, want %q", result.Name, sig.Name)
+		}
+		if result.Title != sig.Title {
+			t.Errorf("Title = %q, want %q", result.Title, sig.Title)
+		}
+		if result.Email != sig.Email {
+			t.Errorf("Email = %q, want %q", result.Email, sig.Email)
+		}
+		if result.ImagePath != sig.ImagePath {
+			t.Errorf("ImagePath = %q, want %q", result.ImagePath, sig.ImagePath)
+		}
+		if len(result.Links) != 1 {
+			t.Fatalf("Links count = %d, want 1", len(result.Links))
+		}
+		if result.Links[0].Label != "GitHub" || result.Links[0].URL != "https://github.com/john" {
+			t.Errorf("Links[0] = %+v, want {GitHub, https://github.com/john}", result.Links[0])
+		}
+	})
+}
+
+func TestToFooterData(t *testing.T) {
+	t.Run("nil returns nil", func(t *testing.T) {
+		result := toFooterData(nil)
+		if result != nil {
+			t.Error("expected nil for nil input")
+		}
+	})
+
+	t.Run("converts all fields", func(t *testing.T) {
+		footer := &Footer{
+			Position:       "center",
+			ShowPageNumber: true,
+			Date:           "2025-01-15",
+			Status:         "DRAFT",
+			Text:           "Footer",
+		}
+
+		result := toFooterData(footer)
+
+		if result.Position != footer.Position {
+			t.Errorf("Position = %q, want %q", result.Position, footer.Position)
+		}
+		if result.ShowPageNumber != footer.ShowPageNumber {
+			t.Errorf("ShowPageNumber = %v, want %v", result.ShowPageNumber, footer.ShowPageNumber)
+		}
+		if result.Date != footer.Date {
+			t.Errorf("Date = %q, want %q", result.Date, footer.Date)
+		}
+		if result.Status != footer.Status {
+			t.Errorf("Status = %q, want %q", result.Status, footer.Status)
+		}
+		if result.Text != footer.Text {
+			t.Errorf("Text = %q, want %q", result.Text, footer.Text)
+		}
+	})
 }

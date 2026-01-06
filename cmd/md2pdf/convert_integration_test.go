@@ -1,41 +1,44 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
+
+	md2pdf "github.com/alnah/go-md2pdf"
 )
 
 // mockConverter is a test double for the Converter interface.
 type mockConverter struct {
 	mu          sync.Mutex
-	calls       []ConversionOptions
-	convertFunc func(opts ConversionOptions) error
+	calls       []md2pdf.Input
+	convertFunc func(ctx context.Context, input md2pdf.Input) ([]byte, error)
 }
 
 func newMockConverter() *mockConverter {
 	return &mockConverter{}
 }
 
-func (m *mockConverter) Convert(opts ConversionOptions) error {
+func (m *mockConverter) Convert(ctx context.Context, input md2pdf.Input) ([]byte, error) {
 	m.mu.Lock()
-	m.calls = append(m.calls, opts)
+	m.calls = append(m.calls, input)
 	m.mu.Unlock()
 
 	if m.convertFunc != nil {
-		return m.convertFunc(opts)
+		return m.convertFunc(ctx, input)
 	}
 
-	// Default: simulate success by creating a minimal PDF file
-	return os.WriteFile(opts.OutputPath, []byte("%PDF-1.4 mock"), 0644)
+	// Default: return mock PDF bytes
+	return []byte("%PDF-1.4 mock"), nil
 }
 
-func (m *mockConverter) getCalls() []ConversionOptions {
+func (m *mockConverter) getCalls() []md2pdf.Input {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	return append([]ConversionOptions{}, m.calls...)
+	return append([]md2pdf.Input{}, m.calls...)
 }
 
 // setupTestDir creates a temp directory with the given file structure.
@@ -66,7 +69,7 @@ func TestBatchConversion_SingleFile(t *testing.T) {
 	inputPath := filepath.Join(tempDir, "doc.md")
 	expectedOutput := filepath.Join(tempDir, "doc.pdf")
 
-	err := run([]string{"go-md2pdf", inputPath}, mock)
+	err := run([]string{"md2pdf", inputPath}, mock)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -81,11 +84,8 @@ func TestBatchConversion_SingleFile(t *testing.T) {
 	if len(calls) != 1 {
 		t.Fatalf("expected 1 call, got %d", len(calls))
 	}
-	if calls[0].MarkdownContent != "# Hello World" {
-		t.Errorf("MarkdownContent = %q, want %q", calls[0].MarkdownContent, "# Hello World")
-	}
-	if calls[0].OutputPath != expectedOutput {
-		t.Errorf("OutputPath = %q, want %q", calls[0].OutputPath, expectedOutput)
+	if calls[0].Markdown != "# Hello World" {
+		t.Errorf("Markdown = %q, want %q", calls[0].Markdown, "# Hello World")
 	}
 }
 
@@ -98,7 +98,7 @@ func TestBatchConversion_SingleFileWithOutputFile(t *testing.T) {
 	inputPath := filepath.Join(tempDir, "doc.md")
 	outputPath := filepath.Join(tempDir, "custom.pdf")
 
-	err := run([]string{"go-md2pdf", "-o", outputPath, inputPath}, mock)
+	err := run([]string{"md2pdf", "-o", outputPath, inputPath}, mock)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -112,9 +112,6 @@ func TestBatchConversion_SingleFileWithOutputFile(t *testing.T) {
 	if len(calls) != 1 {
 		t.Fatalf("expected 1 call, got %d", len(calls))
 	}
-	if calls[0].OutputPath != outputPath {
-		t.Errorf("OutputPath = %q, want %q", calls[0].OutputPath, outputPath)
-	}
 }
 
 func TestBatchConversion_SingleFileWithOutputDir(t *testing.T) {
@@ -127,7 +124,7 @@ func TestBatchConversion_SingleFileWithOutputDir(t *testing.T) {
 	outputDir := filepath.Join(tempDir, "out")
 	expectedOutput := filepath.Join(outputDir, "doc.pdf")
 
-	err := run([]string{"go-md2pdf", "-o", outputDir, inputPath}, mock)
+	err := run([]string{"md2pdf", "-o", outputDir, inputPath}, mock)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -141,9 +138,6 @@ func TestBatchConversion_SingleFileWithOutputDir(t *testing.T) {
 	if len(calls) != 1 {
 		t.Fatalf("expected 1 call, got %d", len(calls))
 	}
-	if calls[0].OutputPath != expectedOutput {
-		t.Errorf("OutputPath = %q, want %q", calls[0].OutputPath, expectedOutput)
-	}
 }
 
 func TestBatchConversion_Directory(t *testing.T) {
@@ -156,7 +150,7 @@ func TestBatchConversion_Directory(t *testing.T) {
 
 	mock := newMockConverter()
 
-	err := run([]string{"go-md2pdf", tempDir}, mock)
+	err := run([]string{"md2pdf", tempDir}, mock)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -191,7 +185,7 @@ func TestBatchConversion_DirectoryMirror(t *testing.T) {
 	inputDir := tempDir
 	outputDir := filepath.Join(tempDir, "output")
 
-	err := run([]string{"go-md2pdf", "-o", outputDir, inputDir}, mock)
+	err := run([]string{"md2pdf", "-o", outputDir, inputDir}, mock)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -224,14 +218,14 @@ func TestBatchConversion_MixedSuccessFailure(t *testing.T) {
 	mock := newMockConverter()
 
 	// Make converter fail for bad.md
-	mock.convertFunc = func(opts ConversionOptions) error {
-		if opts.OutputPath == filepath.Join(tempDir, "bad.pdf") {
-			return errors.New("simulated conversion failure")
+	mock.convertFunc = func(ctx context.Context, input md2pdf.Input) ([]byte, error) {
+		if input.Markdown == "# Bad" {
+			return nil, errors.New("simulated conversion failure")
 		}
-		return os.WriteFile(opts.OutputPath, []byte("%PDF-1.4 mock"), 0644)
+		return []byte("%PDF-1.4 mock"), nil
 	}
 
-	err := run([]string{"go-md2pdf", tempDir}, mock)
+	err := run([]string{"md2pdf", tempDir}, mock)
 
 	// Should return error indicating 1 failure
 	if err == nil {
@@ -265,7 +259,7 @@ func TestBatchConversion_EmptyDirectory(t *testing.T) {
 
 	mock := newMockConverter()
 
-	err := run([]string{"go-md2pdf", tempDir}, mock)
+	err := run([]string{"md2pdf", tempDir}, mock)
 
 	// Should return error for no markdown files
 	if err == nil {
@@ -296,7 +290,7 @@ func TestBatchConversion_ConfigDefaultDir(t *testing.T) {
 	mock := newMockConverter()
 
 	// Run without specifying input, using config
-	err := run([]string{"go-md2pdf", "--config", configPath}, mock)
+	err := run([]string{"md2pdf", "--config", configPath}, mock)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -306,8 +300,8 @@ func TestBatchConversion_ConfigDefaultDir(t *testing.T) {
 	if len(calls) != 1 {
 		t.Fatalf("expected 1 call, got %d", len(calls))
 	}
-	if calls[0].MarkdownContent != "# From Config" {
-		t.Errorf("MarkdownContent = %q, want %q", calls[0].MarkdownContent, "# From Config")
+	if calls[0].Markdown != "# From Config" {
+		t.Errorf("Markdown = %q, want %q", calls[0].Markdown, "# From Config")
 	}
 }
 
@@ -321,7 +315,7 @@ func TestBatchConversion_CSSPassedToConverter(t *testing.T) {
 	inputPath := filepath.Join(tempDir, "doc.md")
 	cssPath := filepath.Join(tempDir, "style.css")
 
-	err := run([]string{"go-md2pdf", "--css", cssPath, inputPath}, mock)
+	err := run([]string{"md2pdf", "--css", cssPath, inputPath}, mock)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -330,15 +324,15 @@ func TestBatchConversion_CSSPassedToConverter(t *testing.T) {
 	if len(calls) != 1 {
 		t.Fatalf("expected 1 call, got %d", len(calls))
 	}
-	if calls[0].CSSContent != "body { color: blue; }" {
-		t.Errorf("CSSContent = %q, want %q", calls[0].CSSContent, "body { color: blue; }")
+	if calls[0].CSS != "body { color: blue; }" {
+		t.Errorf("CSS = %q, want %q", calls[0].CSS, "body { color: blue; }")
 	}
 }
 
 func TestBatchConversion_NoInput(t *testing.T) {
 	mock := newMockConverter()
 
-	err := run([]string{"go-md2pdf"}, mock)
+	err := run([]string{"md2pdf"}, mock)
 
 	// Should return ErrNoInput
 	if !errors.Is(err, ErrNoInput) {
@@ -362,7 +356,7 @@ func TestBatchConversion_ConcurrentExecution(t *testing.T) {
 
 	mock := newMockConverter()
 
-	err := run([]string{"go-md2pdf", tempDir}, mock)
+	err := run([]string{"md2pdf", tempDir}, mock)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
