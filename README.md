@@ -8,6 +8,33 @@
 
 > Convert Markdown to print-ready PDF in **3 lines of code** - with signatures, footers, and custom styling.
 
+## Installation
+
+```bash
+go install github.com/alnah/go-md2pdf/cmd/md2pdf@latest
+```
+
+<details>
+<summary>Other installation methods</summary>
+
+### Homebrew (macOS/Linux)
+
+```bash
+brew install alnah/go-md2pdf/go-md2pdf
+```
+
+### Docker
+
+```bash
+docker pull ghcr.io/alnah/go-md2pdf:latest
+```
+
+### Binary Download
+
+Download pre-built binaries from [GitHub Releases](https://github.com/alnah/go-md2pdf/releases).
+
+</details>
+
 ## Features
 
 - **CLI + Library** - Use as `md2pdf` command or import in Go
@@ -21,8 +48,6 @@
 ### CLI
 
 ```bash
-go install github.com/alnah/go-md2pdf/cmd/md2pdf@latest
-
 md2pdf document.md                        # Single file
 md2pdf ./docs/ -o ./output/               # Batch convert
 md2pdf --config work document.md          # With config
@@ -66,7 +91,7 @@ pdf, err := svc.Convert(ctx, md2pdf.Input{
     Footer: &md2pdf.Footer{
         ShowPageNumber: true,
         Position:       "center",
-        Date:           "2025-01-15",
+        Date:           "2026-01-15",
         Status:         "DRAFT",
     },
     Signature: &md2pdf.Signature{
@@ -100,6 +125,7 @@ Flags:
       --no-signature Disable signature
   -q, --quiet        Only show errors
   -v, --verbose      Show detailed timing
+      --version      Show version and exit
 ```
 
 ### Examples
@@ -113,6 +139,19 @@ md2pdf --config work ./docs/ -o ./pdfs/
 
 # Custom CSS, no footer
 md2pdf --css custom.css --no-footer document.md
+```
+
+### Docker
+
+```bash
+# Convert a single file
+docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf document.md
+
+# Convert with output path
+docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf -o output.pdf input.md
+
+# Batch convert directory
+docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf ./docs/ -o ./pdfs/
 ```
 
 ## Configuration
@@ -151,7 +190,7 @@ footer:
   enabled: true
   showPageNumber: true
   position: 'center'
-  date: '2025-01-15'
+  date: '2026-01-15'
   status: 'DRAFT'
 
 signature:
@@ -180,9 +219,13 @@ go-md2pdf/
 └── internal/           # Assets, config, utilities
 ```
 
+## Documentation
+
+Full API documentation: [pkg.go.dev/github.com/alnah/go-md2pdf](https://pkg.go.dev/github.com/alnah/go-md2pdf)
+
 ## Requirements
 
-- Go 1.21+
+- Go 1.25+
 - Chrome/Chromium (downloaded automatically on first run)
 
 ## Contributing
@@ -191,4 +234,4 @@ See: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-See: [LICENSE MIT](LICENSE.txt).
+See: [MIT](LICENSE.txt).
