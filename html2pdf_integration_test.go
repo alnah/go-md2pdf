@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func assertValidPDF(t *testing.T, data []byte) {
@@ -191,4 +192,21 @@ func TestService_Integration(t *testing.T) {
 
 		assertValidPDFFile(t, outputPath)
 	})
+}
+
+// TestRodRenderer_EnsureBrowser_CI tests browser launch with CI environment variable.
+func TestRodRenderer_EnsureBrowser_CI(t *testing.T) {
+	t.Setenv("CI", "true")
+
+	renderer := newRodRenderer(30 * time.Second)
+	defer renderer.Close()
+
+	err := renderer.ensureBrowser()
+	if err != nil {
+		t.Fatalf("ensureBrowser() with CI=true error = %v", err)
+	}
+
+	if renderer.browser == nil {
+		t.Error("browser should not be nil after ensureBrowser()")
+	}
 }

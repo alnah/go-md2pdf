@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 )
 
@@ -59,7 +61,18 @@ func (r *rodRenderer) ensureBrowser() error {
 	if r.browser != nil {
 		return nil
 	}
-	r.browser = rod.New()
+
+	// Configure launcher (NoSandbox required for CI environments)
+	l := launcher.New()
+	if os.Getenv("CI") == "true" {
+		l = l.NoSandbox(true)
+	}
+	u, err := l.Launch()
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrBrowserConnect, err)
+	}
+
+	r.browser = rod.New().ControlURL(u)
 	if err := r.browser.Connect(); err != nil {
 		r.browser = nil
 		return fmt.Errorf("%w: %v", ErrBrowserConnect, err)
