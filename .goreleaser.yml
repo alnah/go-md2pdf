@@ -1,0 +1,104 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: go-md2pdf
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - id: go-md2pdf
+    main: ./cmd/md2pdf
+    binary: go-md2pdf
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+    # Ignore unsupported combinations
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE.txt
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+  groups:
+    - title: Features
+      regexp: '^feat(\(.+\))?:'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^fix(\(.+\))?:'
+      order: 1
+    - title: Refactoring
+      regexp: '^refactor(\(.+\))?:'
+      order: 2
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: alnah
+    name: go-md2pdf
+  draft: false
+  prerelease: auto
+  name_template: "{{.ProjectName}} v{{.Version}}"
+
+# ------------------------------------------------------------------------------
+# Docker: DISABLED - requires Chromium, handled by separate workflow
+# See .github/workflows/docker.yml
+# ------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# Homebrew Tap
+# Source: https://goreleaser.com/customization/homebrew/
+# ------------------------------------------------------------------------------
+brews:
+  - name: go-md2pdf
+    repository:
+      owner: alnah
+      name: go-md2pdf
+      branch: main
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    directory: Formula
+    homepage: "https://github.com/alnah/go-md2pdf"
+    description: "Convert Markdown to print-ready PDF with signatures, footers, and custom styling"
+    license: "MIT"
+    test: |
+      system "#{bin}/go-md2pdf", "--version"
+    install: |
+      bin.install "go-md2pdf"

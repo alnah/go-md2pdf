@@ -7,6 +7,9 @@ import (
 	md2pdf "github.com/alnah/go-md2pdf"
 )
 
+// Version is set at build time via ldflags.
+var Version = "dev"
+
 func main() {
 	svc := md2pdf.New()
 	defer svc.Close()

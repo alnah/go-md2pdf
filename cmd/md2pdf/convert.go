@@ -57,6 +57,7 @@ type cliFlags struct {
 	noSignature bool
 	noStyle     bool
 	noFooter    bool
+	version     bool
 }
 
 // run parses arguments, discovers files, and orchestrates batch conversion.
@@ -135,6 +136,7 @@ func parseFlags(args []string) (*cliFlags, []string, error) {
 	flagSet.BoolVar(&flags.noSignature, "no-signature", false, "disable signature injection")
 	flagSet.BoolVar(&flags.noStyle, "no-style", false, "disable CSS styling")
 	flagSet.BoolVar(&flags.noFooter, "no-footer", false, "disable page footer")
+	flagSet.BoolVar(&flags.version, "version", false, "show version and exit")
 
 	flagSet.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: md2pdf [flags] <input> [flags]\n\n")
@@ -150,6 +152,11 @@ func parseFlags(args []string) (*cliFlags, []string, error) {
 		if err := flagSet.Parse(args[1:]); err != nil {
 			return nil, nil, err
 		}
+	}
+
+	if flags.version {
+		fmt.Printf("go-md2pdf %s\n", Version)
+		os.Exit(0)
 	}
 
 	return flags, flagSet.Args(), nil
