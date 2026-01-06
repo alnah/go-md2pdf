@@ -1,4 +1,4 @@
-BINARY := go-md2pdf
+BINARY := md2pdf
 
 .PHONY: help build test test-integration test-cover test-cover-all run clean fmt vet lint sec check check-all tools
 
@@ -18,7 +18,7 @@ deps: ## Install dependencies (go-rod, go-yaml, pflag, goldmark)
 	go get github.com/yuin/goldmark
 
 build: ## Build the binary
-	go build -o $(BINARY) .
+	go build -o $(BINARY) ./cmd/md2pdf
 
 test: ## Run unit tests
 	go test -v ./...

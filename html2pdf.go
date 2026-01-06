@@ -1,11 +1,10 @@
-package main
+package md2pdf
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"html"
 	"io"
-	"os"
 	"strings"
 	"time"
 
@@ -13,29 +12,27 @@ import (
 	"github.com/go-rod/rod/lib/proto"
 )
 
-// PDFConverter abstracts HTML to PDF conversion to allow different backends.
-type PDFConverter interface {
-	ToPDF(htmlContent, outputPath string, opts *PDFOptions) error
+// pdfConverter abstracts HTML to PDF conversion to allow different backends.
+type pdfConverter interface {
+	ToPDF(ctx context.Context, htmlContent string, opts *pdfOptions) ([]byte, error)
+	Close() error
 }
 
-// PDFRenderer abstracts PDF rendering from an HTML file to enable testing without a browser.
-type PDFRenderer interface {
-	RenderFromFile(filePath string, opts *PDFOptions) ([]byte, error)
+// pdfRenderer abstracts PDF rendering from an HTML file to enable testing without a browser.
+type pdfRenderer interface {
+	RenderFromFile(ctx context.Context, filePath string, opts *pdfOptions) ([]byte, error)
 }
 
-// PDFOptions holds options for PDF generation.
-type PDFOptions struct {
-	Footer *FooterData
-}
-
-// Sentinel errors for PDF conversion failures.
+// Compile-time interface checks
 var (
-	ErrBrowserConnect = errors.New("failed to connect to browser")
-	ErrPageCreate     = errors.New("failed to create browser page")
-	ErrPageLoad       = errors.New("failed to load page")
-	ErrPDFGeneration  = errors.New("PDF generation failed")
-	ErrWritePDF       = errors.New("failed to write PDF file")
+	_ pdfConverter = (*rodConverter)(nil)
+	_ pdfRenderer  = (*rodRenderer)(nil)
 )
+
+// pdfOptions holds options for PDF generation.
+type pdfOptions struct {
+	Footer *footerData
+}
 
 // PDF page dimensions in inches (US Letter format).
 const (
@@ -43,33 +40,77 @@ const (
 	paperHeightInches      = 11
 	marginInches           = 0.5
 	marginBottomWithFooter = 0.75 // Extra space for footer
-	defaultTimeout         = 30 * time.Second
 )
 
-// RodRenderer implements PDFRenderer using go-rod.
+// rodRenderer implements pdfRenderer using go-rod.
 // Rod automatically downloads Chromium on first run if not found.
-type RodRenderer struct {
-	Timeout time.Duration
+type rodRenderer struct {
+	browser *rod.Browser
+	timeout time.Duration
+}
+
+// newRodRenderer creates a rodRenderer with the given timeout.
+func newRodRenderer(timeout time.Duration) *rodRenderer {
+	return &rodRenderer{timeout: timeout}
+}
+
+// ensureBrowser lazily connects to the browser.
+func (r *rodRenderer) ensureBrowser() error {
+	if r.browser != nil {
+		return nil
+	}
+	r.browser = rod.New()
+	if err := r.browser.Connect(); err != nil {
+		r.browser = nil
+		return fmt.Errorf("%w: %v", ErrBrowserConnect, err)
+	}
+	return nil
+}
+
+// Close releases browser resources.
+func (r *rodRenderer) Close() error {
+	if r.browser != nil {
+		err := r.browser.Close()
+		r.browser = nil
+		return err
+	}
+	return nil
 }
 
 // RenderFromFile opens a local HTML file in headless Chrome and renders it to PDF.
 // Returns explicit errors instead of panicking when browser operations fail.
-func (r *RodRenderer) RenderFromFile(filePath string, opts *PDFOptions) ([]byte, error) {
-	browser := rod.New()
-	if err := browser.Connect(); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrBrowserConnect, err)
+func (r *rodRenderer) RenderFromFile(ctx context.Context, filePath string, opts *pdfOptions) ([]byte, error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
-	defer browser.Close()
 
-	page, err := browser.Page(proto.TargetCreateTarget{URL: "file://" + filePath})
+	if err := r.ensureBrowser(); err != nil {
+		return nil, err
+	}
+
+	page, err := r.browser.Page(proto.TargetCreateTarget{URL: "file://" + filePath})
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrPageCreate, err)
 	}
 	defer page.Close()
 
-	// Wait for page to load with timeout
-	if err := page.Timeout(r.Timeout).WaitLoad(); err != nil {
+	// Wait for page to load with timeout from context or default
+	timeout := r.timeout
+	if deadline, ok := ctx.Deadline(); ok {
+		timeout = time.Until(deadline)
+		if timeout <= 0 {
+			return nil, context.DeadlineExceeded
+		}
+	}
+
+	if err := page.Timeout(timeout).WaitLoad(); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrPageLoad, err)
+	}
+
+	// Check context after page load
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 
 	// Build PDF options
@@ -90,7 +131,7 @@ func (r *RodRenderer) RenderFromFile(filePath string, opts *PDFOptions) ([]byte,
 }
 
 // buildPDFOptions constructs proto.PagePrintToPDF with optional footer.
-func (r *RodRenderer) buildPDFOptions(opts *PDFOptions) *proto.PagePrintToPDF {
+func (r *rodRenderer) buildPDFOptions(opts *pdfOptions) *proto.PagePrintToPDF {
 	marginBottom := marginInches
 	hasFooter := opts != nil && opts.Footer != nil
 
@@ -119,7 +160,7 @@ func (r *RodRenderer) buildPDFOptions(opts *PDFOptions) *proto.PagePrintToPDF {
 
 // buildFooterTemplate generates an HTML template for Chrome's native footer.
 // Supports pageNumber, totalPages, date placeholders via CSS classes.
-func buildFooterTemplate(data *FooterData) string {
+func buildFooterTemplate(data *footerData) string {
 	if data == nil {
 		return "<span></span>"
 	}
@@ -162,44 +203,34 @@ func floatPtr(v float64) *float64 {
 	return &v
 }
 
-// RodConverter converts HTML to PDF using headless Chrome via go-rod.
-type RodConverter struct {
-	Renderer PDFRenderer
+// rodConverter converts HTML to PDF using headless Chrome via go-rod.
+type rodConverter struct {
+	renderer *rodRenderer
 }
 
-// NewRodConverter creates a RodConverter with production renderer.
-func NewRodConverter() *RodConverter {
-	return &RodConverter{
-		Renderer: &RodRenderer{Timeout: defaultTimeout},
+// newRodConverter creates a rodConverter with production renderer.
+func newRodConverter(timeout time.Duration) *rodConverter {
+	return &rodConverter{
+		renderer: newRodRenderer(timeout),
 	}
 }
 
-// NewRodConverterWith creates a RodConverter with custom renderer (for testing).
-func NewRodConverterWith(renderer PDFRenderer) *RodConverter {
-	if renderer == nil {
-		panic("nil PDFRenderer in NewRodConverterWith")
-	}
-	return &RodConverter{Renderer: renderer}
-}
-
-// ToPDF converts HTML content to a PDF file using headless Chrome.
+// ToPDF converts HTML content to PDF bytes using headless Chrome.
 // Uses US Letter format (8.5x11 inches) with 0.5 inch margins.
-func (c *RodConverter) ToPDF(htmlContent, outputPath string, opts *PDFOptions) error {
+func (c *rodConverter) ToPDF(ctx context.Context, htmlContent string, opts *pdfOptions) ([]byte, error) {
 	tmpPath, cleanup, err := writeTempFile(htmlContent, "html")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer cleanup()
 
-	pdfBuf, err := c.Renderer.RenderFromFile(tmpPath, opts)
-	if err != nil {
-		return err
-	}
+	return c.renderer.RenderFromFile(ctx, tmpPath, opts)
+}
 
-	// #nosec G306 -- PDF output files are intended to be readable
-	if err := os.WriteFile(outputPath, pdfBuf, 0o644); err != nil {
-		return fmt.Errorf("%w: %v", ErrWritePDF, err)
+// Close releases browser resources.
+func (c *rodConverter) Close() error {
+	if c.renderer != nil {
+		return c.renderer.Close()
 	}
-
 	return nil
 }

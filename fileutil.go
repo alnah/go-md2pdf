@@ -1,4 +1,4 @@
-package main
+package md2pdf
 
 import (
 	"errors"
@@ -20,7 +20,7 @@ func writeTempFile(content, extension string) (path string, cleanup func(), err 
 		return "", nil, err
 	}
 
-	tmpFile, err := os.CreateTemp("", "go-md2pdf-*."+extension)
+	tmpFile, err := os.CreateTemp("", "md2pdf-*."+extension)
 	if err != nil {
 		return "", nil, fmt.Errorf("creating temp file: %w", err)
 	}
@@ -53,8 +53,8 @@ func validateExtension(extension string) error {
 	return nil
 }
 
-// fileExists returns true if the path exists and is a regular file.
-func fileExists(path string) bool {
+// FileExists returns true if the path exists and is a regular file.
+func FileExists(path string) bool {
 	info, err := os.Stat(path)
 	if err != nil {
 		return false

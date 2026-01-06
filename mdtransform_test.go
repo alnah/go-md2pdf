@@ -1,6 +1,7 @@
-package main
+package md2pdf
 
 import (
+	"context"
 	"testing"
 )
 
@@ -39,9 +40,9 @@ func TestNormalizeLineEndings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NormalizeLineEndings(tt.input)
+			got := normalizeLineEndings(tt.input)
 			if got != tt.expected {
-				t.Errorf("NormalizeLineEndings() = %q, want %q", got, tt.expected)
+				t.Errorf("normalizeLineEndings() = %q, want %q", got, tt.expected)
 			}
 		})
 	}
@@ -87,9 +88,9 @@ func TestCompressBlankLines(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := CompressBlankLines(tt.input)
+			got := compressBlankLines(tt.input)
 			if got != tt.expected {
-				t.Errorf("CompressBlankLines() = %q, want %q", got, tt.expected)
+				t.Errorf("compressBlankLines() = %q, want %q", got, tt.expected)
 			}
 		})
 	}
@@ -150,9 +151,9 @@ func TestConvertHighlights(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ConvertHighlights(tt.input)
+			got := convertHighlights(tt.input)
 			if got != tt.expected {
-				t.Errorf("ConvertHighlights() = %q, want %q", got, tt.expected)
+				t.Errorf("convertHighlights() = %q, want %q", got, tt.expected)
 			}
 		})
 	}
@@ -206,11 +207,12 @@ func TestCommonMarkPreprocessor_PreprocessMarkdown(t *testing.T) {
 		},
 	}
 
-	preprocessor := &CommonMarkPreprocessor{}
+	preprocessor := &commonMarkPreprocessor{}
+	ctx := context.Background()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := preprocessor.PreprocessMarkdown(tt.input)
+			got := preprocessor.PreprocessMarkdown(ctx, tt.input)
 			if got != tt.expected {
 				t.Errorf("PreprocessMarkdown():\ngot:  %q\nwant: %q", got, tt.expected)
 			}

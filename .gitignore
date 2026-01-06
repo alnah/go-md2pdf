@@ -6,7 +6,7 @@
 # https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
 #
 # Binaries for programs and plugins
-/go-md2pdf
+/md2pdf
 *.exe
 *.exe~
 *.dll

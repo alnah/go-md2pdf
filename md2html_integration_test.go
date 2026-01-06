@@ -1,19 +1,22 @@
 //go:build integration
 
-package main
+package md2pdf
 
 import (
+	"context"
 	"strings"
 	"testing"
 )
 
 func TestGoldmarkConverter_ToHTML_Integration(t *testing.T) {
+	ctx := context.Background()
+
 	t.Run("basic markdown", func(t *testing.T) {
 		content := `# Hello
 
 World`
-		converter := NewGoldmarkConverter()
-		got, err := converter.ToHTML(content)
+		converter := newGoldmarkConverter()
+		got, err := converter.ToHTML(ctx, content)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -34,8 +37,8 @@ World`
 
 Ceci est un test avec des caracteres speciaux.`
 
-		converter := NewGoldmarkConverter()
-		got, err := converter.ToHTML(content)
+		converter := newGoldmarkConverter()
+		got, err := converter.ToHTML(ctx, content)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -48,8 +51,8 @@ Ceci est un test avec des caracteres speciaux.`
 	t.Run("code block with special chars", func(t *testing.T) {
 		content := "# Code Example\n\n```go\nfunc main() {\n\tfmt.Println(\"<hello>\")\n}\n```"
 
-		converter := NewGoldmarkConverter()
-		got, err := converter.ToHTML(content)
+		converter := newGoldmarkConverter()
+		got, err := converter.ToHTML(ctx, content)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -67,8 +70,8 @@ Ceci est un test avec des caracteres speciaux.`
 | Alice | 30 |
 | Bob | 25 |`
 
-		converter := NewGoldmarkConverter()
-		got, err := converter.ToHTML(content)
+		converter := newGoldmarkConverter()
+		got, err := converter.ToHTML(ctx, content)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -89,8 +92,8 @@ Ceci est un test avec des caracteres speciaux.`
   - Subitem 1.2
 - Item 2`
 
-		converter := NewGoldmarkConverter()
-		got, err := converter.ToHTML(content)
+		converter := newGoldmarkConverter()
+		got, err := converter.ToHTML(ctx, content)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -106,8 +109,8 @@ Ceci est un test avec des caracteres speciaux.`
 	t.Run("whitespace-only content is valid", func(t *testing.T) {
 		content := "   \n\t\n   "
 
-		converter := NewGoldmarkConverter()
-		_, err := converter.ToHTML(content)
+		converter := newGoldmarkConverter()
+		_, err := converter.ToHTML(ctx, content)
 		if err != nil {
 			t.Fatalf("whitespace-only content should be valid, got error: %v", err)
 		}

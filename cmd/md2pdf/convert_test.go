@@ -5,7 +5,22 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	md2pdf "github.com/alnah/go-md2pdf"
+	"github.com/alnah/go-md2pdf/internal/config"
 )
+
+// Aliases for cleaner test code
+type Config = config.Config
+type InputConfig = config.InputConfig
+type OutputConfig = config.OutputConfig
+type CSSConfig = config.CSSConfig
+type SignatureConfig = config.SignatureConfig
+type FooterConfig = config.FooterConfig
+type Link = config.Link
+
+// Ensure md2pdf is used (avoid unused import error)
+var _ = md2pdf.New
 
 func TestParseFlags(t *testing.T) {
 	tests := []struct {
@@ -24,47 +39,47 @@ func TestParseFlags(t *testing.T) {
 	}{
 		{
 			name:           "no args",
-			args:           []string{"go-md2pdf"},
+			args:           []string{"md2pdf"},
 			wantPositional: []string{},
 		},
 		{
 			name:           "single file",
-			args:           []string{"go-md2pdf", "doc.md"},
+			args:           []string{"md2pdf", "doc.md"},
 			wantPositional: []string{"doc.md"},
 		},
 		{
 			name:           "config flag",
-			args:           []string{"go-md2pdf", "--config", "work"},
+			args:           []string{"md2pdf", "--config", "work"},
 			wantConfig:     "work",
 			wantPositional: []string{},
 		},
 		{
 			name:           "output flag short",
-			args:           []string{"go-md2pdf", "-o", "./out/"},
+			args:           []string{"md2pdf", "-o", "./out/"},
 			wantOutput:     "./out/",
 			wantPositional: []string{},
 		},
 		{
 			name:           "css flag",
-			args:           []string{"go-md2pdf", "--css", "style.css"},
+			args:           []string{"md2pdf", "--css", "style.css"},
 			wantCSS:        "style.css",
 			wantPositional: []string{},
 		},
 		{
 			name:           "quiet flag",
-			args:           []string{"go-md2pdf", "--quiet"},
+			args:           []string{"md2pdf", "--quiet"},
 			wantQuiet:      true,
 			wantPositional: []string{},
 		},
 		{
 			name:           "verbose flag",
-			args:           []string{"go-md2pdf", "--verbose"},
+			args:           []string{"md2pdf", "--verbose"},
 			wantVerbose:    true,
 			wantPositional: []string{},
 		},
 		{
 			name:           "all flags with file",
-			args:           []string{"go-md2pdf", "--config", "work", "-o", "out.pdf", "--css", "style.css", "--verbose", "doc.md"},
+			args:           []string{"md2pdf", "--config", "work", "-o", "out.pdf", "--css", "style.css", "--verbose", "doc.md"},
 			wantConfig:     "work",
 			wantOutput:     "out.pdf",
 			wantCSS:        "style.css",
@@ -73,19 +88,19 @@ func TestParseFlags(t *testing.T) {
 		},
 		{
 			name:    "unknown flag returns error",
-			args:    []string{"go-md2pdf", "--unknown"},
+			args:    []string{"md2pdf", "--unknown"},
 			wantErr: true,
 		},
 		{
 			name:           "flags after positional argument",
-			args:           []string{"go-md2pdf", "doc.md", "-o", "./out/", "--verbose"},
+			args:           []string{"md2pdf", "doc.md", "-o", "./out/", "--verbose"},
 			wantOutput:     "./out/",
 			wantVerbose:    true,
 			wantPositional: []string{"doc.md"},
 		},
 		{
 			name:           "short flags",
-			args:           []string{"go-md2pdf", "-c", "work", "-q", "-v", "doc.md"},
+			args:           []string{"md2pdf", "-c", "work", "-q", "-v", "doc.md"},
 			wantConfig:     "work",
 			wantQuiet:      true,
 			wantVerbose:    true,
@@ -93,7 +108,7 @@ func TestParseFlags(t *testing.T) {
 		},
 		{
 			name:           "mixed long and short flags",
-			args:           []string{"go-md2pdf", "--config", "work", "-o", "./out/", "doc.md", "-v"},
+			args:           []string{"md2pdf", "--config", "work", "-o", "./out/", "doc.md", "-v"},
 			wantConfig:     "work",
 			wantOutput:     "./out/",
 			wantVerbose:    true,
@@ -101,25 +116,25 @@ func TestParseFlags(t *testing.T) {
 		},
 		{
 			name:            "no-signature flag",
-			args:            []string{"go-md2pdf", "--no-signature", "doc.md"},
+			args:            []string{"md2pdf", "--no-signature", "doc.md"},
 			wantNoSignature: true,
 			wantPositional:  []string{"doc.md"},
 		},
 		{
 			name:           "no-style flag",
-			args:           []string{"go-md2pdf", "--no-style", "doc.md"},
+			args:           []string{"md2pdf", "--no-style", "doc.md"},
 			wantNoStyle:    true,
 			wantPositional: []string{"doc.md"},
 		},
 		{
 			name:           "no-footer flag",
-			args:           []string{"go-md2pdf", "--no-footer", "doc.md"},
+			args:           []string{"md2pdf", "--no-footer", "doc.md"},
 			wantNoFooter:   true,
 			wantPositional: []string{"doc.md"},
 		},
 		{
 			name:            "all disable flags combined",
-			args:            []string{"go-md2pdf", "--no-signature", "--no-style", "--no-footer", "doc.md"},
+			args:            []string{"md2pdf", "--no-signature", "--no-style", "--no-footer", "doc.md"},
 			wantNoSignature: true,
 			wantNoStyle:     true,
 			wantNoFooter:    true,

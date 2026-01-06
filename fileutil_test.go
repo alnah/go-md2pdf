@@ -1,4 +1,4 @@
-package main
+package md2pdf
 
 import (
 	"errors"
@@ -103,8 +103,8 @@ func TestWriteTempFile(t *testing.T) {
 			}
 
 			// Verify path pattern
-			if !strings.Contains(path, "go-md2pdf-") {
-				t.Errorf("path %q does not contain prefix 'go-md2pdf-'", path)
+			if !strings.Contains(path, "md2pdf-") {
+				t.Errorf("path %q does not contain prefix 'md2pdf-'", path)
 			}
 			if !strings.HasSuffix(path, "."+tt.extension) {
 				t.Errorf("path %q does not have extension .%s", path, tt.extension)
@@ -245,9 +245,9 @@ func TestFileExists(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := fileExists(tt.path)
+			got := FileExists(tt.path)
 			if got != tt.want {
-				t.Errorf("fileExists(%q) = %v, want %v", tt.path, got, tt.want)
+				t.Errorf("FileExists(%q) = %v, want %v", tt.path, got, tt.want)
 			}
 		})
 	}

@@ -1,0 +1,194 @@
+//go:build integration
+
+package md2pdf
+
+import (
+	"bytes"
+	"context"
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func assertValidPDF(t *testing.T, data []byte) {
+	t.Helper()
+
+	if !bytes.HasPrefix(data, []byte("%PDF-")) {
+		t.Errorf("data does not have PDF magic bytes, got prefix: %q", data[:min(10, len(data))])
+	}
+
+	if len(data) < 100 {
+		t.Errorf("PDF data suspiciously small: %d bytes", len(data))
+	}
+}
+
+func assertValidPDFFile(t *testing.T, path string) {
+	t.Helper()
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read PDF file: %v", err)
+	}
+
+	assertValidPDF(t, data)
+}
+
+// TestRodConverter_ToPDF_Integration tests PDF generation using go-rod.
+// Rod automatically downloads Chromium on first run if not found.
+func TestRodConverter_ToPDF_Integration(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("valid HTML produces PDF", func(t *testing.T) {
+		html := `<!DOCTYPE html>
+<html>
+<head><title>Test</title></head>
+<body><h1>Hello, World!</h1><p>This is a test document.</p></body>
+</html>`
+
+		converter := newRodConverter(defaultTimeout)
+		data, err := converter.ToPDF(ctx, html, nil)
+		if err != nil {
+			t.Fatalf("ToPDF() error = %v", err)
+		}
+
+		assertValidPDF(t, data)
+	})
+
+	t.Run("HTML with CSS produces PDF", func(t *testing.T) {
+		// CSS is now injected before calling ToPDF
+		injector := &cssInjection{}
+		html := `<!DOCTYPE html>
+<html>
+<head><title>Test</title></head>
+<body><h1>Styled Document</h1></body>
+</html>`
+		css := "h1 { color: blue; font-size: 24px; }"
+		htmlWithCSS := injector.InjectCSS(ctx, html, css)
+
+		converter := newRodConverter(defaultTimeout)
+		data, err := converter.ToPDF(ctx, htmlWithCSS, nil)
+		if err != nil {
+			t.Fatalf("ToPDF() error = %v", err)
+		}
+
+		assertValidPDF(t, data)
+	})
+
+	t.Run("HTML with footer produces PDF", func(t *testing.T) {
+		html := `<!DOCTYPE html>
+<html>
+<head><title>Test</title></head>
+<body><h1>Document with Footer</h1></body>
+</html>`
+
+		converter := newRodConverter(defaultTimeout)
+		opts := &pdfOptions{
+			Footer: &footerData{
+				ShowPageNumber: true,
+				Date:           "2025-01-15",
+				Status:         "DRAFT",
+			},
+		}
+		data, err := converter.ToPDF(ctx, html, opts)
+		if err != nil {
+			t.Fatalf("ToPDF() error = %v", err)
+		}
+
+		assertValidPDF(t, data)
+	})
+}
+
+// TestService_Integration tests the full conversion pipeline through the public API.
+func TestService_Integration(t *testing.T) {
+	ctx := context.Background()
+	service := New()
+	defer service.Close()
+
+	t.Run("basic markdown to PDF", func(t *testing.T) {
+		input := Input{
+			Markdown: "# Hello\n\nWorld",
+		}
+
+		data, err := service.Convert(ctx, input)
+		if err != nil {
+			t.Fatalf("Convert() error = %v", err)
+		}
+
+		assertValidPDF(t, data)
+	})
+
+	t.Run("markdown with CSS", func(t *testing.T) {
+		input := Input{
+			Markdown: "# Styled\n\nContent",
+			CSS:      "h1 { color: blue; }",
+		}
+
+		data, err := service.Convert(ctx, input)
+		if err != nil {
+			t.Fatalf("Convert() error = %v", err)
+		}
+
+		assertValidPDF(t, data)
+	})
+
+	t.Run("markdown with footer", func(t *testing.T) {
+		input := Input{
+			Markdown: "# Document\n\nWith footer",
+			Footer: &Footer{
+				Position:       "center",
+				ShowPageNumber: true,
+				Date:           "2025-01-15",
+				Status:         "DRAFT",
+			},
+		}
+
+		data, err := service.Convert(ctx, input)
+		if err != nil {
+			t.Fatalf("Convert() error = %v", err)
+		}
+
+		assertValidPDF(t, data)
+	})
+
+	t.Run("markdown with signature", func(t *testing.T) {
+		input := Input{
+			Markdown: "# Document\n\nWith signature",
+			Signature: &Signature{
+				Name:  "John Doe",
+				Title: "Developer",
+				Email: "john@example.com",
+				Links: []Link{
+					{Label: "GitHub", URL: "https://github.com/johndoe"},
+				},
+			},
+		}
+
+		data, err := service.Convert(ctx, input)
+		if err != nil {
+			t.Fatalf("Convert() error = %v", err)
+		}
+
+		assertValidPDF(t, data)
+	})
+
+	t.Run("write to file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		outputPath := filepath.Join(tmpDir, "output.pdf")
+
+		input := Input{
+			Markdown: "# Test\n\nWriting to file",
+		}
+
+		data, err := service.Convert(ctx, input)
+		if err != nil {
+			t.Fatalf("Convert() error = %v", err)
+		}
+
+		err = os.WriteFile(outputPath, data, 0644)
+		if err != nil {
+			t.Fatalf("WriteFile() error = %v", err)
+		}
+
+		assertValidPDFFile(t, outputPath)
+	})
+}

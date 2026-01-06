@@ -1,129 +1,137 @@
-package main
+package md2pdf
 
 import (
-	"errors"
+	"context"
 	"fmt"
 )
 
-// Sentinel errors for service operations.
-var (
-	ErrEmptyMarkdown = errors.New("markdown content cannot be empty")
-	ErrEmptyOutput   = errors.New("output path cannot be empty")
-)
-
-// ConversionOptions holds all inputs for a conversion.
-type ConversionOptions struct {
-	MarkdownContent string         // Raw markdown content (required)
-	OutputPath      string         // Path for output PDF (required)
-	CSSContent      string         // Custom CSS (empty = no CSS)
-	Footer          *FooterData    // Footer data (nil = no footer)
-	Signature       *SignatureData // Signature data (nil = no signature)
+// Service orchestrates the markdown-to-PDF pipeline.
+type Service struct {
+	cfg               serviceConfig
+	preprocessor      markdownPreprocessor
+	htmlConverter     htmlConverter
+	cssInjector       cssInjector
+	signatureInjector signatureInjector
+	pdfConverter      *rodConverter
 }
 
-// ConversionService orchestrates the markdown-to-PDF pipeline.
-type ConversionService struct {
-	preprocessor      MarkdownPreprocessor
-	htmlConverter     HTMLConverter
-	cssInjector       CSSInjector
-	signatureInjector SignatureInjector
-	pdfConverter      PDFConverter
-}
+// New creates a Service with default configuration.
+// Use options to customize behavior (e.g., WithTimeout).
+func New(opts ...Option) *Service {
+	cfg := serviceConfig{
+		timeout: defaultTimeout,
+	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
 
-// NewConversionService creates a service with production dependencies.
-func NewConversionService() *ConversionService {
-	return &ConversionService{
-		preprocessor:      &CommonMarkPreprocessor{},
-		htmlConverter:     NewGoldmarkConverter(),
-		cssInjector:       &CSSInjection{},
-		signatureInjector: NewSignatureInjection(),
-		pdfConverter:      NewRodConverter(),
+	return &Service{
+		cfg:               cfg,
+		preprocessor:      &commonMarkPreprocessor{},
+		htmlConverter:     newGoldmarkConverter(),
+		cssInjector:       &cssInjection{},
+		signatureInjector: newSignatureInjection(),
+		pdfConverter:      newRodConverter(cfg.timeout),
 	}
 }
 
-// NewConversionServiceWith creates a service with custom dependencies (for testing).
-// Panics if any dependency is nil.
-func NewConversionServiceWith(
-	preprocessor MarkdownPreprocessor,
-	htmlConverter HTMLConverter,
-	cssInjector CSSInjector,
-	signatureInjector SignatureInjector,
-	pdfConverter PDFConverter,
-) *ConversionService {
-	if preprocessor == nil {
-		panic("nil preprocessor provided to ConversionService")
+// Convert runs the full pipeline and returns the PDF as bytes.
+// The context is used for cancellation and timeout.
+func (s *Service) Convert(ctx context.Context, input Input) ([]byte, error) {
+	if err := s.validateInput(input); err != nil {
+		return nil, err
 	}
-	if htmlConverter == nil {
-		panic("nil htmlConverter provided to ConversionService")
-	}
-	if cssInjector == nil {
-		panic("nil cssInjector provided to ConversionService")
-	}
-	if signatureInjector == nil {
-		panic("nil signatureInjector provided to ConversionService")
-	}
-	if pdfConverter == nil {
-		panic("nil pdfConverter provided to ConversionService")
-	}
-	return &ConversionService{
-		preprocessor:      preprocessor,
-		htmlConverter:     htmlConverter,
-		cssInjector:       cssInjector,
-		signatureInjector: signatureInjector,
-		pdfConverter:      pdfConverter,
-	}
-}
-
-// Convert executes the full markdown-to-PDF pipeline.
-func (s *ConversionService) Convert(opts ConversionOptions) error {
-	if err := s.validateOptions(opts); err != nil {
-		return err
-	}
-
-	css := s.resolveCSS(opts)
 
 	// Preprocess markdown
-	mdContent := s.preprocessor.PreprocessMarkdown(opts.MarkdownContent)
+	mdContent := s.preprocessor.PreprocessMarkdown(ctx, input.Markdown)
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 
 	// Convert to HTML
-	htmlContent, err := s.htmlConverter.ToHTML(mdContent)
+	htmlContent, err := s.htmlConverter.ToHTML(ctx, mdContent)
 	if err != nil {
-		return fmt.Errorf("converting to HTML: %w", err)
+		return nil, fmt.Errorf("converting to HTML: %w", err)
 	}
 
 	// Inject CSS
-	htmlContent = s.cssInjector.InjectCSS(htmlContent, css)
+	htmlContent = s.cssInjector.InjectCSS(ctx, htmlContent, input.CSS)
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 
 	// Inject signature (if provided)
-	htmlContent, err = s.signatureInjector.InjectSignature(htmlContent, opts.Signature)
+	var sigData *signatureData
+	if input.Signature != nil {
+		sigData = toSignatureData(input.Signature)
+	}
+	htmlContent, err = s.signatureInjector.InjectSignature(ctx, htmlContent, sigData)
 	if err != nil {
-		return fmt.Errorf("injecting signature: %w", err)
+		return nil, fmt.Errorf("injecting signature: %w", err)
 	}
 
 	// Build PDF options with footer
-	pdfOpts := &PDFOptions{
-		Footer: opts.Footer,
+	var footData *footerData
+	if input.Footer != nil {
+		footData = toFooterData(input.Footer)
+	}
+	pdfOpts := &pdfOptions{
+		Footer: footData,
 	}
 
-	// Convert to PDF (footer is handled natively by Chrome)
-	if err := s.pdfConverter.ToPDF(htmlContent, opts.OutputPath, pdfOpts); err != nil {
-		return fmt.Errorf("converting to PDF: %w", err)
+	// Convert to PDF
+	pdfBytes, err := s.pdfConverter.ToPDF(ctx, htmlContent, pdfOpts)
+	if err != nil {
+		return nil, fmt.Errorf("converting to PDF: %w", err)
 	}
 
+	return pdfBytes, nil
+}
+
+// Close releases resources (headless Chrome browser).
+func (s *Service) Close() error {
+	if s.pdfConverter != nil {
+		return s.pdfConverter.Close()
+	}
 	return nil
 }
 
-// validateOptions checks that required fields are present.
-func (s *ConversionService) validateOptions(opts ConversionOptions) error {
-	if opts.MarkdownContent == "" {
+// validateInput checks that required fields are present.
+func (s *Service) validateInput(input Input) error {
+	if input.Markdown == "" {
 		return ErrEmptyMarkdown
 	}
-	if opts.OutputPath == "" {
-		return ErrEmptyOutput
-	}
 	return nil
 }
 
-// resolveCSS returns the CSS content from options.
-func (s *ConversionService) resolveCSS(opts ConversionOptions) string {
-	return opts.CSSContent
+// toSignatureData converts the public Signature type to internal signatureData.
+func toSignatureData(sig *Signature) *signatureData {
+	if sig == nil {
+		return nil
+	}
+	links := make([]signatureLink, len(sig.Links))
+	for i, l := range sig.Links {
+		links[i] = signatureLink(l)
+	}
+	return &signatureData{
+		Name:      sig.Name,
+		Title:     sig.Title,
+		Email:     sig.Email,
+		ImagePath: sig.ImagePath,
+		Links:     links,
+	}
+}
+
+// toFooterData converts the public Footer type to internal footerData.
+func toFooterData(f *Footer) *footerData {
+	if f == nil {
+		return nil
+	}
+	return &footerData{
+		Position:       f.Position,
+		ShowPageNumber: f.ShowPageNumber,
+		Date:           f.Date,
+		Status:         f.Status,
+		Text:           f.Text,
+	}
 }
