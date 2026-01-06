@@ -1,0 +1,26 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 80% # global coverage must be at least 80%
+        threshold: 1% # allow -1% drop without failing PR
+    patch:
+      default:
+        informational: true # don't block on new code coverage
+
+flags:
+  unit:
+    carryforward: true
+  integration:
+    carryforward: true
+
+ignore:
+  - "cmd/**/*" # CLI wiring, tested manually
+  - "**/*_test.go"
+  - "testdata/**/*"
+  - "docs/**/*"
+
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default
+  require_changes: true
