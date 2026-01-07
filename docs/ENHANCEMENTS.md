@@ -41,16 +41,6 @@ go test -bench=. -benchmem ./...
 
 ---
 
-## Page Settings
-
-| Setting     | Current Value | Future Options      |
-| ----------- | ------------- | ------------------- |
-| Size        | US Letter     | A4, Letter, Legal   |
-| Orientation | Portrait      | Portrait, Landscape |
-| Margins     | 0.5 inch      | Customizable        |
-
----
-
 ## Visual Enhancements
 
 | Feature               | Description                           |
@@ -71,12 +61,11 @@ go test -bench=. -benchmem ./...
 
 ---
 
-## Implementation
+## Implementation Notes
 
-| Feature    | Approach                           |
-| ---------- | ---------------------------------- |
-| Metadata   | YAML frontmatter -> `<meta>` tags  |
-| Page size  | `html2pdf` parameters              |
-| Watermark  | CSS `@page { background }`         |
-| Cover page | Injected HTML + `page-break-after` |
-| TOC        | Goldmark extension or post-process |
+| Feature    | Approach                           | Status  |
+| ---------- | ---------------------------------- | ------- |
+| Metadata   | YAML frontmatter -> `<meta>` tags  | Planned |
+| Watermark  | CSS `@page { background }`         | Planned |
+| Cover page | Injected HTML + `page-break-after` | Planned |
+| TOC        | Goldmark extension or post-process | Planned |

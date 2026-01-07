@@ -34,6 +34,7 @@ Download pre-built binaries from [GitHub Releases](https://github.com/alnah/go-m
 - **CLI + Library** - Use as `md2pdf` command or import in Go
 - **Batch conversion** - Process directories with parallel workers
 - **Custom styling** - Embedded themes or your own CSS
+- **Page settings** - Size (letter, A4, legal), orientation, margins
 - **Signatures** - Name, title, email, photo, links
 - **Footers** - Page numbers, dates, status text
 
@@ -105,6 +106,19 @@ pdf, err := svc.Convert(ctx, md2pdf.Input{
 })
 ```
 
+### With Page Settings
+
+```go
+pdf, err := svc.Convert(ctx, md2pdf.Input{
+    Markdown: content,
+    Page: &md2pdf.PageSettings{
+        Size:        md2pdf.PageSizeA4,
+        Orientation: md2pdf.OrientationLandscape,
+        Margin:      1.0, // inches
+    },
+})
+```
+
 ## CLI Reference
 
 ```
@@ -114,6 +128,9 @@ Flags:
   -o, --output       Output file or directory
   -c, --config       Config name (work, personal) or path
   -w, --workers      Number of parallel workers (default: auto)
+  -p, --page-size    Page size: letter, a4, legal (default: letter)
+      --orientation  Page orientation: portrait, landscape (default: portrait)
+      --margin       Page margin in inches (default: 0.5)
       --css          Custom CSS file
       --no-style     Disable default styling
       --no-footer    Disable footer
@@ -134,6 +151,9 @@ md2pdf --config work ./docs/ -o ./pdfs/
 
 # Custom CSS, no footer
 md2pdf --css custom.css --no-footer document.md
+
+# A4 landscape with 1-inch margins
+md2pdf -p a4 --orientation landscape --margin 1.0 document.md
 ```
 
 ### Docker
@@ -154,23 +174,26 @@ docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf ./docs/ -o ./pdfs/
 Config files are loaded from `~/.config/go-md2pdf/` or current directory.
 Supported formats: `.yaml`, `.yml`
 
-| Option                  | Type   | Default   | Description              |
-| ----------------------- | ------ | --------- | ------------------------ |
-| `input.defaultDir`      | string | -         | Default input directory  |
-| `output.defaultDir`     | string | -         | Default output directory |
-| `css.style`             | string | -         | Embedded style name      |
-| `footer.enabled`        | bool   | `false`   | Show footer              |
-| `footer.showPageNumber` | bool   | `false`   | Show page numbers        |
-| `footer.position`       | string | `"right"` | left, center, right      |
-| `footer.date`           | string | -         | Date text                |
-| `footer.status`         | string | -         | Status text (DRAFT, etc) |
-| `footer.text`           | string | -         | Custom footer text       |
-| `signature.enabled`     | bool   | `false`   | Show signature block     |
-| `signature.name`        | string | -         | Signer name              |
-| `signature.title`       | string | -         | Signer title             |
-| `signature.email`       | string | -         | Signer email             |
-| `signature.imagePath`   | string | -         | Photo path or URL        |
-| `signature.links`       | array  | -         | Links (label, url)       |
+| Option                  | Type   | Default      | Description                   |
+| ----------------------- | ------ | ------------ | ----------------------------- |
+| `input.defaultDir`      | string | -            | Default input directory       |
+| `output.defaultDir`     | string | -            | Default output directory      |
+| `css.style`             | string | -            | Embedded style name           |
+| `page.size`             | string | `"letter"`   | letter, a4, legal             |
+| `page.orientation`      | string | `"portrait"` | portrait, landscape           |
+| `page.margin`           | float  | `0.5`        | Margin in inches (0.25-3.0)   |
+| `footer.enabled`        | bool   | `false`      | Show footer                   |
+| `footer.showPageNumber` | bool   | `false`      | Show page numbers             |
+| `footer.position`       | string | `"right"`    | left, center, right           |
+| `footer.date`           | string | -            | Date text                     |
+| `footer.status`         | string | -            | Status text (DRAFT, etc)      |
+| `footer.text`           | string | -            | Custom footer text            |
+| `signature.enabled`     | bool   | `false`      | Show signature block          |
+| `signature.name`        | string | -            | Signer name                   |
+| `signature.title`       | string | -            | Signer title                  |
+| `signature.email`       | string | -            | Signer email                  |
+| `signature.imagePath`   | string | -            | Photo path or URL             |
+| `signature.links`       | array  | -            | Links (label, url)            |
 
 <details>
 <summary>Example config file</summary>
@@ -180,6 +203,11 @@ Supported formats: `.yaml`, `.yml`
 
 css:
   style: 'nord' # add your styles to internal/assets/styles/, and build or install
+
+page:
+  size: 'a4'
+  orientation: 'portrait'
+  margin: 0.75 # inches (0.5in ≈ 12.7mm, 1in ≈ 25.4mm)
 
 footer:
   enabled: true
