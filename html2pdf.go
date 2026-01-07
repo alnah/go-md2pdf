@@ -56,6 +56,32 @@ func newRodRenderer(timeout time.Duration) *rodRenderer {
 	return &rodRenderer{timeout: timeout}
 }
 
+// findSystemChrome returns the path to system Chrome/Chromium if found.
+// Returns empty string if not found (rod will download its own).
+func findSystemChrome() string {
+	// macOS paths
+	paths := []string{
+		"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+		"/Applications/Chromium.app/Contents/MacOS/Chromium",
+		"/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary",
+	}
+
+	// Linux paths
+	paths = append(paths,
+		"/usr/bin/google-chrome",
+		"/usr/bin/google-chrome-stable",
+		"/usr/bin/chromium",
+		"/usr/bin/chromium-browser",
+	)
+
+	for _, p := range paths {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return ""
+}
+
 // ensureBrowser lazily connects to the browser.
 func (r *rodRenderer) ensureBrowser() error {
 	if r.browser != nil {
@@ -63,17 +89,18 @@ func (r *rodRenderer) ensureBrowser() error {
 	}
 
 	// Configure launcher
-	l := launcher.New()
+	// Leakless(false) prevents hanging on macOS - see github.com/go-rod/rod/issues/210
+	l := launcher.New().Headless(true).Leakless(false).Set("disable-gpu")
 
-	// Use pre-installed browser if specified (Docker/containerized environments)
-	if bin := os.Getenv("ROD_BROWSER_BIN"); bin != "" {
-		l = l.Bin(bin)
+	// Use pre-installed browser if specified, or auto-detect on macOS/Linux
+	bin := os.Getenv("ROD_BROWSER_BIN")
+	if bin == "" {
+		bin = findSystemChrome()
+	}
+	if bin != "" {
+		l = l.Bin(bin).NoSandbox(true)
 	}
 
-	// NoSandbox required for CI and containerized environments
-	if os.Getenv("CI") == "true" || os.Getenv("ROD_BROWSER_BIN") != "" {
-		l = l.NoSandbox(true)
-	}
 	u, err := l.Launch()
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrBrowserConnect, err)
