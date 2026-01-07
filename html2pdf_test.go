@@ -228,14 +228,190 @@ func TestBuildFooterTemplate(t *testing.T) {
 	}
 }
 
+func TestResolvePageDimensions(t *testing.T) {
+	tests := []struct {
+		name             string
+		page             *PageSettings
+		hasFooter        bool
+		wantW            float64
+		wantH            float64
+		wantMargin       float64
+		wantBottomMargin float64
+	}{
+		{
+			name:             "nil uses defaults (letter portrait)",
+			page:             nil,
+			hasFooter:        false,
+			wantW:            8.5,
+			wantH:            11.0,
+			wantMargin:       DefaultMargin,
+			wantBottomMargin: DefaultMargin,
+		},
+		{
+			name:             "nil with footer adds extra bottom margin",
+			page:             nil,
+			hasFooter:        true,
+			wantW:            8.5,
+			wantH:            11.0,
+			wantMargin:       DefaultMargin,
+			wantBottomMargin: DefaultMargin + footerMarginExtra,
+		},
+		{
+			name:             "letter portrait explicit",
+			page:             &PageSettings{Size: "letter", Orientation: "portrait", Margin: 0.5},
+			hasFooter:        false,
+			wantW:            8.5,
+			wantH:            11.0,
+			wantMargin:       0.5,
+			wantBottomMargin: 0.5,
+		},
+		{
+			name:             "letter landscape swaps dimensions",
+			page:             &PageSettings{Size: "letter", Orientation: "landscape", Margin: 0.5},
+			hasFooter:        false,
+			wantW:            11.0,
+			wantH:            8.5,
+			wantMargin:       0.5,
+			wantBottomMargin: 0.5,
+		},
+		{
+			name:             "a4 portrait",
+			page:             &PageSettings{Size: "a4", Orientation: "portrait", Margin: 0.5},
+			hasFooter:        false,
+			wantW:            8.27,
+			wantH:            11.69,
+			wantMargin:       0.5,
+			wantBottomMargin: 0.5,
+		},
+		{
+			name:             "a4 landscape",
+			page:             &PageSettings{Size: "a4", Orientation: "landscape", Margin: 0.5},
+			hasFooter:        false,
+			wantW:            11.69,
+			wantH:            8.27,
+			wantMargin:       0.5,
+			wantBottomMargin: 0.5,
+		},
+		{
+			name:             "legal portrait",
+			page:             &PageSettings{Size: "legal", Orientation: "portrait", Margin: 0.5},
+			hasFooter:        false,
+			wantW:            8.5,
+			wantH:            14.0,
+			wantMargin:       0.5,
+			wantBottomMargin: 0.5,
+		},
+		{
+			name:             "legal landscape",
+			page:             &PageSettings{Size: "legal", Orientation: "landscape", Margin: 0.5},
+			hasFooter:        false,
+			wantW:            14.0,
+			wantH:            8.5,
+			wantMargin:       0.5,
+			wantBottomMargin: 0.5,
+		},
+		{
+			name:             "custom margin",
+			page:             &PageSettings{Size: "letter", Orientation: "portrait", Margin: 1.0},
+			hasFooter:        false,
+			wantW:            8.5,
+			wantH:            11.0,
+			wantMargin:       1.0,
+			wantBottomMargin: 1.0,
+		},
+		{
+			name:             "custom margin with footer",
+			page:             &PageSettings{Size: "letter", Orientation: "portrait", Margin: 1.0},
+			hasFooter:        true,
+			wantW:            8.5,
+			wantH:            11.0,
+			wantMargin:       1.0,
+			wantBottomMargin: 1.0 + footerMarginExtra,
+		},
+		{
+			name:             "case insensitive size",
+			page:             &PageSettings{Size: "A4", Orientation: "portrait", Margin: 0.5},
+			hasFooter:        false,
+			wantW:            8.27,
+			wantH:            11.69,
+			wantMargin:       0.5,
+			wantBottomMargin: 0.5,
+		},
+		{
+			name:             "case insensitive orientation",
+			page:             &PageSettings{Size: "letter", Orientation: "LANDSCAPE", Margin: 0.5},
+			hasFooter:        false,
+			wantW:            11.0,
+			wantH:            8.5,
+			wantMargin:       0.5,
+			wantBottomMargin: 0.5,
+		},
+		{
+			name:             "unknown size falls back to letter",
+			page:             &PageSettings{Size: "tabloid", Orientation: "portrait", Margin: 0.5},
+			hasFooter:        false,
+			wantW:            8.5,
+			wantH:            11.0,
+			wantMargin:       0.5,
+			wantBottomMargin: 0.5,
+		},
+		{
+			name:             "empty size uses default letter",
+			page:             &PageSettings{Size: "", Orientation: "portrait", Margin: 0.5},
+			hasFooter:        false,
+			wantW:            8.5,
+			wantH:            11.0,
+			wantMargin:       0.5,
+			wantBottomMargin: 0.5,
+		},
+		{
+			name:             "empty orientation uses portrait",
+			page:             &PageSettings{Size: "letter", Orientation: "", Margin: 0.5},
+			hasFooter:        false,
+			wantW:            8.5,
+			wantH:            11.0,
+			wantMargin:       0.5,
+			wantBottomMargin: 0.5,
+		},
+		{
+			name:             "zero margin uses default",
+			page:             &PageSettings{Size: "letter", Orientation: "portrait", Margin: 0},
+			hasFooter:        false,
+			wantW:            8.5,
+			wantH:            11.0,
+			wantMargin:       DefaultMargin,
+			wantBottomMargin: DefaultMargin,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w, h, margin, bottomMargin := resolvePageDimensions(tt.page, tt.hasFooter)
+
+			if w != tt.wantW {
+				t.Errorf("width = %v, want %v", w, tt.wantW)
+			}
+			if h != tt.wantH {
+				t.Errorf("height = %v, want %v", h, tt.wantH)
+			}
+			if margin != tt.wantMargin {
+				t.Errorf("margin = %v, want %v", margin, tt.wantMargin)
+			}
+			if bottomMargin != tt.wantBottomMargin {
+				t.Errorf("bottomMargin = %v, want %v", bottomMargin, tt.wantBottomMargin)
+			}
+		})
+	}
+}
+
 func TestBuildPDFOptions(t *testing.T) {
 	renderer := &rodRenderer{timeout: defaultTimeout}
 
 	t.Run("nil opts uses default margins", func(t *testing.T) {
 		pdfOpts := renderer.buildPDFOptions(nil)
 
-		if *pdfOpts.MarginBottom != marginInches {
-			t.Errorf("expected margin %v, got %v", marginInches, *pdfOpts.MarginBottom)
+		if *pdfOpts.MarginBottom != DefaultMargin {
+			t.Errorf("expected margin %v, got %v", DefaultMargin, *pdfOpts.MarginBottom)
 		}
 		if pdfOpts.DisplayHeaderFooter {
 			t.Error("expected no header/footer by default")
@@ -246,8 +422,48 @@ func TestBuildPDFOptions(t *testing.T) {
 		opts := &pdfOptions{Footer: &footerData{Text: "Footer"}}
 		pdfOpts := renderer.buildPDFOptions(opts)
 
-		if *pdfOpts.MarginBottom != marginBottomWithFooter {
-			t.Errorf("expected margin %v, got %v", marginBottomWithFooter, *pdfOpts.MarginBottom)
+		expectedMargin := DefaultMargin + footerMarginExtra
+		if *pdfOpts.MarginBottom != expectedMargin {
+			t.Errorf("expected margin %v, got %v", expectedMargin, *pdfOpts.MarginBottom)
+		}
+		if !pdfOpts.DisplayHeaderFooter {
+			t.Error("expected header/footer enabled")
+		}
+	})
+
+	t.Run("with page settings uses custom dimensions", func(t *testing.T) {
+		opts := &pdfOptions{
+			Page: &PageSettings{Size: "a4", Orientation: "landscape", Margin: 1.0},
+		}
+		pdfOpts := renderer.buildPDFOptions(opts)
+
+		if *pdfOpts.PaperWidth != 11.69 {
+			t.Errorf("PaperWidth = %v, want 11.69", *pdfOpts.PaperWidth)
+		}
+		if *pdfOpts.PaperHeight != 8.27 {
+			t.Errorf("PaperHeight = %v, want 8.27", *pdfOpts.PaperHeight)
+		}
+		if *pdfOpts.MarginTop != 1.0 {
+			t.Errorf("MarginTop = %v, want 1.0", *pdfOpts.MarginTop)
+		}
+		if *pdfOpts.MarginBottom != 1.0 {
+			t.Errorf("MarginBottom = %v, want 1.0", *pdfOpts.MarginBottom)
+		}
+	})
+
+	t.Run("with page settings and footer", func(t *testing.T) {
+		opts := &pdfOptions{
+			Page:   &PageSettings{Size: "letter", Orientation: "portrait", Margin: 0.75},
+			Footer: &footerData{Text: "Footer"},
+		}
+		pdfOpts := renderer.buildPDFOptions(opts)
+
+		if *pdfOpts.MarginTop != 0.75 {
+			t.Errorf("MarginTop = %v, want 0.75", *pdfOpts.MarginTop)
+		}
+		expectedBottom := 0.75 + footerMarginExtra
+		if *pdfOpts.MarginBottom != expectedBottom {
+			t.Errorf("MarginBottom = %v, want %v", *pdfOpts.MarginBottom, expectedBottom)
 		}
 		if !pdfOpts.DisplayHeaderFooter {
 			t.Error("expected header/footer enabled")
