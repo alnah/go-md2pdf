@@ -32,7 +32,7 @@ Download pre-built binaries from [GitHub Releases](https://github.com/alnah/go-m
 ## Features
 
 - **CLI + Library** - Use as `md2pdf` command or import in Go
-- **Batch conversion** - Process directories, mirror structure
+- **Batch conversion** - Process directories with parallel workers
 - **Custom styling** - Embedded themes or your own CSS
 - **Signatures** - Name, title, email, photo, links
 - **Footers** - Page numbers, dates, status text
@@ -205,6 +205,7 @@ signature:
 ```
 go-md2pdf/
 ├── service.go          # Public API: New(), Convert(), Close()
+├── pool.go             # ServicePool for parallel processing
 ├── types.go            # Input, Footer, Signature, Link
 ├── mdtransform.go      # Markdown preprocessing
 ├── md2html.go          # Markdown to HTML (Goldmark)
