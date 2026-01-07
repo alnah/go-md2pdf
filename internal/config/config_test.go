@@ -420,4 +420,61 @@ unknownField: "should fail"
 			t.Errorf("error = %v, want ErrConfigNotFound", err)
 		}
 	})
+
+	t.Run("loads page settings", func(t *testing.T) {
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "test.yaml")
+		content := `page:
+  size: "a4"
+  orientation: "landscape"
+  margin: 1.0
+`
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		cfg, err := LoadConfig(configPath)
+		if err != nil {
+			t.Fatalf("LoadConfig() error = %v", err)
+		}
+		if cfg.Page.Size != "a4" {
+			t.Errorf("Page.Size = %q, want %q", cfg.Page.Size, "a4")
+		}
+		if cfg.Page.Orientation != "landscape" {
+			t.Errorf("Page.Orientation = %q, want %q", cfg.Page.Orientation, "landscape")
+		}
+		if cfg.Page.Margin != 1.0 {
+			t.Errorf("Page.Margin = %v, want %v", cfg.Page.Margin, 1.0)
+		}
+	})
+
+	t.Run("page.size too long returns ErrFieldTooLong", func(t *testing.T) {
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "test.yaml")
+		longSize := string(make([]byte, MaxPageSizeLength+1))
+		content := "page:\n  size: \"" + longSize + "\"\n"
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		_, err := LoadConfig(configPath)
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("page.orientation too long returns ErrFieldTooLong", func(t *testing.T) {
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "test.yaml")
+		longOrientation := string(make([]byte, MaxOrientationLength+1))
+		content := "page:\n  orientation: \"" + longOrientation + "\"\n"
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		_, err := LoadConfig(configPath)
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
 }
