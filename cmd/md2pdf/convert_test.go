@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -846,4 +847,103 @@ func TestBuildFooterData(t *testing.T) {
 			t.Error("expected nil when noFooter=true, got FooterData")
 		}
 	})
+}
+
+func TestConvertFile_ErrorPaths(t *testing.T) {
+	// Mock converter that returns success
+	mockConv := &staticMockConverter{result: []byte("%PDF-1.4 mock")}
+
+	t.Run("mkdir failure returns error", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		// Create a file where directory should be (blocks mkdir)
+		blockingFile := filepath.Join(tempDir, "blocked")
+		if err := os.WriteFile(blockingFile, []byte("blocker"), 0644); err != nil {
+			t.Fatalf("failed to create blocking file: %v", err)
+		}
+
+		// Create input file
+		inputPath := filepath.Join(tempDir, "doc.md")
+		if err := os.WriteFile(inputPath, []byte("# Test"), 0644); err != nil {
+			t.Fatalf("failed to create input: %v", err)
+		}
+
+		// Try to output to a path under the blocking file (will fail mkdir)
+		f := FileToConvert{
+			InputPath:  inputPath,
+			OutputPath: filepath.Join(blockingFile, "subdir", "out.pdf"),
+		}
+
+		result := convertFile(mockConv, f, "", nil, nil)
+
+		if result.Err == nil {
+			t.Error("expected error when mkdir fails")
+		}
+		if !errors.Is(result.Err, os.ErrNotExist) && result.Err.Error() == "" {
+			// Different OS may return different errors, just check we got one
+			t.Logf("got expected error: %v", result.Err)
+		}
+	})
+
+	t.Run("write failure returns ErrWritePDF", func(t *testing.T) {
+		tempDir := t.TempDir()
+
+		// Create input file
+		inputPath := filepath.Join(tempDir, "doc.md")
+		if err := os.WriteFile(inputPath, []byte("# Test"), 0644); err != nil {
+			t.Fatalf("failed to create input: %v", err)
+		}
+
+		// Create output directory as read-only
+		outDir := filepath.Join(tempDir, "readonly")
+		if err := os.MkdirAll(outDir, 0750); err != nil {
+			t.Fatalf("failed to create output dir: %v", err)
+		}
+		if err := os.Chmod(outDir, 0500); err != nil {
+			t.Fatalf("failed to chmod: %v", err)
+		}
+		t.Cleanup(func() {
+			os.Chmod(outDir, 0750) // Restore for cleanup
+		})
+
+		f := FileToConvert{
+			InputPath:  inputPath,
+			OutputPath: filepath.Join(outDir, "out.pdf"),
+		}
+
+		result := convertFile(mockConv, f, "", nil, nil)
+
+		if result.Err == nil {
+			t.Error("expected error when write fails")
+		}
+		if !errors.Is(result.Err, ErrWritePDF) {
+			t.Errorf("expected ErrWritePDF, got: %v", result.Err)
+		}
+	})
+
+	t.Run("read failure returns ErrReadMarkdown", func(t *testing.T) {
+		f := FileToConvert{
+			InputPath:  "/nonexistent/doc.md",
+			OutputPath: "/tmp/out.pdf",
+		}
+
+		result := convertFile(mockConv, f, "", nil, nil)
+
+		if result.Err == nil {
+			t.Error("expected error when read fails")
+		}
+		if !errors.Is(result.Err, ErrReadMarkdown) {
+			t.Errorf("expected ErrReadMarkdown, got: %v", result.Err)
+		}
+	})
+}
+
+// staticMockConverter is a simple mock that returns a fixed result.
+type staticMockConverter struct {
+	result []byte
+	err    error
+}
+
+func (m *staticMockConverter) Convert(_ context.Context, _ md2pdf.Input) ([]byte, error) {
+	return m.result, m.err
 }
