@@ -113,6 +113,7 @@ md2pdf [flags] <input>
 Flags:
   -o, --output       Output file or directory
   -c, --config       Config name (work, personal) or path
+  -w, --workers      Number of parallel workers (default: auto)
       --css          Custom CSS file
       --no-style     Disable default styling
       --no-footer    Disable footer
