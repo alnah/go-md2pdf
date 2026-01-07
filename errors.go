@@ -11,4 +11,9 @@ var (
 	ErrPageCreate      = errors.New("failed to create browser page")
 	ErrPageLoad        = errors.New("failed to load page")
 	ErrSignatureRender = errors.New("signature template rendering failed")
+
+	// Page settings validation errors.
+	ErrInvalidPageSize    = errors.New("invalid page size")
+	ErrInvalidOrientation = errors.New("invalid orientation")
+	ErrInvalidMargin      = errors.New("invalid margin")
 )
