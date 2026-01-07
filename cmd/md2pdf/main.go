@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	md2pdf "github.com/alnah/go-md2pdf"
 	"go.uber.org/automaxprocs/maxprocs"
 )
 
@@ -30,12 +31,15 @@ func main() {
 	}
 
 	// Create pool with resolved size
-	poolSize := resolvePoolSize(flags.workers)
+	poolSize := md2pdf.ResolvePoolSize(flags.workers)
 	if flags.verbose {
 		fmt.Fprintf(os.Stderr, "Pool size: %d\n", poolSize)
 	}
-	pool := NewServicePool(poolSize)
-	defer pool.Close()
+	servicePool := md2pdf.NewServicePool(poolSize)
+	defer servicePool.Close()
+
+	// Wrap in adapter for local Pool interface (used for testing)
+	pool := &poolAdapter{pool: servicePool}
 
 	if flags.verbose {
 		fmt.Fprintln(os.Stderr, "Starting conversion...")
@@ -45,4 +49,26 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+// poolAdapter adapts md2pdf.ServicePool to the local Pool interface.
+type poolAdapter struct {
+	pool *md2pdf.ServicePool
+}
+
+func (a *poolAdapter) Acquire() Converter {
+	return a.pool.Acquire()
+}
+
+func (a *poolAdapter) Release(c Converter) {
+	svc, ok := c.(*md2pdf.Service)
+	if !ok {
+		fmt.Fprintf(os.Stderr, "poolAdapter.Release: unexpected type %T, expected *md2pdf.Service\n", c)
+		return
+	}
+	a.pool.Release(svc)
+}
+
+func (a *poolAdapter) Size() int {
+	return a.pool.Size()
 }
