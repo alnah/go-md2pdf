@@ -28,15 +28,18 @@ type pdfRenderer interface {
 // pdfOptions holds options for PDF generation.
 type pdfOptions struct {
 	Footer *footerData
+	Page   *PageSettings
 }
 
-// PDF page dimensions in inches (US Letter format).
-const (
-	paperWidthInches       = 8.5
-	paperHeightInches      = 11
-	marginInches           = 0.5
-	marginBottomWithFooter = 0.75 // Extra space for footer
-)
+// footerMarginExtra is added to bottom margin when footer is active.
+const footerMarginExtra = 0.25
+
+// pageDimensions maps page size to (width, height) in inches.
+var pageDimensions = map[string]struct{ width, height float64 }{
+	PageSizeLetter: {8.5, 11.0},
+	PageSizeA4:     {8.27, 11.69},
+	PageSizeLegal:  {8.5, 14.0},
+}
 
 // rodRenderer implements pdfRenderer using go-rod.
 // Rod automatically downloads Chromium on first run if not found.
@@ -171,22 +174,64 @@ func (r *rodRenderer) RenderFromFile(ctx context.Context, filePath string, opts 
 	return pdfBuf, nil
 }
 
-// buildPDFOptions constructs proto.PagePrintToPDF with optional footer.
-func (r *rodRenderer) buildPDFOptions(opts *pdfOptions) *proto.PagePrintToPDF {
-	marginBottom := marginInches
-	hasFooter := opts != nil && opts.Footer != nil
+// resolvePageDimensions returns width, height, margin, and bottom margin.
+// Applies defaults for nil/zero values, swaps for landscape, adds footer space.
+func resolvePageDimensions(page *PageSettings, hasFooter bool) (w, h, margin, bottomMargin float64) {
+	// Apply defaults
+	size := PageSizeLetter
+	orientation := OrientationPortrait
+	margin = DefaultMargin
 
-	if hasFooter {
-		marginBottom = marginBottomWithFooter
+	if page != nil {
+		if page.Size != "" {
+			size = strings.ToLower(page.Size)
+		}
+		if page.Orientation != "" {
+			orientation = strings.ToLower(page.Orientation)
+		}
+		if page.Margin > 0 {
+			margin = page.Margin
+		}
 	}
 
+	// Get dimensions for size
+	dims, ok := pageDimensions[size]
+	if !ok {
+		dims = pageDimensions[PageSizeLetter] // fallback
+	}
+	w, h = dims.width, dims.height
+
+	// Swap for landscape
+	if orientation == OrientationLandscape {
+		w, h = h, w
+	}
+
+	// Bottom margin: add extra space for footer
+	bottomMargin = margin
+	if hasFooter {
+		bottomMargin = margin + footerMarginExtra
+	}
+
+	return w, h, margin, bottomMargin
+}
+
+// buildPDFOptions constructs proto.PagePrintToPDF with page settings and optional footer.
+func (r *rodRenderer) buildPDFOptions(opts *pdfOptions) *proto.PagePrintToPDF {
+	hasFooter := opts != nil && opts.Footer != nil
+	var page *PageSettings
+	if opts != nil {
+		page = opts.Page
+	}
+
+	w, h, margin, bottomMargin := resolvePageDimensions(page, hasFooter)
+
 	pdfOpts := &proto.PagePrintToPDF{
-		PaperWidth:      floatPtr(paperWidthInches),
-		PaperHeight:     floatPtr(paperHeightInches),
-		MarginTop:       floatPtr(marginInches),
-		MarginBottom:    floatPtr(marginBottom),
-		MarginLeft:      floatPtr(marginInches),
-		MarginRight:     floatPtr(marginInches),
+		PaperWidth:      floatPtr(w),
+		PaperHeight:     floatPtr(h),
+		MarginTop:       floatPtr(margin),
+		MarginBottom:    floatPtr(bottomMargin),
+		MarginLeft:      floatPtr(margin),
+		MarginRight:     floatPtr(margin),
 		PrintBackground: true,
 	}
 
@@ -257,7 +302,7 @@ func newRodConverter(timeout time.Duration) *rodConverter {
 }
 
 // ToPDF converts HTML content to PDF bytes using headless Chrome.
-// Uses US Letter format (8.5x11 inches) with 0.5 inch margins.
+// Page dimensions are configured via opts.Page (defaults to US Letter, portrait, 0.5in margins).
 func (c *rodConverter) ToPDF(ctx context.Context, htmlContent string, opts *pdfOptions) ([]byte, error) {
 	tmpPath, cleanup, err := writeTempFile(htmlContent, "html")
 	if err != nil {
