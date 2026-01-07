@@ -65,6 +65,9 @@ type cliFlags struct {
 	noFooter    bool
 	version     bool
 	workers     int
+	pageSize    string
+	orientation string
+	margin      float64
 }
 
 // run parses arguments, discovers files, and orchestrates batch conversion.
@@ -117,8 +120,14 @@ func run(args []string, pool Pool) error {
 	// Build footer data
 	footerData := buildFooterData(cfg, flags.noFooter)
 
+	// Build page settings
+	pageData, err := buildPageSettings(flags, cfg)
+	if err != nil {
+		return err
+	}
+
 	// Convert files
-	results := convertBatch(pool, files, cssContent, footerData, sigData)
+	results := convertBatch(pool, files, cssContent, footerData, sigData, pageData)
 
 	// Print results and return appropriate exit code
 	failedCount := printResults(results, flags.quiet, flags.verbose)
@@ -145,6 +154,9 @@ func parseFlags(args []string) (*cliFlags, []string, error) {
 	flagSet.BoolVar(&flags.noFooter, "no-footer", false, "disable page footer")
 	flagSet.BoolVar(&flags.version, "version", false, "show version and exit")
 	flagSet.IntVarP(&flags.workers, "workers", "w", 0, "number of parallel workers (default: auto)")
+	flagSet.StringVarP(&flags.pageSize, "page-size", "p", "", "page size: letter, a4, legal")
+	flagSet.StringVar(&flags.orientation, "orientation", "", "page orientation: portrait, landscape")
+	flagSet.Float64Var(&flags.margin, "margin", 0, "page margin in inches (0.25-3.0)")
 
 	flagSet.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: md2pdf [flags] <input> [flags]\n\n")
@@ -343,9 +355,59 @@ func buildFooterData(cfg *config.Config, noFooter bool) *md2pdf.Footer {
 	}
 }
 
+// buildPageSettings creates md2pdf.PageSettings from flags and config.
+// Priority: CLI flags > config > defaults (handled by library).
+// Returns nil if no page settings specified (library uses defaults).
+// Validates settings early for user-friendly CLI feedback.
+func buildPageSettings(flags *cliFlags, cfg *config.Config) (*md2pdf.PageSettings, error) {
+	// Check if any page settings are specified
+	hasFlags := flags.pageSize != "" || flags.orientation != "" || flags.margin > 0
+	hasConfig := cfg.Page.Size != "" || cfg.Page.Orientation != "" || cfg.Page.Margin > 0
+
+	if !hasFlags && !hasConfig {
+		return nil, nil // Use library defaults
+	}
+
+	// Start with config values
+	ps := &md2pdf.PageSettings{
+		Size:        cfg.Page.Size,
+		Orientation: cfg.Page.Orientation,
+		Margin:      cfg.Page.Margin,
+	}
+
+	// CLI flags override config
+	if flags.pageSize != "" {
+		ps.Size = flags.pageSize
+	}
+	if flags.orientation != "" {
+		ps.Orientation = flags.orientation
+	}
+	if flags.margin > 0 {
+		ps.Margin = flags.margin
+	}
+
+	// Apply defaults for any remaining zero values
+	if ps.Size == "" {
+		ps.Size = md2pdf.PageSizeLetter
+	}
+	if ps.Orientation == "" {
+		ps.Orientation = md2pdf.OrientationPortrait
+	}
+	if ps.Margin == 0 {
+		ps.Margin = md2pdf.DefaultMargin
+	}
+
+	// Validate early for CLI feedback
+	if err := ps.Validate(); err != nil {
+		return nil, err
+	}
+
+	return ps, nil
+}
+
 // convertBatch processes files concurrently using the service pool.
 // Each worker acquires its own service (browser) for true parallelism.
-func convertBatch(pool Pool, files []FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature) []ConversionResult {
+func convertBatch(pool Pool, files []FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings) []ConversionResult {
 	if len(files) == 0 {
 		return nil
 	}
@@ -371,7 +433,7 @@ func convertBatch(pool Pool, files []FileToConvert, cssContent string, footerDat
 			defer pool.Release(svc)
 
 			for idx := range jobs {
-				results[idx] = convertFile(svc, files[idx], cssContent, footerData, sigData)
+				results[idx] = convertFile(svc, files[idx], cssContent, footerData, sigData, pageData)
 			}
 		}()
 	}
@@ -387,7 +449,7 @@ func convertBatch(pool Pool, files []FileToConvert, cssContent string, footerDat
 }
 
 // convertFile processes a single file and returns the result.
-func convertFile(service Converter, f FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature) ConversionResult {
+func convertFile(service Converter, f FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings) ConversionResult {
 	start := time.Now()
 	result := ConversionResult{
 		InputPath:  f.InputPath,
@@ -416,6 +478,7 @@ func convertFile(service Converter, f FileToConvert, cssContent string, footerDa
 		CSS:       cssContent,
 		Footer:    footerData,
 		Signature: sigData,
+		Page:      pageData,
 	})
 	if err != nil {
 		result.Err = err

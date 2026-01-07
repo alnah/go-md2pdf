@@ -35,6 +35,9 @@ func TestParseFlags(t *testing.T) {
 		wantNoSignature bool
 		wantNoStyle     bool
 		wantNoFooter    bool
+		wantPageSize    string
+		wantOrientation string
+		wantMargin      float64
 		wantPositional  []string
 		wantErr         bool
 	}{
@@ -141,6 +144,38 @@ func TestParseFlags(t *testing.T) {
 			wantNoFooter:    true,
 			wantPositional:  []string{"doc.md"},
 		},
+		{
+			name:           "page-size flag",
+			args:           []string{"md2pdf", "--page-size", "a4", "doc.md"},
+			wantPageSize:   "a4",
+			wantPositional: []string{"doc.md"},
+		},
+		{
+			name:           "page-size short flag",
+			args:           []string{"md2pdf", "-p", "legal", "doc.md"},
+			wantPageSize:   "legal",
+			wantPositional: []string{"doc.md"},
+		},
+		{
+			name:            "orientation flag",
+			args:            []string{"md2pdf", "--orientation", "landscape", "doc.md"},
+			wantOrientation: "landscape",
+			wantPositional:  []string{"doc.md"},
+		},
+		{
+			name:           "margin flag",
+			args:           []string{"md2pdf", "--margin", "1.5", "doc.md"},
+			wantMargin:     1.5,
+			wantPositional: []string{"doc.md"},
+		},
+		{
+			name:            "all page flags combined",
+			args:            []string{"md2pdf", "-p", "a4", "--orientation", "landscape", "--margin", "1.0", "doc.md"},
+			wantPageSize:    "a4",
+			wantOrientation: "landscape",
+			wantMargin:      1.0,
+			wantPositional:  []string{"doc.md"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -181,6 +216,15 @@ func TestParseFlags(t *testing.T) {
 			}
 			if flags.noFooter != tt.wantNoFooter {
 				t.Errorf("noFooter = %v, want %v", flags.noFooter, tt.wantNoFooter)
+			}
+			if flags.pageSize != tt.wantPageSize {
+				t.Errorf("pageSize = %q, want %q", flags.pageSize, tt.wantPageSize)
+			}
+			if flags.orientation != tt.wantOrientation {
+				t.Errorf("orientation = %q, want %q", flags.orientation, tt.wantOrientation)
+			}
+			if flags.margin != tt.wantMargin {
+				t.Errorf("margin = %v, want %v", flags.margin, tt.wantMargin)
 			}
 			if len(positional) != len(tt.wantPositional) {
 				t.Errorf("positional args = %v, want %v", positional, tt.wantPositional)
@@ -874,7 +918,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: filepath.Join(blockingFile, "subdir", "out.pdf"),
 		}
 
-		result := convertFile(mockConv, f, "", nil, nil)
+		result := convertFile(mockConv, f, "", nil, nil, nil)
 
 		if result.Err == nil {
 			t.Error("expected error when mkdir fails")
@@ -911,7 +955,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: filepath.Join(outDir, "out.pdf"),
 		}
 
-		result := convertFile(mockConv, f, "", nil, nil)
+		result := convertFile(mockConv, f, "", nil, nil, nil)
 
 		if result.Err == nil {
 			t.Error("expected error when write fails")
@@ -927,7 +971,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: "/tmp/out.pdf",
 		}
 
-		result := convertFile(mockConv, f, "", nil, nil)
+		result := convertFile(mockConv, f, "", nil, nil, nil)
 
 		if result.Err == nil {
 			t.Error("expected error when read fails")
@@ -947,3 +991,171 @@ type staticMockConverter struct {
 func (m *staticMockConverter) Convert(_ context.Context, _ md2pdf.Input) ([]byte, error) {
 	return m.result, m.err
 }
+
+func TestBuildPageSettings(t *testing.T) {
+	tests := []struct {
+		name            string
+		flags           *cliFlags
+		cfg             *Config
+		wantNil         bool
+		wantSize        string
+		wantOrientation string
+		wantMargin      float64
+		wantErr         bool
+	}{
+		{
+			name:    "no flags no config returns nil",
+			flags:   &cliFlags{},
+			cfg:     &Config{},
+			wantNil: true,
+		},
+		{
+			name:            "flags only",
+			flags:           &cliFlags{pageSize: "a4", orientation: "landscape", margin: 1.0},
+			cfg:             &Config{},
+			wantSize:        "a4",
+			wantOrientation: "landscape",
+			wantMargin:      1.0,
+		},
+		{
+			name:  "config only",
+			flags: &cliFlags{},
+			cfg: &Config{Page: PageConfig{
+				Size:        "legal",
+				Orientation: "portrait",
+				Margin:      0.75,
+			}},
+			wantSize:        "legal",
+			wantOrientation: "portrait",
+			wantMargin:      0.75,
+		},
+		{
+			name:  "flags override config",
+			flags: &cliFlags{pageSize: "a4", orientation: "landscape", margin: 1.5},
+			cfg: &Config{Page: PageConfig{
+				Size:        "legal",
+				Orientation: "portrait",
+				Margin:      0.5,
+			}},
+			wantSize:        "a4",
+			wantOrientation: "landscape",
+			wantMargin:      1.5,
+		},
+		{
+			name:  "partial flags override - size only",
+			flags: &cliFlags{pageSize: "a4"},
+			cfg: &Config{Page: PageConfig{
+				Size:        "letter",
+				Orientation: "landscape",
+				Margin:      1.0,
+			}},
+			wantSize:        "a4",
+			wantOrientation: "landscape",
+			wantMargin:      1.0,
+		},
+		{
+			name:  "partial flags override - orientation only",
+			flags: &cliFlags{orientation: "landscape"},
+			cfg: &Config{Page: PageConfig{
+				Size:        "a4",
+				Orientation: "portrait",
+				Margin:      0.75,
+			}},
+			wantSize:        "a4",
+			wantOrientation: "landscape",
+			wantMargin:      0.75,
+		},
+		{
+			name:  "partial flags override - margin only",
+			flags: &cliFlags{margin: 2.0},
+			cfg: &Config{Page: PageConfig{
+				Size:        "legal",
+				Orientation: "landscape",
+				Margin:      0.5,
+			}},
+			wantSize:        "legal",
+			wantOrientation: "landscape",
+			wantMargin:      2.0,
+		},
+		{
+			name:            "defaults applied when config partial",
+			flags:           &cliFlags{},
+			cfg:             &Config{Page: PageConfig{Size: "a4"}},
+			wantSize:        "a4",
+			wantOrientation: md2pdf.OrientationPortrait,
+			wantMargin:      md2pdf.DefaultMargin,
+		},
+		{
+			name:            "flags trigger validation with defaults",
+			flags:           &cliFlags{pageSize: "letter"},
+			cfg:             &Config{},
+			wantSize:        "letter",
+			wantOrientation: md2pdf.OrientationPortrait,
+			wantMargin:      md2pdf.DefaultMargin,
+		},
+		{
+			name:    "invalid size returns error",
+			flags:   &cliFlags{pageSize: "tabloid"},
+			cfg:     &Config{},
+			wantErr: true,
+		},
+		{
+			name:    "invalid orientation returns error",
+			flags:   &cliFlags{orientation: "diagonal"},
+			cfg:     &Config{},
+			wantErr: true,
+		},
+		{
+			name:    "invalid margin returns error",
+			flags:   &cliFlags{margin: 10.0},
+			cfg:     &Config{},
+			wantErr: true,
+		},
+		{
+			name:    "margin below minimum returns error",
+			flags:   &cliFlags{margin: 0.1},
+			cfg:     &Config{},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := buildPageSettings(tt.flags, tt.cfg)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if tt.wantNil {
+				if got != nil {
+					t.Errorf("expected nil, got %+v", got)
+				}
+				return
+			}
+
+			if got == nil {
+				t.Fatal("expected PageSettings, got nil")
+			}
+			if got.Size != tt.wantSize {
+				t.Errorf("Size = %q, want %q", got.Size, tt.wantSize)
+			}
+			if got.Orientation != tt.wantOrientation {
+				t.Errorf("Orientation = %q, want %q", got.Orientation, tt.wantOrientation)
+			}
+			if got.Margin != tt.wantMargin {
+				t.Errorf("Margin = %v, want %v", got.Margin, tt.wantMargin)
+			}
+		})
+	}
+}
+
+// PageConfig alias for test file
+type PageConfig = config.PageConfig
