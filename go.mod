@@ -12,6 +12,7 @@ require (
 	github.com/goccy/go-yaml v1.19.1
 	github.com/spf13/pflag v1.0.10
 	github.com/yuin/goldmark v1.7.13
+	go.uber.org/automaxprocs v1.6.0
 )
 
 require (
