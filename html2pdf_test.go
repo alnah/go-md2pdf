@@ -7,6 +7,12 @@ import (
 	"testing"
 )
 
+// Compile-time interface checks.
+var (
+	_ pdfConverter = (*rodConverter)(nil)
+	_ pdfRenderer  = (*rodRenderer)(nil)
+)
+
 // mockRenderer implements pdfRenderer for testing.
 type mockRenderer struct {
 	Result     []byte
