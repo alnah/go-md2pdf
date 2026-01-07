@@ -80,25 +80,3 @@ release:
 # See .github/workflows/docker.yml
 # ------------------------------------------------------------------------------
 
-# ------------------------------------------------------------------------------
-# Homebrew Tap
-# Source: https://goreleaser.com/customization/homebrew/
-# ------------------------------------------------------------------------------
-brews:
-  - name: go-md2pdf
-    repository:
-      owner: alnah
-      name: go-md2pdf
-      branch: main
-    commit_author:
-      name: goreleaserbot
-      email: bot@goreleaser.com
-    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
-    directory: Formula
-    homepage: "https://github.com/alnah/go-md2pdf"
-    description: "Convert Markdown to print-ready PDF with signatures, footers, and custom styling"
-    license: "MIT"
-    test: |
-      system "#{bin}/go-md2pdf", "--version"
-    install: |
-      bin.install "go-md2pdf"

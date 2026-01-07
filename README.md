@@ -17,12 +17,6 @@ go install github.com/alnah/go-md2pdf/cmd/md2pdf@latest
 <details>
 <summary>Other installation methods</summary>
 
-### Homebrew (macOS/Linux)
-
-```bash
-brew install alnah/go-md2pdf/go-md2pdf
-```
-
 ### Docker
 
 ```bash
