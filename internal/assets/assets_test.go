@@ -14,7 +14,7 @@ func TestLoadStyle(t *testing.T) {
 	}{
 		{
 			name:      "valid style returns content",
-			styleName: "fle",
+			styleName: "nord",
 			wantErr:   nil,
 		},
 		{

@@ -178,7 +178,7 @@ Supported formats: `.yaml`, `.yml`
 # ~/.config/go-md2pdf/work.yaml
 
 css:
-  style: 'fle' # add your styles to internal/assets/styles/, and build or install
+  style: 'nord' # add your styles to internal/assets/styles/, and build or install
 
 footer:
   enabled: true
