@@ -1,4 +1,4 @@
-package main
+package md2pdf
 
 import (
 	"runtime"
@@ -7,63 +7,68 @@ import (
 	"time"
 )
 
+// Compile-time interface check.
+var _ interface {
+	Acquire() *Service
+	Release(*Service)
+	Size() int
+	Close() error
+} = (*ServicePool)(nil)
+
 func TestResolvePoolSize(t *testing.T) {
 	gomaxprocs := runtime.GOMAXPROCS(0)
 
 	tests := []struct {
-		name        string
-		flagWorkers int
-		want        int
+		name    string
+		workers int
+		want    int
 	}{
 		{
-			name:        "flag takes priority",
-			flagWorkers: 4,
-			want:        4,
+			name:    "explicit takes priority",
+			workers: 4,
+			want:    4,
 		},
 		{
-			name:        "flag=1 for sequential",
-			flagWorkers: 1,
-			want:        1,
+			name:    "explicit=1 for sequential",
+			workers: 1,
+			want:    1,
 		},
 		{
-			name:        "flag=0 uses auto calculation",
-			flagWorkers: 0,
-			want:        min(max(gomaxprocs/2, 1), 8),
+			name:    "zero uses auto calculation",
+			workers: 0,
+			want:    min(max(gomaxprocs/cpuDivisor, minPoolSize), maxPoolSize),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := resolvePoolSize(tt.flagWorkers)
+			got := ResolvePoolSize(tt.workers)
 			if got != tt.want {
-				t.Errorf("resolvePoolSize(%d) = %d, want %d", tt.flagWorkers, got, tt.want)
+				t.Errorf("ResolvePoolSize(%d) = %d, want %d", tt.workers, got, tt.want)
 			}
 		})
 	}
 }
 
 func TestResolvePoolSize_Bounds(t *testing.T) {
-	// Test minimum bound
 	t.Run("minimum is 1", func(t *testing.T) {
-		got := resolvePoolSize(0)
-		if got < 1 {
-			t.Errorf("resolvePoolSize(0) = %d, should be at least 1", got)
+		got := ResolvePoolSize(0)
+		if got < minPoolSize {
+			t.Errorf("ResolvePoolSize(0) = %d, should be at least %d", got, minPoolSize)
 		}
 	})
 
-	// Test maximum bound
 	t.Run("maximum is 8", func(t *testing.T) {
-		got := resolvePoolSize(0)
-		if got > 8 {
-			t.Errorf("resolvePoolSize(0) = %d, should be at most 8", got)
+		got := ResolvePoolSize(0)
+		if got > maxPoolSize {
+			t.Errorf("ResolvePoolSize(0) = %d, should be at most %d", got, maxPoolSize)
 		}
 	})
 
-	// Explicit flag can exceed 8
-	t.Run("explicit flag can exceed max", func(t *testing.T) {
-		got := resolvePoolSize(16)
+	t.Run("explicit can exceed max", func(t *testing.T) {
+		got := ResolvePoolSize(16)
 		if got != 16 {
-			t.Errorf("resolvePoolSize(16) = %d, want 16", got)
+			t.Errorf("ResolvePoolSize(16) = %d, want 16", got)
 		}
 	})
 }
@@ -176,7 +181,6 @@ func TestServicePool_DoubleClose(t *testing.T) {
 		t.Errorf("first Close() error = %v", err)
 	}
 
-	// Second close should not panic (but may error)
-	// We just verify it doesn't panic
+	// Second close should not panic
 	pool.Close()
 }
