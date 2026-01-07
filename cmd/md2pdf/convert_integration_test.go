@@ -99,7 +99,7 @@ func (p *testPool) Size() int {
 func runWithTestPool(args []string, mock *mockConverter) error {
 	pool := newTestPool(mock, 2)
 	defer pool.Close()
-	return run(args, pool)
+	return run(context.Background(), args, pool)
 }
 
 // setupTestDir creates a temp directory with the given file structure.

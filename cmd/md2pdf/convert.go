@@ -71,7 +71,8 @@ type cliFlags struct {
 }
 
 // run parses arguments, discovers files, and orchestrates batch conversion.
-func run(args []string, pool Pool) error {
+// The context is used for cancellation (e.g., on SIGINT/SIGTERM).
+func run(ctx context.Context, args []string, pool Pool) error {
 	flags, positionalArgs, err := parseFlags(args)
 	if err != nil {
 		return err
@@ -127,7 +128,7 @@ func run(args []string, pool Pool) error {
 	}
 
 	// Convert files
-	results := convertBatch(pool, files, cssContent, footerData, sigData, pageData)
+	results := convertBatch(ctx, pool, files, cssContent, footerData, sigData, pageData)
 
 	// Print results and return appropriate exit code
 	failedCount := printResults(results, flags.quiet, flags.verbose)
@@ -172,11 +173,6 @@ func parseFlags(args []string) (*cliFlags, []string, error) {
 		if err := flagSet.Parse(args[1:]); err != nil {
 			return nil, nil, err
 		}
-	}
-
-	if flags.version {
-		fmt.Printf("go-md2pdf %s\n", Version)
-		os.Exit(0)
 	}
 
 	return flags, flagSet.Args(), nil
@@ -407,7 +403,8 @@ func buildPageSettings(flags *cliFlags, cfg *config.Config) (*md2pdf.PageSetting
 
 // convertBatch processes files concurrently using the service pool.
 // Each worker acquires its own service (browser) for true parallelism.
-func convertBatch(pool Pool, files []FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings) []ConversionResult {
+// The context is checked for cancellation between file conversions.
+func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings) []ConversionResult {
 	if len(files) == 0 {
 		return nil
 	}
@@ -433,7 +430,15 @@ func convertBatch(pool Pool, files []FileToConvert, cssContent string, footerDat
 			defer pool.Release(svc)
 
 			for idx := range jobs {
-				results[idx] = convertFile(svc, files[idx], cssContent, footerData, sigData, pageData)
+				// Check for cancellation before processing
+				if ctx.Err() != nil {
+					results[idx] = ConversionResult{
+						InputPath: files[idx].InputPath,
+						Err:       ctx.Err(),
+					}
+					continue
+				}
+				results[idx] = convertFile(ctx, svc, files[idx], cssContent, footerData, sigData, pageData)
 			}
 		}()
 	}
@@ -449,7 +454,8 @@ func convertBatch(pool Pool, files []FileToConvert, cssContent string, footerDat
 }
 
 // convertFile processes a single file and returns the result.
-func convertFile(service Converter, f FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings) ConversionResult {
+// The context is passed to the conversion service for cancellation support.
+func convertFile(ctx context.Context, service Converter, f FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings) ConversionResult {
 	start := time.Now()
 	result := ConversionResult{
 		InputPath:  f.InputPath,
@@ -473,7 +479,7 @@ func convertFile(service Converter, f FileToConvert, cssContent string, footerDa
 	}
 
 	// Convert via service (returns []byte)
-	pdfBytes, err := service.Convert(context.Background(), md2pdf.Input{
+	pdfBytes, err := service.Convert(ctx, md2pdf.Input{
 		Markdown:  string(content),
 		CSS:       cssContent,
 		Footer:    footerData,
