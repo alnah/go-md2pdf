@@ -20,14 +20,16 @@ var (
 
 // Field length limits for multi-tenant safety.
 const (
-	MaxNameLength   = 100  // Full name (generous)
-	MaxTitleLength  = 100  // Professional title
-	MaxEmailLength  = 254  // RFC 5321
-	MaxURLLength    = 2048 // Browser limit
-	MaxStatusLength = 50   // "DRAFT", "FINAL", "v1.2.3"
-	MaxDateLength   = 30   // "2025-12-31" or "December 31, 2025"
-	MaxTextLength   = 500  // Footer/free-form text
-	MaxLabelLength  = 100  // Link label
+	MaxNameLength        = 100  // Full name (generous)
+	MaxTitleLength       = 100  // Professional title
+	MaxEmailLength       = 254  // RFC 5321
+	MaxURLLength         = 2048 // Browser limit
+	MaxStatusLength      = 50   // "DRAFT", "FINAL", "v1.2.3"
+	MaxDateLength        = 30   // "2025-12-31" or "December 31, 2025"
+	MaxTextLength        = 500  // Footer/free-form text
+	MaxLabelLength       = 100  // Link label
+	MaxPageSizeLength    = 10   // "letter", "a4", "legal"
+	MaxOrientationLength = 10   // "portrait", "landscape"
 )
 
 // Config holds all configuration for document generation.
@@ -38,6 +40,7 @@ type Config struct {
 	Footer    FooterConfig    `yaml:"footer"`
 	Signature SignatureConfig `yaml:"signature"`
 	Assets    AssetsConfig    `yaml:"assets"`
+	Page      PageConfig      `yaml:"page"`
 }
 
 // InputConfig defines input source options.
@@ -86,6 +89,13 @@ type AssetsConfig struct {
 	BasePath string `yaml:"basePath"` // Empty = use embedded assets
 }
 
+// PageConfig defines PDF page settings.
+type PageConfig struct {
+	Size        string  `yaml:"size"`        // "letter", "a4", "legal" (default: "letter")
+	Orientation string  `yaml:"orientation"` // "portrait", "landscape" (default: "portrait")
+	Margin      float64 `yaml:"margin"`      // inches (default: 0.5)
+}
+
 // Validate checks field lengths to prevent abuse in multi-tenant scenarios.
 // Called automatically by LoadConfig, but available for consumers
 // who construct Config manually (e.g., API adapters, library users).
@@ -122,6 +132,14 @@ func (c *Config) Validate() error {
 		return err
 	}
 	if err := validateFieldLength("footer.text", c.Footer.Text, MaxTextLength); err != nil {
+		return err
+	}
+
+	// Validate page fields
+	if err := validateFieldLength("page.size", c.Page.Size, MaxPageSizeLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("page.orientation", c.Page.Orientation, MaxOrientationLength); err != nil {
 		return err
 	}
 
