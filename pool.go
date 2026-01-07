@@ -1,19 +1,30 @@
-package main
+package md2pdf
 
 import (
+	"errors"
 	"runtime"
 	"sync"
-
-	md2pdf "github.com/alnah/go-md2pdf"
 )
 
-// ServicePool manages a pool of md2pdf.Service instances for parallel processing.
+// Pool sizing constants.
+const (
+	// minPoolSize ensures at least one worker is available.
+	minPoolSize = 1
+
+	// maxPoolSize caps browser instances to limit memory (~200MB each).
+	maxPoolSize = 8
+
+	// cpuDivisor leaves headroom for Chrome child processes.
+	cpuDivisor = 2
+)
+
+// ServicePool manages a pool of Service instances for parallel processing.
 // Each service has its own browser instance, enabling true parallelism.
 // Services are created lazily on first acquire to avoid startup delay.
 type ServicePool struct {
 	size     int
-	services []*md2pdf.Service
-	sem      chan Converter
+	services []*Service
+	sem      chan *Service
 	mu       sync.Mutex
 	created  int
 	closed   bool
@@ -28,17 +39,14 @@ func NewServicePool(n int) *ServicePool {
 
 	return &ServicePool{
 		size:     n,
-		services: make([]*md2pdf.Service, 0, n),
-		sem:      make(chan Converter, n),
+		services: make([]*Service, 0, n),
+		sem:      make(chan *Service, n),
 	}
 }
 
-// Compile-time check that ServicePool implements Pool.
-var _ Pool = (*ServicePool)(nil)
-
 // Acquire gets a service from the pool, creating one if needed.
 // Blocks if all services are in use.
-func (p *ServicePool) Acquire() Converter {
+func (p *ServicePool) Acquire() *Service {
 	// Try to get an existing service (non-blocking)
 	select {
 	case svc := <-p.sem:
@@ -53,7 +61,7 @@ func (p *ServicePool) Acquire() Converter {
 		p.mu.Unlock()
 
 		// Create new service outside the lock
-		svc := md2pdf.New()
+		svc := New()
 
 		p.mu.Lock()
 		p.services = append(p.services, svc)
@@ -68,7 +76,7 @@ func (p *ServicePool) Acquire() Converter {
 }
 
 // Release returns a service to the pool.
-func (p *ServicePool) Release(svc Converter) {
+func (p *ServicePool) Release(svc *Service) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -78,6 +86,7 @@ func (p *ServicePool) Release(svc Converter) {
 }
 
 // Close releases all browser resources.
+// Returns an aggregated error if multiple services fail to close.
 func (p *ServicePool) Close() error {
 	p.mu.Lock()
 	if p.closed {
@@ -89,13 +98,13 @@ func (p *ServicePool) Close() error {
 	services := p.services
 	p.mu.Unlock()
 
-	var lastErr error
+	var errs []error
 	for _, svc := range services {
 		if err := svc.Close(); err != nil {
-			lastErr = err
+			errs = append(errs, err)
 		}
 	}
-	return lastErr
+	return errors.Join(errs...)
 }
 
 // Size returns the pool capacity.
@@ -103,24 +112,24 @@ func (p *ServicePool) Size() int {
 	return p.size
 }
 
-// resolvePoolSize determines the optimal pool size.
-// Priority: explicit flag > GOMAXPROCS-based calculation.
-func resolvePoolSize(flagWorkers int) int {
-	// Explicit flag takes priority
-	if flagWorkers > 0 {
-		return flagWorkers
+// ResolvePoolSize determines the optimal pool size.
+// Priority: explicit workers > GOMAXPROCS-based calculation.
+// Exported for use by servers and CLIs.
+func ResolvePoolSize(workers int) int {
+	// Explicit value takes priority
+	if workers > 0 {
+		return workers
 	}
 
 	// Auto-calculate based on GOMAXPROCS (adjusted by automaxprocs for containers)
 	available := runtime.GOMAXPROCS(0)
-	n := available / 2
+	n := available / cpuDivisor
 
-	// Minimum 1, maximum 8
-	if n < 1 {
-		return 1
+	if n < minPoolSize {
+		return minPoolSize
 	}
-	if n > 8 {
-		return 8
+	if n > maxPoolSize {
+		return maxPoolSize
 	}
 	return n
 }
