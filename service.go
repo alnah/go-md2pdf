@@ -73,13 +73,14 @@ func (s *Service) Convert(ctx context.Context, input Input) ([]byte, error) {
 		return nil, fmt.Errorf("injecting signature: %w", err)
 	}
 
-	// Build PDF options with footer
+	// Build PDF options with footer and page settings
 	var footData *footerData
 	if input.Footer != nil {
 		footData = toFooterData(input.Footer)
 	}
 	pdfOpts := &pdfOptions{
 		Footer: footData,
+		Page:   input.Page,
 	}
 
 	// Convert to PDF
@@ -99,10 +100,13 @@ func (s *Service) Close() error {
 	return nil
 }
 
-// validateInput checks that required fields are present.
+// validateInput checks that required fields are present and valid.
 func (s *Service) validateInput(input Input) error {
 	if input.Markdown == "" {
 		return ErrEmptyMarkdown
+	}
+	if err := input.Page.Validate(); err != nil {
+		return err
 	}
 	return nil
 }
