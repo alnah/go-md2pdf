@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -17,6 +18,12 @@ func main() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+
+	// Handle --version before any other initialization
+	if flags.version {
+		fmt.Printf("go-md2pdf %s\n", Version)
+		return
 	}
 
 	// Configure GOMAXPROCS with conditional logging
@@ -41,11 +48,15 @@ func main() {
 	// Wrap in adapter for local Pool interface (used for testing)
 	pool := &poolAdapter{pool: servicePool}
 
+	// Setup signal handling for graceful shutdown (SIGINT, SIGTERM)
+	ctx, stop := notifyContext(context.Background())
+	defer stop()
+
 	if flags.verbose {
 		fmt.Fprintln(os.Stderr, "Starting conversion...")
 	}
 
-	if err := run(os.Args, pool); err != nil {
+	if err := run(ctx, os.Args, pool); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

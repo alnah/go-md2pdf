@@ -35,6 +35,7 @@ func TestParseFlags(t *testing.T) {
 		wantNoSignature bool
 		wantNoStyle     bool
 		wantNoFooter    bool
+		wantVersion     bool
 		wantPageSize    string
 		wantOrientation string
 		wantMargin      float64
@@ -176,6 +177,18 @@ func TestParseFlags(t *testing.T) {
 			wantMargin:      1.0,
 			wantPositional:  []string{"doc.md"},
 		},
+		{
+			name:           "version flag",
+			args:           []string{"md2pdf", "--version"},
+			wantVersion:    true,
+			wantPositional: []string{},
+		},
+		{
+			name:           "version flag with other args ignored",
+			args:           []string{"md2pdf", "--version", "doc.md"},
+			wantVersion:    true,
+			wantPositional: []string{"doc.md"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -216,6 +229,9 @@ func TestParseFlags(t *testing.T) {
 			}
 			if flags.noFooter != tt.wantNoFooter {
 				t.Errorf("noFooter = %v, want %v", flags.noFooter, tt.wantNoFooter)
+			}
+			if flags.version != tt.wantVersion {
+				t.Errorf("version = %v, want %v", flags.version, tt.wantVersion)
 			}
 			if flags.pageSize != tt.wantPageSize {
 				t.Errorf("pageSize = %q, want %q", flags.pageSize, tt.wantPageSize)
@@ -918,7 +934,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: filepath.Join(blockingFile, "subdir", "out.pdf"),
 		}
 
-		result := convertFile(mockConv, f, "", nil, nil, nil)
+		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil)
 
 		if result.Err == nil {
 			t.Error("expected error when mkdir fails")
@@ -955,7 +971,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: filepath.Join(outDir, "out.pdf"),
 		}
 
-		result := convertFile(mockConv, f, "", nil, nil, nil)
+		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil)
 
 		if result.Err == nil {
 			t.Error("expected error when write fails")
@@ -971,7 +987,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: "/tmp/out.pdf",
 		}
 
-		result := convertFile(mockConv, f, "", nil, nil, nil)
+		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil)
 
 		if result.Err == nil {
 			t.Error("expected error when read fails")
