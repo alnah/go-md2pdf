@@ -7,12 +7,17 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 )
+
+// browserCloseTimeout is the maximum time to wait for browser.Close() before force-killing.
+const browserCloseTimeout = 5 * time.Second
 
 // pdfConverter abstracts HTML to PDF conversion to allow different backends.
 type pdfConverter interface {
@@ -44,8 +49,10 @@ var pageDimensions = map[string]struct{ width, height float64 }{
 // rodRenderer implements pdfRenderer using go-rod.
 // Rod automatically downloads Chromium on first run if not found.
 type rodRenderer struct {
-	browser *rod.Browser
-	timeout time.Duration
+	browser   *rod.Browser
+	launcher  *launcher.Launcher
+	timeout   time.Duration
+	closeOnce sync.Once
 }
 
 // newRodRenderer creates a rodRenderer with the given timeout.
@@ -87,6 +94,7 @@ func (r *rodRenderer) ensureBrowser() error {
 
 	// Configure launcher
 	// Leakless(false) prevents hanging on macOS - see github.com/go-rod/rod/issues/210
+	// We compensate by explicitly calling Kill() and Cleanup() in Close().
 	l := launcher.New().Headless(true).Leakless(false).Set("disable-gpu")
 
 	// Use pre-installed browser if specified, or auto-detect on macOS/Linux
@@ -103,22 +111,63 @@ func (r *rodRenderer) ensureBrowser() error {
 		return fmt.Errorf("%w: %v", ErrBrowserConnect, err)
 	}
 
+	// Store launcher reference for cleanup in Close()
+	r.launcher = l
+
 	r.browser = rod.New().ControlURL(u)
 	if err := r.browser.Connect(); err != nil {
+		r.launcher.Kill()
+		r.launcher.Cleanup()
 		r.browser = nil
+		r.launcher = nil
 		return fmt.Errorf("%w: %v", ErrBrowserConnect, err)
 	}
 	return nil
 }
 
 // Close releases browser resources.
+// Safe to call multiple times (idempotent via sync.Once).
+// Uses a timeout to avoid hanging indefinitely if browser.Close() blocks.
 func (r *rodRenderer) Close() error {
-	if r.browser != nil {
-		err := r.browser.Close()
-		r.browser = nil
-		return err
-	}
-	return nil
+	var closeErr error
+	r.closeOnce.Do(func() {
+		// Get PID before any cleanup - we'll need it to kill the process group
+		var pid int
+		if r.launcher != nil {
+			pid = r.launcher.PID()
+		}
+
+		// Try graceful close first with timeout
+		if r.browser != nil {
+			done := make(chan error, 1)
+			go func() {
+				done <- r.browser.Close()
+			}()
+
+			select {
+			case closeErr = <-done:
+				// Browser closed normally
+			case <-time.After(browserCloseTimeout):
+				// Timeout - will be force-killed below
+			}
+			r.browser = nil
+		}
+
+		// Force kill the Chrome process group (kills all child processes too)
+		if pid > 0 {
+			// Kill the entire process group by sending signal to negative PID
+			// This ensures GPU, renderer, and other Chrome child processes are killed
+			_ = syscall.Kill(-pid, syscall.SIGKILL)
+		}
+
+		// Also call launcher.Kill() as fallback and cleanup user-data-dir
+		if r.launcher != nil {
+			r.launcher.Kill()
+			r.launcher.Cleanup()
+			r.launcher = nil
+		}
+	})
+	return closeErr
 }
 
 // RenderFromFile opens a local HTML file in headless Chrome and renders it to PDF.
