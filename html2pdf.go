@@ -62,9 +62,16 @@ func (r *rodRenderer) ensureBrowser() error {
 		return nil
 	}
 
-	// Configure launcher (NoSandbox required for CI environments)
+	// Configure launcher
 	l := launcher.New()
-	if os.Getenv("CI") == "true" {
+
+	// Use pre-installed browser if specified (Docker/containerized environments)
+	if bin := os.Getenv("ROD_BROWSER_BIN"); bin != "" {
+		l = l.Bin(bin)
+	}
+
+	// NoSandbox required for CI and containerized environments
+	if os.Getenv("CI") == "true" || os.Getenv("ROD_BROWSER_BIN") != "" {
 		l = l.NoSandbox(true)
 	}
 	u, err := l.Launch()
