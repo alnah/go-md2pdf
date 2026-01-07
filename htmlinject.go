@@ -11,7 +11,7 @@ import (
 )
 
 // defaultFontFamily is the standard font stack for PDF footers and generated content.
-const defaultFontFamily = "-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif"
+const defaultFontFamily = "'Inter', sans-serif"
 
 // cssInjector defines the contract for CSS injection into HTML.
 type cssInjector interface {

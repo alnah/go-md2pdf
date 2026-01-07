@@ -47,8 +47,7 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial,
-    sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: var(--font-size-base);
   line-height: var(--line-height);
   color: var(--text-primary);
@@ -72,7 +71,7 @@ h3,
 h4,
 h5,
 h6 {
-  font-weight: 600;
+  font-weight: 500;
   page-break-after: avoid;
   color: white;
   padding: 0.3em 0.6em;
@@ -338,7 +337,7 @@ table tbody tr:nth-child(even) {
 
 /* Inline code */
 code {
-  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: var(--font-size-small);
   background: var(--background-code);
   color: var(--heading-blue);
