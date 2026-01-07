@@ -25,12 +25,6 @@ type pdfRenderer interface {
 	RenderFromFile(ctx context.Context, filePath string, opts *pdfOptions) ([]byte, error)
 }
 
-// Compile-time interface checks
-var (
-	_ pdfConverter = (*rodConverter)(nil)
-	_ pdfRenderer  = (*rodRenderer)(nil)
-)
-
 // pdfOptions holds options for PDF generation.
 type pdfOptions struct {
 	Footer *footerData
