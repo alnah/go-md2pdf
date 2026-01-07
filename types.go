@@ -1,13 +1,95 @@
 package md2pdf
 
-import "time"
+import (
+	"fmt"
+	"strings"
+	"time"
+)
+
+// Page size constants.
+const (
+	PageSizeLetter = "letter"
+	PageSizeA4     = "a4"
+	PageSizeLegal  = "legal"
+)
+
+// Orientation constants.
+const (
+	OrientationPortrait  = "portrait"
+	OrientationLandscape = "landscape"
+)
+
+// Margin bounds in inches.
+const (
+	MinMargin     = 0.25
+	MaxMargin     = 3.0
+	DefaultMargin = 0.5
+)
+
+// PageSettings configures PDF page dimensions.
+type PageSettings struct {
+	Size        string  // "letter", "a4", "legal"
+	Orientation string  // "portrait", "landscape"
+	Margin      float64 // inches, applied to all sides
+}
+
+// DefaultPageSettings returns page settings with default values.
+func DefaultPageSettings() *PageSettings {
+	return &PageSettings{
+		Size:        PageSizeLetter,
+		Orientation: OrientationPortrait,
+		Margin:      DefaultMargin,
+	}
+}
+
+// Validate checks that page settings are valid.
+// Returns nil if p is nil (nil means use defaults).
+// Does not mutate - uses case-insensitive comparison.
+func (p *PageSettings) Validate() error {
+	if p == nil {
+		return nil
+	}
+
+	if !isValidPageSize(p.Size) {
+		return fmt.Errorf("%w: %q", ErrInvalidPageSize, p.Size)
+	}
+
+	if !isValidOrientation(p.Orientation) {
+		return fmt.Errorf("%w: %q", ErrInvalidOrientation, p.Orientation)
+	}
+
+	if p.Margin < MinMargin || p.Margin > MaxMargin {
+		return fmt.Errorf("%w: %.2f (must be between %.2f and %.2f)", ErrInvalidMargin, p.Margin, MinMargin, MaxMargin)
+	}
+
+	return nil
+}
+
+// isValidPageSize checks if size is a known page size (case-insensitive).
+func isValidPageSize(size string) bool {
+	switch strings.ToLower(size) {
+	case PageSizeLetter, PageSizeA4, PageSizeLegal:
+		return true
+	}
+	return false
+}
+
+// isValidOrientation checks if orientation is valid (case-insensitive).
+func isValidOrientation(orientation string) bool {
+	switch strings.ToLower(orientation) {
+	case OrientationPortrait, OrientationLandscape:
+		return true
+	}
+	return false
+}
 
 // Input contains conversion parameters.
 type Input struct {
-	Markdown  string     // Markdown content (required)
-	CSS       string     // Custom CSS (optional)
-	Footer    *Footer    // Footer config (optional)
-	Signature *Signature // Signature config (optional)
+	Markdown  string        // Markdown content (required)
+	CSS       string        // Custom CSS (optional)
+	Footer    *Footer       // Footer config (optional)
+	Signature *Signature    // Signature config (optional)
+	Page      *PageSettings // Page settings (optional, nil = defaults)
 }
 
 // Footer configures the PDF footer.
