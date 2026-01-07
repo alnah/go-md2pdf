@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -31,6 +30,13 @@ var (
 // Converter is the interface for the conversion service.
 type Converter interface {
 	Convert(ctx context.Context, input md2pdf.Input) ([]byte, error)
+}
+
+// Pool abstracts service pool operations for testability.
+type Pool interface {
+	Acquire() Converter
+	Release(Converter)
+	Size() int
 }
 
 // FileToConvert represents a single file to process.
@@ -58,10 +64,11 @@ type cliFlags struct {
 	noStyle     bool
 	noFooter    bool
 	version     bool
+	workers     int
 }
 
 // run parses arguments, discovers files, and orchestrates batch conversion.
-func run(args []string, service Converter) error {
+func run(args []string, pool Pool) error {
 	flags, positionalArgs, err := parseFlags(args)
 	if err != nil {
 		return err
@@ -111,7 +118,7 @@ func run(args []string, service Converter) error {
 	footerData := buildFooterData(cfg, flags.noFooter)
 
 	// Convert files
-	results := convertBatch(service, files, cssContent, footerData, sigData)
+	results := convertBatch(pool, files, cssContent, footerData, sigData)
 
 	// Print results and return appropriate exit code
 	failedCount := printResults(results, flags.quiet, flags.verbose)
@@ -137,6 +144,7 @@ func parseFlags(args []string) (*cliFlags, []string, error) {
 	flagSet.BoolVar(&flags.noStyle, "no-style", false, "disable CSS styling")
 	flagSet.BoolVar(&flags.noFooter, "no-footer", false, "disable page footer")
 	flagSet.BoolVar(&flags.version, "version", false, "show version and exit")
+	flagSet.IntVarP(&flags.workers, "workers", "w", 0, "number of parallel workers (default: auto)")
 
 	flagSet.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: md2pdf [flags] <input> [flags]\n\n")
@@ -335,30 +343,44 @@ func buildFooterData(cfg *config.Config, noFooter bool) *md2pdf.Footer {
 	}
 }
 
-// convertBatch processes files concurrently using the service.
-func convertBatch(service Converter, files []FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature) []ConversionResult {
+// convertBatch processes files concurrently using the service pool.
+// Each worker acquires its own service (browser) for true parallelism.
+func convertBatch(pool Pool, files []FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature) []ConversionResult {
 	if len(files) == 0 {
 		return nil
 	}
 
-	concurrency := runtime.NumCPU()
+	// Concurrency limited by pool size (each worker gets its own browser)
+	concurrency := pool.Size()
 	if concurrency > len(files) {
 		concurrency = len(files)
 	}
 
 	results := make([]ConversionResult, len(files))
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, concurrency)
+	jobs := make(chan int, len(files))
 
-	for i, file := range files {
+	// Start workers
+	for w := 0; w < concurrency; w++ {
 		wg.Add(1)
-		go func(idx int, f FileToConvert) {
+		go func() {
 			defer wg.Done()
-			sem <- struct{}{}        // acquire
-			defer func() { <-sem }() // release
-			results[idx] = convertFile(service, f, cssContent, footerData, sigData)
-		}(i, file)
+
+			// Each worker acquires its own service
+			svc := pool.Acquire()
+			defer pool.Release(svc)
+
+			for idx := range jobs {
+				results[idx] = convertFile(svc, files[idx], cssContent, footerData, sigData)
+			}
+		}()
 	}
+
+	// Send jobs
+	for i := range files {
+		jobs <- i
+	}
+	close(jobs)
 
 	wg.Wait()
 	return results
