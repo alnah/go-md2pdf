@@ -338,3 +338,136 @@ func TestWithTimeoutPanic(t *testing.T) {
 		WithTimeout(-1 * time.Second)
 	})
 }
+
+func TestIsValidHexColor(t *testing.T) {
+	tests := []struct {
+		color string
+		want  bool
+	}{
+		// Valid colors
+		{"#fff", true},
+		{"#FFF", true},
+		{"#000", true},
+		{"#abc", true},
+		{"#ABC", true},
+		{"#123", true},
+		{"#ffffff", true},
+		{"#FFFFFF", true},
+		{"#000000", true},
+		{"#abcdef", true},
+		{"#ABCDEF", true},
+		{"#123456", true},
+		{"#aAbBcC", true},
+		{"#888888", true},
+		{"#ff0000", true},
+
+		// Invalid colors
+		{"", false},
+		{"fff", false},          // missing #
+		{"#ff", false},          // too short
+		{"#ffff", false},        // wrong length (4)
+		{"#fffff", false},       // wrong length (5)
+		{"#fffffff", false},     // too long (7)
+		{"#ggg", false},         // invalid hex char
+		{"#xyz", false},         // invalid hex char
+		{"#12345g", false},      // invalid hex char
+		{"red", false},          // color name not supported
+		{"rgb(255,0,0)", false}, // rgb not supported
+		{"#", false},            // just hash
+		{" #fff", false},        // leading space
+		{"#fff ", false},        // trailing space
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.color, func(t *testing.T) {
+			got := isValidHexColor(tt.color)
+			if got != tt.want {
+				t.Errorf("isValidHexColor(%q) = %v, want %v", tt.color, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWatermark_Validate(t *testing.T) {
+	tests := []struct {
+		name      string
+		watermark *Watermark
+		wantErr   error
+	}{
+		{
+			name:      "nil is valid",
+			watermark: nil,
+			wantErr:   nil,
+		},
+		{
+			name:      "empty color is valid (uses default)",
+			watermark: &Watermark{Text: "DRAFT", Color: ""},
+			wantErr:   nil,
+		},
+		{
+			name:      "valid 3-char hex color",
+			watermark: &Watermark{Text: "DRAFT", Color: "#fff"},
+			wantErr:   nil,
+		},
+		{
+			name:      "valid 6-char hex color",
+			watermark: &Watermark{Text: "DRAFT", Color: "#888888"},
+			wantErr:   nil,
+		},
+		{
+			name:      "valid uppercase hex color",
+			watermark: &Watermark{Text: "DRAFT", Color: "#AABBCC"},
+			wantErr:   nil,
+		},
+		{
+			name:      "valid mixed case hex color",
+			watermark: &Watermark{Text: "DRAFT", Color: "#aAbBcC"},
+			wantErr:   nil,
+		},
+		{
+			name:      "invalid color - missing hash",
+			watermark: &Watermark{Text: "DRAFT", Color: "888888"},
+			wantErr:   ErrInvalidWatermarkColor,
+		},
+		{
+			name:      "invalid color - wrong length",
+			watermark: &Watermark{Text: "DRAFT", Color: "#8888"},
+			wantErr:   ErrInvalidWatermarkColor,
+		},
+		{
+			name:      "invalid color - invalid hex char",
+			watermark: &Watermark{Text: "DRAFT", Color: "#gggggg"},
+			wantErr:   ErrInvalidWatermarkColor,
+		},
+		{
+			name:      "invalid color - color name",
+			watermark: &Watermark{Text: "DRAFT", Color: "red"},
+			wantErr:   ErrInvalidWatermarkColor,
+		},
+		{
+			name:      "invalid color - rgb format",
+			watermark: &Watermark{Text: "DRAFT", Color: "rgb(255,0,0)"},
+			wantErr:   ErrInvalidWatermarkColor,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.watermark.Validate()
+
+			if tt.wantErr != nil {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("error = %v, want %v", err, tt.wantErr)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}

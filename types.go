@@ -90,6 +90,44 @@ type Input struct {
 	Footer    *Footer       // Footer config (optional)
 	Signature *Signature    // Signature config (optional)
 	Page      *PageSettings // Page settings (optional, nil = defaults)
+	Watermark *Watermark    // Watermark config (optional)
+}
+
+// Watermark configures a background text watermark.
+type Watermark struct {
+	Text    string  // Text to display (e.g., "DRAFT", "CONFIDENTIAL")
+	Color   string  // Hex color (default: "#888888")
+	Opacity float64 // 0.0 to 1.0 (default: 0.1)
+	Angle   float64 // Rotation in degrees (default: -45)
+}
+
+// Validate checks that watermark settings are valid.
+// Returns nil if w is nil (nil means no watermark).
+func (w *Watermark) Validate() error {
+	if w == nil {
+		return nil
+	}
+	if w.Color != "" && !isValidHexColor(w.Color) {
+		return fmt.Errorf("%w: %q (must be hex format like #RGB or #RRGGBB)", ErrInvalidWatermarkColor, w.Color)
+	}
+	return nil
+}
+
+// isValidHexColor checks if color is a valid hex color (#RGB or #RRGGBB).
+func isValidHexColor(color string) bool {
+	if len(color) == 0 || color[0] != '#' {
+		return false
+	}
+	hex := color[1:]
+	if len(hex) != 3 && len(hex) != 6 {
+		return false
+	}
+	for _, c := range hex {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
 
 // Footer configures the PDF footer.
