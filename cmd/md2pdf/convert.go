@@ -60,19 +60,24 @@ type ConversionResult struct {
 
 // cliFlags holds parsed command-line flags.
 type cliFlags struct {
-	configName  string
-	outputPath  string
-	cssFile     string
-	quiet       bool
-	verbose     bool
-	noSignature bool
-	noStyle     bool
-	noFooter    bool
-	version     bool
-	workers     int
-	pageSize    string
-	orientation string
-	margin      float64
+	configName       string
+	outputPath       string
+	cssFile          string
+	quiet            bool
+	verbose          bool
+	noSignature      bool
+	noStyle          bool
+	noFooter         bool
+	noWatermark      bool
+	version          bool
+	workers          int
+	pageSize         string
+	orientation      string
+	margin           float64
+	watermarkText    string
+	watermarkColor   string
+	watermarkOpacity float64
+	watermarkAngle   float64
 }
 
 // run parses arguments, discovers files, and orchestrates batch conversion.
@@ -137,8 +142,14 @@ func run(ctx context.Context, args []string, pool Pool) error {
 		return err
 	}
 
+	// Build watermark data
+	watermarkData, err := buildWatermarkData(flags, cfg)
+	if err != nil {
+		return err
+	}
+
 	// Convert files
-	results := convertBatch(ctx, pool, files, cssContent, footerData, sigData, pageData)
+	results := convertBatch(ctx, pool, files, cssContent, footerData, sigData, pageData, watermarkData)
 
 	// Print results and return appropriate exit code
 	failedCount := printResults(results, flags.quiet, flags.verbose)
@@ -163,11 +174,16 @@ func parseFlags(args []string) (*cliFlags, []string, error) {
 	flagSet.BoolVar(&flags.noSignature, "no-signature", false, "disable signature injection")
 	flagSet.BoolVar(&flags.noStyle, "no-style", false, "disable CSS styling")
 	flagSet.BoolVar(&flags.noFooter, "no-footer", false, "disable page footer")
+	flagSet.BoolVar(&flags.noWatermark, "no-watermark", false, "disable watermark")
 	flagSet.BoolVar(&flags.version, "version", false, "show version and exit")
 	flagSet.IntVarP(&flags.workers, "workers", "w", 0, "number of parallel workers (default: auto)")
 	flagSet.StringVarP(&flags.pageSize, "page-size", "p", "", "page size: letter, a4, legal")
 	flagSet.StringVar(&flags.orientation, "orientation", "", "page orientation: portrait, landscape")
 	flagSet.Float64Var(&flags.margin, "margin", 0, "page margin in inches (0.25-3.0)")
+	flagSet.StringVar(&flags.watermarkText, "watermark-text", "", "watermark text (e.g., DRAFT, CONFIDENTIAL)")
+	flagSet.StringVar(&flags.watermarkColor, "watermark-color", "", "watermark color in hex (default: #888888)")
+	flagSet.Float64Var(&flags.watermarkOpacity, "watermark-opacity", 0, "watermark opacity 0.0-1.0 (default: 0.1)")
+	flagSet.Float64Var(&flags.watermarkAngle, "watermark-angle", -999, "watermark rotation in degrees (default: -45)")
 
 	flagSet.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: md2pdf [flags] <input> [flags]\n\n")
@@ -372,6 +388,77 @@ func buildFooterData(cfg *config.Config, noFooter bool) *md2pdf.Footer {
 	}
 }
 
+// buildWatermarkData creates md2pdf.Watermark from flags and config.
+// Priority: CLI flags > config > defaults.
+// Returns nil if watermark is disabled (via config or --no-watermark flag).
+// Validates settings early for user-friendly CLI feedback.
+func buildWatermarkData(flags *cliFlags, cfg *config.Config) (*md2pdf.Watermark, error) {
+	if flags.noWatermark {
+		return nil, nil
+	}
+
+	// Check if any watermark settings are specified
+	hasFlags := flags.watermarkText != ""
+	hasConfig := cfg.Watermark.Enabled
+
+	if !hasFlags && !hasConfig {
+		return nil, nil
+	}
+
+	// Start with config values if enabled
+	w := &md2pdf.Watermark{}
+	if cfg.Watermark.Enabled {
+		w.Text = cfg.Watermark.Text
+		w.Color = cfg.Watermark.Color
+		w.Opacity = cfg.Watermark.Opacity
+		w.Angle = cfg.Watermark.Angle
+	}
+
+	// CLI flags override config
+	if flags.watermarkText != "" {
+		w.Text = flags.watermarkText
+	}
+	if flags.watermarkColor != "" {
+		w.Color = flags.watermarkColor
+	}
+	// Note: 0 is not a valid opacity (invisible), so we use > 0 to detect "set"
+	// Negative values are caught by validation below
+	if flags.watermarkOpacity != 0 {
+		w.Opacity = flags.watermarkOpacity
+	}
+	if flags.watermarkAngle != -999 {
+		w.Angle = flags.watermarkAngle
+	}
+
+	// Apply defaults for any remaining zero values
+	if w.Color == "" {
+		w.Color = "#888888"
+	}
+	if w.Opacity == 0 {
+		w.Opacity = 0.1
+	}
+	// Angle defaults to -45, but 0 is a valid value so we use -999 as sentinel
+	if flags.watermarkAngle == -999 && cfg.Watermark.Angle == 0 && !cfg.Watermark.Enabled {
+		w.Angle = -45
+	}
+
+	// Validate at boundary
+	if w.Text == "" {
+		return nil, fmt.Errorf("watermark text is required when watermark is enabled")
+	}
+	if err := w.Validate(); err != nil {
+		return nil, err
+	}
+	if w.Opacity < 0 || w.Opacity > 1 {
+		return nil, fmt.Errorf("watermark opacity must be between 0 and 1, got %.2f", w.Opacity)
+	}
+	if w.Angle < -90 || w.Angle > 90 {
+		return nil, fmt.Errorf("watermark angle must be between -90 and 90, got %.2f", w.Angle)
+	}
+
+	return w, nil
+}
+
 // buildPageSettings creates md2pdf.PageSettings from flags and config.
 // Priority: CLI flags > config > defaults (handled by library).
 // Returns nil if no page settings specified (library uses defaults).
@@ -425,7 +512,7 @@ func buildPageSettings(flags *cliFlags, cfg *config.Config) (*md2pdf.PageSetting
 // convertBatch processes files concurrently using the service pool.
 // Each worker acquires its own service (browser) for true parallelism.
 // The context is checked for cancellation between file conversions.
-func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings) []ConversionResult {
+func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings, watermarkData *md2pdf.Watermark) []ConversionResult {
 	if len(files) == 0 {
 		return nil
 	}
@@ -459,7 +546,7 @@ func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssCont
 					}
 					continue
 				}
-				results[idx] = convertFile(ctx, svc, files[idx], cssContent, footerData, sigData, pageData)
+				results[idx] = convertFile(ctx, svc, files[idx], cssContent, footerData, sigData, pageData, watermarkData)
 			}
 		}()
 	}
@@ -476,7 +563,7 @@ func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssCont
 
 // convertFile processes a single file and returns the result.
 // The context is passed to the conversion service for cancellation support.
-func convertFile(ctx context.Context, service Converter, f FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings) ConversionResult {
+func convertFile(ctx context.Context, service Converter, f FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings, watermarkData *md2pdf.Watermark) ConversionResult {
 	start := time.Now()
 	result := ConversionResult{
 		InputPath:  f.InputPath,
@@ -506,6 +593,7 @@ func convertFile(ctx context.Context, service Converter, f FileToConvert, cssCon
 		Footer:    footerData,
 		Signature: sigData,
 		Page:      pageData,
+		Watermark: watermarkData,
 	})
 	if err != nil {
 		result.Err = err
