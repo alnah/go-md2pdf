@@ -523,16 +523,8 @@ img {
   font-size: var(--font-size-small);
 }
 
-/* 10. TEACHER SIGNATURE */
-.signature-block {
-  page-break-inside: avoid;
-  margin-top: var(--signature-margin-top) !important;
-  display: flex !important;
-  align-items: center !important;
-}
-
 /*
- * 11. CHROME PDF SPECIFIC RULES
+ * 10. CHROME PDF SPECIFIC RULES
  * Chrome print rendering has quirks with list display.
  * The !important overrides are necessary to force correct
  * rendering when converting to PDF via Chrome headless.
@@ -567,6 +559,77 @@ img {
   ol > li {
     list-style: decimal outside !important;
   }
+}
+
+/* 11. COVER PAGE */
+.cover-page {
+  page-break-after: always;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.cover-logo {
+  max-height: 120px;
+  max-width: 300px;
+  margin-bottom: 2rem;
+  object-fit: contain;
+}
+
+.cover-title {
+  font-size: 2.5em;
+  background: var(--heading-red);
+  color: white;
+  padding: 0.5em 1em;
+  margin: 0 0 1rem 0;
+  width: auto;
+}
+
+.cover-subtitle {
+  font-size: 1.5em;
+  color: var(--text-primary);
+  margin: 0 0 2rem 0;
+  font-weight: 300;
+}
+
+.cover-organization {
+  font-size: 1.2em;
+  color: var(--heading-green);
+  margin: 0 0 2rem 0;
+  font-weight: 500;
+}
+
+.cover-meta {
+  margin-top: auto;
+  padding-top: 3rem;
+}
+
+.cover-meta p {
+  margin: 0.3em 0;
+  text-align: center;
+}
+
+.cover-author {
+  font-size: 1.1em;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.cover-author-title {
+  font-size: 1em;
+  color: var(--text-accent);
+  font-style: italic;
+}
+
+.cover-date,
+.cover-version {
+  font-size: 0.9em;
+  color: var(--heading-blue);
 }
 
 /* 12. PRINT SETTINGS */
