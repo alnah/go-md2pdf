@@ -477,4 +477,141 @@ unknownField: "should fail"
 			t.Errorf("error = %v, want ErrFieldTooLong", err)
 		}
 	})
+
+	t.Run("loads TOC settings", func(t *testing.T) {
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "test.yaml")
+		content := `toc:
+  enabled: true
+  title: "Table of Contents"
+  maxDepth: 4
+`
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		cfg, err := LoadConfig(configPath)
+		if err != nil {
+			t.Fatalf("LoadConfig() error = %v", err)
+		}
+		if !cfg.TOC.Enabled {
+			t.Error("TOC.Enabled = false, want true")
+		}
+		if cfg.TOC.Title != "Table of Contents" {
+			t.Errorf("TOC.Title = %q, want %q", cfg.TOC.Title, "Table of Contents")
+		}
+		if cfg.TOC.MaxDepth != 4 {
+			t.Errorf("TOC.MaxDepth = %d, want %d", cfg.TOC.MaxDepth, 4)
+		}
+	})
+
+	t.Run("toc.title too long returns ErrFieldTooLong", func(t *testing.T) {
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "test.yaml")
+		longTitle := string(make([]byte, MaxTOCTitleLength+1))
+		content := "toc:\n  title: \"" + longTitle + "\"\n"
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		_, err := LoadConfig(configPath)
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("toc.maxDepth invalid range returns error", func(t *testing.T) {
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "test.yaml")
+		content := `toc:
+  enabled: true
+  maxDepth: 7
+`
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		_, err := LoadConfig(configPath)
+		if err == nil {
+			t.Fatal("expected error for invalid maxDepth")
+		}
+	})
+
+	t.Run("toc.maxDepth 0 is valid when enabled", func(t *testing.T) {
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "test.yaml")
+		content := `toc:
+  enabled: true
+  maxDepth: 0
+`
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		cfg, err := LoadConfig(configPath)
+		if err != nil {
+			t.Fatalf("LoadConfig() error = %v", err)
+		}
+		if cfg.TOC.MaxDepth != 0 {
+			t.Errorf("TOC.MaxDepth = %d, want 0 (will use default)", cfg.TOC.MaxDepth)
+		}
+	})
+}
+
+func TestConfig_Validate_TOC(t *testing.T) {
+	t.Run("toc disabled passes validation", func(t *testing.T) {
+		cfg := &Config{TOC: TOCConfig{Enabled: false}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("toc enabled with valid depth passes", func(t *testing.T) {
+		cfg := &Config{TOC: TOCConfig{Enabled: true, MaxDepth: 3}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("toc enabled with depth 0 passes (uses default)", func(t *testing.T) {
+		cfg := &Config{TOC: TOCConfig{Enabled: true, MaxDepth: 0}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("toc.title at max length passes", func(t *testing.T) {
+		cfg := &Config{TOC: TOCConfig{Title: string(make([]byte, MaxTOCTitleLength))}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("toc.title too long returns error", func(t *testing.T) {
+		cfg := &Config{TOC: TOCConfig{Title: string(make([]byte, MaxTOCTitleLength+1))}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("toc enabled with depth 7 returns error", func(t *testing.T) {
+		cfg := &Config{TOC: TOCConfig{Enabled: true, MaxDepth: 7}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("expected error for invalid depth")
+		}
+	})
+
+	t.Run("toc enabled with negative depth returns error", func(t *testing.T) {
+		cfg := &Config{TOC: TOCConfig{Enabled: true, MaxDepth: -1}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("expected error for negative depth")
+		}
+	})
 }

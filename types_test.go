@@ -562,3 +562,92 @@ func TestWatermark_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestTOC_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		toc     *TOC
+		wantErr error
+	}{
+		{
+			name:    "nil is valid",
+			toc:     nil,
+			wantErr: nil,
+		},
+		{
+			name:    "valid depth 1",
+			toc:     &TOC{MaxDepth: 1},
+			wantErr: nil,
+		},
+		{
+			name:    "valid depth 3",
+			toc:     &TOC{MaxDepth: 3},
+			wantErr: nil,
+		},
+		{
+			name:    "valid depth 6",
+			toc:     &TOC{MaxDepth: 6},
+			wantErr: nil,
+		},
+		{
+			name:    "with title",
+			toc:     &TOC{Title: "Table of Contents", MaxDepth: 3},
+			wantErr: nil,
+		},
+		{
+			name:    "min depth boundary",
+			toc:     &TOC{MaxDepth: MinTOCDepth},
+			wantErr: nil,
+		},
+		{
+			name:    "max depth boundary",
+			toc:     &TOC{MaxDepth: MaxTOCDepth},
+			wantErr: nil,
+		},
+		{
+			name:    "depth 0 invalid",
+			toc:     &TOC{MaxDepth: 0},
+			wantErr: ErrInvalidTOCDepth,
+		},
+		{
+			name:    "depth 7 invalid",
+			toc:     &TOC{MaxDepth: 7},
+			wantErr: ErrInvalidTOCDepth,
+		},
+		{
+			name:    "negative depth invalid",
+			toc:     &TOC{MaxDepth: -1},
+			wantErr: ErrInvalidTOCDepth,
+		},
+		{
+			name:    "large negative depth invalid",
+			toc:     &TOC{MaxDepth: -100},
+			wantErr: ErrInvalidTOCDepth,
+		},
+		{
+			name:    "large positive depth invalid",
+			toc:     &TOC{MaxDepth: 100},
+			wantErr: ErrInvalidTOCDepth,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.toc.Validate()
+
+			if tt.wantErr != nil {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("error = %v, want %v", err, tt.wantErr)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
