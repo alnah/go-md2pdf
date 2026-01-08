@@ -92,6 +92,7 @@ type Input struct {
 	Page      *PageSettings // Page settings (optional, nil = defaults)
 	Watermark *Watermark    // Watermark config (optional)
 	Cover     *Cover        // Cover page config (optional)
+	TOC       *TOC          // Table of contents config (optional)
 }
 
 // Watermark configures a background text watermark.
@@ -135,6 +136,31 @@ func (c *Cover) Validate() error {
 	// Semantic validation: logo path exists if not URL
 	if c.Logo != "" && !isURL(c.Logo) && !FileExists(c.Logo) {
 		return fmt.Errorf("%w: %q", ErrCoverLogoNotFound, c.Logo)
+	}
+	return nil
+}
+
+// TOC depth bounds.
+const (
+	MinTOCDepth     = 1
+	MaxTOCDepth     = 6
+	DefaultTOCDepth = 3
+)
+
+// TOC configures the table of contents.
+type TOC struct {
+	Title    string // Title above TOC (empty = no title)
+	MaxDepth int    // 1-6, which heading levels to include (default: 3)
+}
+
+// Validate checks that TOC settings are valid.
+// Returns nil if t is nil (nil means no TOC).
+func (t *TOC) Validate() error {
+	if t == nil {
+		return nil
+	}
+	if t.MaxDepth < MinTOCDepth || t.MaxDepth > MaxTOCDepth {
+		return fmt.Errorf("%w: %d (must be %d-%d)", ErrInvalidTOCDepth, t.MaxDepth, MinTOCDepth, MaxTOCDepth)
 	}
 	return nil
 }
