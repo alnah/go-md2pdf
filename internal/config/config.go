@@ -32,6 +32,10 @@ const (
 	MaxOrientationLength    = 10   // "portrait", "landscape"
 	MaxWatermarkTextLength  = 50   // "DRAFT", "CONFIDENTIAL"
 	MaxWatermarkColorLength = 20   // "#888888" or color name
+	MaxCoverTitleLength     = 200  // Cover page title
+	MaxSubtitleLength       = 200  // Cover page subtitle
+	MaxOrganizationLength   = 100  // Organization name
+	MaxVersionLength        = 50   // Version string
 )
 
 // Config holds all configuration for document generation.
@@ -44,6 +48,7 @@ type Config struct {
 	Assets    AssetsConfig    `yaml:"assets"`
 	Page      PageConfig      `yaml:"page"`
 	Watermark WatermarkConfig `yaml:"watermark"`
+	Cover     CoverConfig     `yaml:"cover"`
 }
 
 // InputConfig defines input source options.
@@ -106,6 +111,19 @@ type WatermarkConfig struct {
 	Color   string  `yaml:"color"`   // Hex color (default: "#888888")
 	Opacity float64 `yaml:"opacity"` // 0.0 to 1.0 (default: 0.1)
 	Angle   float64 `yaml:"angle"`   // Rotation in degrees (default: -45)
+}
+
+// CoverConfig defines cover page options.
+type CoverConfig struct {
+	Enabled      bool   `yaml:"enabled"`
+	Title        string `yaml:"title"`        // Optional - auto: H1 → filename
+	Subtitle     string `yaml:"subtitle"`     // Optional
+	Logo         string `yaml:"logo"`         // Optional - path or URL
+	Author       string `yaml:"author"`       // Fallback → signature.name
+	AuthorTitle  string `yaml:"authorTitle"`  // Fallback → signature.title
+	Organization string `yaml:"organization"` // Optional, no fallback
+	Date         string `yaml:"date"`         // "auto" = YYYY-MM-DD, fallback → footer.date
+	Version      string `yaml:"version"`      // Fallback → footer.status
 }
 
 // Validate checks field lengths to prevent abuse in multi-tenant scenarios.
@@ -182,6 +200,32 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	// Validate cover fields
+	if err := validateFieldLength("cover.title", c.Cover.Title, MaxCoverTitleLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("cover.subtitle", c.Cover.Subtitle, MaxSubtitleLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("cover.logo", c.Cover.Logo, MaxURLLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("cover.author", c.Cover.Author, MaxNameLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("cover.authorTitle", c.Cover.AuthorTitle, MaxTitleLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("cover.organization", c.Cover.Organization, MaxOrganizationLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("cover.date", c.Cover.Date, MaxDateLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("cover.version", c.Cover.Version, MaxVersionLength); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -203,6 +247,7 @@ func DefaultConfig() *Config {
 		Signature: SignatureConfig{Enabled: false},
 		Assets:    AssetsConfig{BasePath: ""},
 		Watermark: WatermarkConfig{Enabled: false},
+		Cover:     CoverConfig{Enabled: false},
 	}
 }
 
