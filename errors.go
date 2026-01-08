@@ -16,4 +16,7 @@ var (
 	ErrInvalidPageSize    = errors.New("invalid page size")
 	ErrInvalidOrientation = errors.New("invalid orientation")
 	ErrInvalidMargin      = errors.New("invalid margin")
+
+	// Footer validation errors.
+	ErrInvalidFooterPosition = errors.New("invalid footer position")
 )

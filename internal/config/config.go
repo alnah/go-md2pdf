@@ -134,6 +134,14 @@ func (c *Config) Validate() error {
 	if err := validateFieldLength("footer.text", c.Footer.Text, MaxTextLength); err != nil {
 		return err
 	}
+	if c.Footer.Position != "" {
+		switch strings.ToLower(c.Footer.Position) {
+		case "left", "center", "right":
+			// valid
+		default:
+			return fmt.Errorf("footer.position: invalid value %q (must be left, center, or right)", c.Footer.Position)
+		}
+	}
 
 	// Validate page fields
 	if err := validateFieldLength("page.size", c.Page.Size, MaxPageSizeLength); err != nil {

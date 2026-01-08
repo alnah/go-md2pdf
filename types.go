@@ -101,6 +101,20 @@ type Footer struct {
 	Text           string
 }
 
+// Validate checks that footer settings are valid.
+// Returns nil if f is nil (nil means no footer).
+func (f *Footer) Validate() error {
+	if f == nil {
+		return nil
+	}
+	switch strings.ToLower(f.Position) {
+	case "", "left", "center", "right":
+		return nil
+	default:
+		return fmt.Errorf("%w: %q (must be left, center, or right)", ErrInvalidFooterPosition, f.Position)
+	}
+}
+
 // Signature configures the signature block.
 type Signature struct {
 	Name      string
@@ -128,7 +142,11 @@ type serviceConfig struct {
 const defaultTimeout = 30 * time.Second
 
 // WithTimeout sets the conversion timeout.
+// Panics if d <= 0 (programmer error, similar to time.NewTicker).
 func WithTimeout(d time.Duration) Option {
+	if d <= 0 {
+		panic("md2pdf: WithTimeout duration must be positive")
+	}
 	return func(s *Service) {
 		s.cfg.timeout = d
 	}

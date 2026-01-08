@@ -25,7 +25,12 @@ var (
 	ErrWritePDF           = errors.New("failed to write PDF file")
 	ErrInvalidExtension   = errors.New("file must have .md or .markdown extension")
 	ErrSignatureImagePath = errors.New("signature image not found")
+	ErrInvalidWorkerCount = errors.New("invalid worker count")
 )
+
+// maxWorkers limits parallel browser instances to prevent resource exhaustion.
+// Each Chrome instance uses ~100-200MB RAM; 32 workers cap memory at ~6GB.
+const maxWorkers = 32
 
 // Converter is the interface for the conversion service.
 type Converter interface {
@@ -75,6 +80,11 @@ type cliFlags struct {
 func run(ctx context.Context, args []string, pool Pool) error {
 	flags, positionalArgs, err := parseFlags(args)
 	if err != nil {
+		return err
+	}
+
+	// Validate worker count early for CLI feedback
+	if err := validateWorkers(flags.workers); err != nil {
 		return err
 	}
 
@@ -296,6 +306,17 @@ func validateMarkdownExtension(path string) error {
 	ext := filepath.Ext(path)
 	if ext != ".md" && ext != ".markdown" {
 		return fmt.Errorf("%w: got %q", ErrInvalidExtension, ext)
+	}
+	return nil
+}
+
+// validateWorkers checks that the worker count is within valid bounds.
+func validateWorkers(n int) error {
+	if n < 0 {
+		return fmt.Errorf("%w: %d (must be >= 0, 0 means auto)", ErrInvalidWorkerCount, n)
+	}
+	if n > maxWorkers {
+		return fmt.Errorf("%w: %d (maximum is %d)", ErrInvalidWorkerCount, n, maxWorkers)
 	}
 	return nil
 }
