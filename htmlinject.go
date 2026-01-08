@@ -145,3 +145,40 @@ type footerData struct {
 	Status         string
 	Text           string
 }
+
+// buildWatermarkCSS generates CSS for a diagonal background watermark.
+// The watermark uses position:fixed to appear on all pages when printed.
+func buildWatermarkCSS(w *Watermark) string {
+	if w == nil || w.Text == "" {
+		return ""
+	}
+
+	return fmt.Sprintf(`
+/* Watermark */
+body::before {
+  content: "%s";
+  position: fixed;
+  top: 50%%;
+  left: 50%%;
+  transform: translate(-50%%, -50%%) rotate(%.1fdeg);
+  font-size: 8rem;
+  font-weight: bold;
+  color: %s;
+  opacity: %.2f;
+  z-index: -1;
+  pointer-events: none;
+  white-space: nowrap;
+  font-family: %s;
+}
+`, escapeCSSString(w.Text), w.Angle, w.Color, w.Opacity, defaultFontFamily)
+}
+
+// escapeCSSString escapes a string for safe use in CSS content property.
+// Prevents CSS injection by escaping backslashes, quotes, and newlines.
+func escapeCSSString(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `"`, `\"`)
+	s = strings.ReplaceAll(s, "\n", `\A `)
+	s = strings.ReplaceAll(s, "\r", "")
+	return s
+}
