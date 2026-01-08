@@ -4,27 +4,26 @@
 go-md2pdf/                      # package md2pdf (library)
 │
 ├── service.go                  # New(), Convert(), Close()
-├── types.go                    # Input, Footer, Signature
+├── pool.go                     # ServicePool, ResolvePoolSize()
+├── types.go                    # Input, Footer, Signature, PageSettings
 ├── errors.go                   # Sentinel errors
 │
-├── mdtransform.go              # MD -> MD
-├── md2html.go                  # MD -> HTML
-├── htmlinject.go               # HTML -> HTML
-├── html2pdf.go                 # HTML -> PDF
+├── mdtransform.go              # MD -> MD (preprocessing)
+├── md2html.go                  # MD -> HTML (Goldmark)
+├── htmlinject.go               # HTML -> HTML (CSS, signature)
+├── html2pdf.go                 # HTML -> PDF (Rod/Chrome)
 ├── fileutil.go                 # Temp files
+├── process_{unix,windows}.go   # killProcessGroup per platform
 │
 ├── cmd/md2pdf/                 # CLI
-│   ├── main.go
-│   ├── convert.go
-│   └── serve.go                # gRPC (future)
+│   ├── main.go                 # Bootstrap, pool, signals
+│   ├── convert.go              # Flags, batch conversion
+│   └── signal_{unix,windows}.go
 │
 ├── internal/
-│   ├── assets/                 # CSS, templates
-│   ├── config/                 # CLI config
-│   └── yamlutil/               # YAML wrapper
-│
-├── proto/                      # gRPC (future)
-│   └── md2pdf.proto
+│   ├── assets/                 # Embedded CSS, templates
+│   ├── config/                 # YAML config, validation
+│   └── yamlutil/               # YAML wrapper with limits
 │
 └── docs/
 ```
@@ -33,5 +32,6 @@ go-md2pdf/                      # package md2pdf (library)
 
 - **Library at root** - `import "github.com/alnah/go-md2pdf"`
 - **Files named by transformation** - `mdtransform`, `md2html`, `htmlinject`, `html2pdf`
+- **Platform suffix** - `_unix.go`, `_windows.go` for OS-specific code
 - **internal/** - Private code (assets, config)
 - **cmd/** - Binaries
