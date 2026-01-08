@@ -75,6 +75,7 @@ type cliFlags struct {
 	noFooter         bool
 	noWatermark      bool
 	noCover          bool
+	noTOC            bool
 	coverTitle       string
 	version          bool
 	workers          int
@@ -155,8 +156,11 @@ func run(ctx context.Context, args []string, pool Pool) error {
 		return err
 	}
 
+	// Build TOC data
+	tocData := buildTOCData(cfg, flags.noTOC)
+
 	// Convert files
-	results := convertBatch(ctx, pool, files, cssContent, footerData, sigData, pageData, watermarkData, flags, cfg)
+	results := convertBatch(ctx, pool, files, cssContent, footerData, sigData, pageData, watermarkData, tocData, flags, cfg)
 
 	// Print results and return appropriate exit code
 	failedCount := printResults(results, flags.quiet, flags.verbose)
@@ -183,6 +187,7 @@ func parseFlags(args []string) (*cliFlags, []string, error) {
 	flagSet.BoolVar(&flags.noFooter, "no-footer", false, "disable page footer")
 	flagSet.BoolVar(&flags.noWatermark, "no-watermark", false, "disable watermark")
 	flagSet.BoolVar(&flags.noCover, "no-cover", false, "disable cover page")
+	flagSet.BoolVar(&flags.noTOC, "no-toc", false, "disable table of contents")
 	flagSet.StringVar(&flags.coverTitle, "cover-title", "", "override cover page title")
 	flagSet.BoolVar(&flags.version, "version", false, "show version and exit")
 	flagSet.IntVarP(&flags.workers, "workers", "w", 0, "number of parallel workers (default: auto)")
@@ -613,10 +618,28 @@ func buildCoverData(flags *cliFlags, cfg *config.Config, markdownContent, filena
 	return c, nil
 }
 
+// buildTOCData creates md2pdf.TOC from config.
+// Returns nil if TOC is disabled (via config or --no-toc flag).
+func buildTOCData(cfg *config.Config, noTOC bool) *md2pdf.TOC {
+	if noTOC || !cfg.TOC.Enabled {
+		return nil
+	}
+
+	maxDepth := cfg.TOC.MaxDepth
+	if maxDepth == 0 {
+		maxDepth = md2pdf.DefaultTOCDepth
+	}
+
+	return &md2pdf.TOC{
+		Title:    cfg.TOC.Title,
+		MaxDepth: maxDepth,
+	}
+}
+
 // convertBatch processes files concurrently using the service pool.
 // Each worker acquires its own service (browser) for true parallelism.
 // The context is checked for cancellation between file conversions.
-func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings, watermarkData *md2pdf.Watermark, flags *cliFlags, cfg *config.Config) []ConversionResult {
+func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings, watermarkData *md2pdf.Watermark, tocData *md2pdf.TOC, flags *cliFlags, cfg *config.Config) []ConversionResult {
 	if len(files) == 0 {
 		return nil
 	}
@@ -650,7 +673,7 @@ func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssCont
 					}
 					continue
 				}
-				results[idx] = convertFile(ctx, svc, files[idx], cssContent, footerData, sigData, pageData, watermarkData, flags, cfg)
+				results[idx] = convertFile(ctx, svc, files[idx], cssContent, footerData, sigData, pageData, watermarkData, tocData, flags, cfg)
 			}
 		}()
 	}
@@ -667,7 +690,7 @@ func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssCont
 
 // convertFile processes a single file and returns the result.
 // The context is passed to the conversion service for cancellation support.
-func convertFile(ctx context.Context, service Converter, f FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings, watermarkData *md2pdf.Watermark, flags *cliFlags, cfg *config.Config) ConversionResult {
+func convertFile(ctx context.Context, service Converter, f FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings, watermarkData *md2pdf.Watermark, tocData *md2pdf.TOC, flags *cliFlags, cfg *config.Config) ConversionResult {
 	start := time.Now()
 	result := ConversionResult{
 		InputPath:  f.InputPath,
@@ -707,6 +730,7 @@ func convertFile(ctx context.Context, service Converter, f FileToConvert, cssCon
 		Page:      pageData,
 		Watermark: watermarkData,
 		Cover:     coverData,
+		TOC:       tocData,
 	})
 	if err != nil {
 		result.Err = err
