@@ -5,7 +5,7 @@ go-md2pdf/                      # package md2pdf (library)
 │
 ├── service.go                  # New(), Convert(), Close()
 ├── pool.go                     # ServicePool, ResolvePoolSize()
-├── types.go                    # Input, PageSettings, Footer, Signature, Watermark, Cover, TOC
+├── types.go                    # Input, PageSettings, Footer, Signature, Watermark, Cover, TOC, PageBreaks
 ├── errors.go                   # Sentinel errors
 │
 ├── mdtransform.go              # MD -> MD (preprocessing)
