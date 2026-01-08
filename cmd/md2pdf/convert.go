@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -31,6 +32,10 @@ var (
 // maxWorkers limits parallel browser instances to prevent resource exhaustion.
 // Each Chrome instance uses ~100-200MB RAM; 32 workers cap memory at ~6GB.
 const maxWorkers = 32
+
+// watermarkAngleSentinel is used to detect if --watermark-angle was explicitly set.
+// We need a sentinel because 0 is a valid angle value.
+const watermarkAngleSentinel = -999.0
 
 // Converter is the interface for the conversion service.
 type Converter interface {
@@ -69,6 +74,8 @@ type cliFlags struct {
 	noStyle          bool
 	noFooter         bool
 	noWatermark      bool
+	noCover          bool
+	coverTitle       string
 	version          bool
 	workers          int
 	pageSize         string
@@ -149,7 +156,7 @@ func run(ctx context.Context, args []string, pool Pool) error {
 	}
 
 	// Convert files
-	results := convertBatch(ctx, pool, files, cssContent, footerData, sigData, pageData, watermarkData)
+	results := convertBatch(ctx, pool, files, cssContent, footerData, sigData, pageData, watermarkData, flags, cfg)
 
 	// Print results and return appropriate exit code
 	failedCount := printResults(results, flags.quiet, flags.verbose)
@@ -175,6 +182,8 @@ func parseFlags(args []string) (*cliFlags, []string, error) {
 	flagSet.BoolVar(&flags.noStyle, "no-style", false, "disable CSS styling")
 	flagSet.BoolVar(&flags.noFooter, "no-footer", false, "disable page footer")
 	flagSet.BoolVar(&flags.noWatermark, "no-watermark", false, "disable watermark")
+	flagSet.BoolVar(&flags.noCover, "no-cover", false, "disable cover page")
+	flagSet.StringVar(&flags.coverTitle, "cover-title", "", "override cover page title")
 	flagSet.BoolVar(&flags.version, "version", false, "show version and exit")
 	flagSet.IntVarP(&flags.workers, "workers", "w", 0, "number of parallel workers (default: auto)")
 	flagSet.StringVarP(&flags.pageSize, "page-size", "p", "", "page size: letter, a4, legal")
@@ -183,7 +192,7 @@ func parseFlags(args []string) (*cliFlags, []string, error) {
 	flagSet.StringVar(&flags.watermarkText, "watermark-text", "", "watermark text (e.g., DRAFT, CONFIDENTIAL)")
 	flagSet.StringVar(&flags.watermarkColor, "watermark-color", "", "watermark color in hex (default: #888888)")
 	flagSet.Float64Var(&flags.watermarkOpacity, "watermark-opacity", 0, "watermark opacity 0.0-1.0 (default: 0.1)")
-	flagSet.Float64Var(&flags.watermarkAngle, "watermark-angle", -999, "watermark rotation in degrees (default: -45)")
+	flagSet.Float64Var(&flags.watermarkAngle, "watermark-angle", watermarkAngleSentinel, "watermark rotation in degrees (default: -45)")
 
 	flagSet.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: md2pdf [flags] <input> [flags]\n\n")
@@ -426,7 +435,7 @@ func buildWatermarkData(flags *cliFlags, cfg *config.Config) (*md2pdf.Watermark,
 	if flags.watermarkOpacity != 0 {
 		w.Opacity = flags.watermarkOpacity
 	}
-	if flags.watermarkAngle != -999 {
+	if flags.watermarkAngle != watermarkAngleSentinel {
 		w.Angle = flags.watermarkAngle
 	}
 
@@ -437,8 +446,8 @@ func buildWatermarkData(flags *cliFlags, cfg *config.Config) (*md2pdf.Watermark,
 	if w.Opacity == 0 {
 		w.Opacity = 0.1
 	}
-	// Angle defaults to -45, but 0 is a valid value so we use -999 as sentinel
-	if flags.watermarkAngle == -999 && cfg.Watermark.Angle == 0 && !cfg.Watermark.Enabled {
+	// Angle defaults to -45, but 0 is a valid value so we use a sentinel
+	if flags.watermarkAngle == watermarkAngleSentinel && cfg.Watermark.Angle == 0 && !cfg.Watermark.Enabled {
 		w.Angle = -45
 	}
 
@@ -509,10 +518,105 @@ func buildPageSettings(flags *cliFlags, cfg *config.Config) (*md2pdf.PageSetting
 	return ps, nil
 }
 
+// headingPattern matches the first # heading in markdown content.
+var headingPattern = regexp.MustCompile(`(?m)^#\s+(.+)$`)
+
+// extractFirstHeading extracts the first # heading from markdown content.
+// Returns empty string if no heading found.
+func extractFirstHeading(markdown string) string {
+	matches := headingPattern.FindStringSubmatch(markdown)
+	if len(matches) >= 2 {
+		return strings.TrimSpace(matches[1])
+	}
+	return ""
+}
+
+// resolveDate resolves "auto" to current date in YYYY-MM-DD format.
+func resolveDate(date string) string {
+	if strings.ToLower(date) == "auto" {
+		return time.Now().Format("2006-01-02")
+	}
+	return date
+}
+
+// buildCoverData creates md2pdf.Cover from flags, config, and markdown content.
+// Priority: CLI flags > config > auto extraction (H1 → filename).
+// Returns nil if cover is disabled (via config or --no-cover flag).
+// Validates settings early for user-friendly CLI feedback.
+func buildCoverData(flags *cliFlags, cfg *config.Config, markdownContent, filename string) (*md2pdf.Cover, error) {
+	if flags.noCover {
+		return nil, nil
+	}
+
+	if !cfg.Cover.Enabled {
+		return nil, nil
+	}
+
+	c := &md2pdf.Cover{}
+
+	// Title resolution: CLI → config → H1 → filename
+	if flags.coverTitle != "" {
+		c.Title = flags.coverTitle
+	} else if cfg.Cover.Title != "" {
+		c.Title = cfg.Cover.Title
+	} else {
+		// Extract from markdown H1
+		c.Title = extractFirstHeading(markdownContent)
+		if c.Title == "" {
+			// Fallback to filename without extension
+			c.Title = strings.TrimSuffix(filepath.Base(filename), filepath.Ext(filename))
+		}
+	}
+
+	// Subtitle: config only
+	c.Subtitle = cfg.Cover.Subtitle
+
+	// Logo: config only
+	c.Logo = cfg.Cover.Logo
+
+	// Author: config → signature.name fallback
+	if cfg.Cover.Author != "" {
+		c.Author = cfg.Cover.Author
+	} else if cfg.Signature.Enabled && cfg.Signature.Name != "" {
+		c.Author = cfg.Signature.Name
+	}
+
+	// AuthorTitle: config → signature.title fallback
+	if cfg.Cover.AuthorTitle != "" {
+		c.AuthorTitle = cfg.Cover.AuthorTitle
+	} else if cfg.Signature.Enabled && cfg.Signature.Title != "" {
+		c.AuthorTitle = cfg.Signature.Title
+	}
+
+	// Organization: config only
+	c.Organization = cfg.Cover.Organization
+
+	// Date: config ("auto" → today) → footer.date fallback
+	if cfg.Cover.Date != "" {
+		c.Date = resolveDate(cfg.Cover.Date)
+	} else if cfg.Footer.Enabled && cfg.Footer.Date != "" {
+		c.Date = resolveDate(cfg.Footer.Date)
+	}
+
+	// Version: config → footer.status fallback
+	if cfg.Cover.Version != "" {
+		c.Version = cfg.Cover.Version
+	} else if cfg.Footer.Enabled && cfg.Footer.Status != "" {
+		c.Version = cfg.Footer.Status
+	}
+
+	// Validate at boundary
+	if err := c.Validate(); err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
 // convertBatch processes files concurrently using the service pool.
 // Each worker acquires its own service (browser) for true parallelism.
 // The context is checked for cancellation between file conversions.
-func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings, watermarkData *md2pdf.Watermark) []ConversionResult {
+func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings, watermarkData *md2pdf.Watermark, flags *cliFlags, cfg *config.Config) []ConversionResult {
 	if len(files) == 0 {
 		return nil
 	}
@@ -546,7 +650,7 @@ func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssCont
 					}
 					continue
 				}
-				results[idx] = convertFile(ctx, svc, files[idx], cssContent, footerData, sigData, pageData, watermarkData)
+				results[idx] = convertFile(ctx, svc, files[idx], cssContent, footerData, sigData, pageData, watermarkData, flags, cfg)
 			}
 		}()
 	}
@@ -563,7 +667,7 @@ func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssCont
 
 // convertFile processes a single file and returns the result.
 // The context is passed to the conversion service for cancellation support.
-func convertFile(ctx context.Context, service Converter, f FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings, watermarkData *md2pdf.Watermark) ConversionResult {
+func convertFile(ctx context.Context, service Converter, f FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings, watermarkData *md2pdf.Watermark, flags *cliFlags, cfg *config.Config) ConversionResult {
 	start := time.Now()
 	result := ConversionResult{
 		InputPath:  f.InputPath,
@@ -574,6 +678,14 @@ func convertFile(ctx context.Context, service Converter, f FileToConvert, cssCon
 	content, err := os.ReadFile(f.InputPath) // #nosec G304 -- discovered path
 	if err != nil {
 		result.Err = fmt.Errorf("%w: %v", ErrReadMarkdown, err)
+		result.Duration = time.Since(start)
+		return result
+	}
+
+	// Build cover data (depends on markdown content for H1 extraction)
+	coverData, err := buildCoverData(flags, cfg, string(content), f.InputPath)
+	if err != nil {
+		result.Err = fmt.Errorf("building cover data: %w", err)
 		result.Duration = time.Since(start)
 		return result
 	}
@@ -594,6 +706,7 @@ func convertFile(ctx context.Context, service Converter, f FileToConvert, cssCon
 		Signature: sigData,
 		Page:      pageData,
 		Watermark: watermarkData,
+		Cover:     coverData,
 	})
 	if err != nil {
 		result.Err = err
