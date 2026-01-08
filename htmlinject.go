@@ -262,6 +262,81 @@ func escapeCSSString(s string) string {
 	return s
 }
 
+// buildPageBreaksCSS generates CSS for page break control.
+// Always includes hardcoded rules for heading protection (break-after/inside: avoid).
+// Configurable rules for page breaks before h1/h2/h3 and orphan/widow control.
+func buildPageBreaksCSS(pb *PageBreaks) string {
+	var buf strings.Builder
+
+	buf.WriteString(`
+/* Page breaks: always active - prevent heading alone at page bottom */
+h1, h2, h3, h4, h5, h6 {
+  break-after: avoid;
+  page-break-after: avoid;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+`)
+
+	// Resolve orphans/widows (0 means use default)
+	orphans := DefaultOrphans
+	widows := DefaultWidows
+	if pb != nil {
+		if pb.Orphans > 0 {
+			orphans = pb.Orphans
+		}
+		if pb.Widows > 0 {
+			widows = pb.Widows
+		}
+	}
+
+	buf.WriteString(fmt.Sprintf(`
+/* Page breaks: orphan/widow control */
+p, li, dd, dt, blockquote {
+  orphans: %d;
+  widows: %d;
+}
+`, orphans, widows))
+
+	// Configurable page breaks before headings
+	if pb != nil && pb.BeforeH1 {
+		buf.WriteString(`
+/* Page breaks: before H1 */
+h1 {
+  break-before: page;
+  page-break-before: always;
+}
+/* Exception: no break before first H1 if it's first element in body */
+body > h1:first-child {
+  break-before: auto;
+  page-break-before: auto;
+}
+`)
+	}
+
+	if pb != nil && pb.BeforeH2 {
+		buf.WriteString(`
+/* Page breaks: before H2 */
+h2 {
+  break-before: page;
+  page-break-before: always;
+}
+`)
+	}
+
+	if pb != nil && pb.BeforeH3 {
+		buf.WriteString(`
+/* Page breaks: before H3 */
+h3 {
+  break-before: page;
+  page-break-before: always;
+}
+`)
+	}
+
+	return buf.String()
+}
+
 // tocData holds TOC configuration for injection.
 type tocData struct {
 	Title    string
