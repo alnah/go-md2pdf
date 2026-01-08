@@ -26,4 +26,7 @@ var (
 	// Cover validation errors.
 	ErrCoverLogoNotFound = errors.New("cover logo file not found")
 	ErrCoverRender       = errors.New("cover template rendering failed")
+
+	// TOC validation errors.
+	ErrInvalidTOCDepth = errors.New("invalid TOC depth")
 )
