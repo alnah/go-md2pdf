@@ -41,16 +41,17 @@ const (
 
 // Config holds all configuration for document generation.
 type Config struct {
-	Input     InputConfig     `yaml:"input"`
-	Output    OutputConfig    `yaml:"output"`
-	CSS       CSSConfig       `yaml:"css"`
-	Footer    FooterConfig    `yaml:"footer"`
-	Signature SignatureConfig `yaml:"signature"`
-	Assets    AssetsConfig    `yaml:"assets"`
-	Page      PageConfig      `yaml:"page"`
-	Watermark WatermarkConfig `yaml:"watermark"`
-	Cover     CoverConfig     `yaml:"cover"`
-	TOC       TOCConfig       `yaml:"toc"`
+	Input      InputConfig      `yaml:"input"`
+	Output     OutputConfig     `yaml:"output"`
+	CSS        CSSConfig        `yaml:"css"`
+	Footer     FooterConfig     `yaml:"footer"`
+	Signature  SignatureConfig  `yaml:"signature"`
+	Assets     AssetsConfig     `yaml:"assets"`
+	Page       PageConfig       `yaml:"page"`
+	Watermark  WatermarkConfig  `yaml:"watermark"`
+	Cover      CoverConfig      `yaml:"cover"`
+	TOC        TOCConfig        `yaml:"toc"`
+	PageBreaks PageBreaksConfig `yaml:"pageBreaks"`
 }
 
 // InputConfig defines input source options.
@@ -133,6 +134,16 @@ type TOCConfig struct {
 	Enabled  bool   `yaml:"enabled"`
 	Title    string `yaml:"title"`    // Empty = no title above TOC
 	MaxDepth int    `yaml:"maxDepth"` // 1-6, default 3
+}
+
+// PageBreaksConfig defines page break options.
+type PageBreaksConfig struct {
+	Enabled  bool `yaml:"enabled"`  // Enable page break features (default: true for orphan/widow)
+	BeforeH1 bool `yaml:"beforeH1"` // Page break before H1 headings
+	BeforeH2 bool `yaml:"beforeH2"` // Page break before H2 headings
+	BeforeH3 bool `yaml:"beforeH3"` // Page break before H3 headings
+	Orphans  int  `yaml:"orphans"`  // Min lines at page bottom (1-5, default 2)
+	Widows   int  `yaml:"widows"`   // Min lines at page top (1-5, default 2)
 }
 
 // Validate checks field lengths to prevent abuse in multi-tenant scenarios.
@@ -245,6 +256,18 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	// Validate page breaks fields
+	if c.PageBreaks.Orphans != 0 {
+		if c.PageBreaks.Orphans < 1 || c.PageBreaks.Orphans > 5 {
+			return fmt.Errorf("pageBreaks.orphans: must be between 1 and 5, got %d", c.PageBreaks.Orphans)
+		}
+	}
+	if c.PageBreaks.Widows != 0 {
+		if c.PageBreaks.Widows < 1 || c.PageBreaks.Widows > 5 {
+			return fmt.Errorf("pageBreaks.widows: must be between 1 and 5, got %d", c.PageBreaks.Widows)
+		}
+	}
+
 	return nil
 }
 
@@ -259,15 +282,16 @@ func validateFieldLength(fieldName, value string, maxLength int) error {
 // DefaultConfig returns a neutral configuration with all features disabled.
 func DefaultConfig() *Config {
 	return &Config{
-		Input:     InputConfig{DefaultDir: ""},
-		Output:    OutputConfig{DefaultDir: ""},
-		CSS:       CSSConfig{Style: ""},
-		Footer:    FooterConfig{Enabled: false},
-		Signature: SignatureConfig{Enabled: false},
-		Assets:    AssetsConfig{BasePath: ""},
-		Watermark: WatermarkConfig{Enabled: false},
-		Cover:     CoverConfig{Enabled: false},
-		TOC:       TOCConfig{Enabled: false},
+		Input:      InputConfig{DefaultDir: ""},
+		Output:     OutputConfig{DefaultDir: ""},
+		CSS:        CSSConfig{Style: ""},
+		Footer:     FooterConfig{Enabled: false},
+		Signature:  SignatureConfig{Enabled: false},
+		Assets:     AssetsConfig{BasePath: ""},
+		Watermark:  WatermarkConfig{Enabled: false},
+		Cover:      CoverConfig{Enabled: false},
+		TOC:        TOCConfig{Enabled: false},
+		PageBreaks: PageBreaksConfig{Enabled: false},
 	}
 }
 
