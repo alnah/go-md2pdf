@@ -935,7 +935,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: filepath.Join(blockingFile, "subdir", "out.pdf"),
 		}
 
-		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil, nil, nil, &cliFlags{}, config.DefaultConfig())
+		result := convertFile(context.Background(), mockConv, f, &conversionParams{flags: &cliFlags{}, cfg: config.DefaultConfig()})
 
 		if result.Err == nil {
 			t.Error("expected error when mkdir fails")
@@ -972,7 +972,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: filepath.Join(outDir, "out.pdf"),
 		}
 
-		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil, nil, nil, &cliFlags{}, config.DefaultConfig())
+		result := convertFile(context.Background(), mockConv, f, &conversionParams{flags: &cliFlags{}, cfg: config.DefaultConfig()})
 
 		if result.Err == nil {
 			t.Error("expected error when write fails")
@@ -988,7 +988,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: "/tmp/out.pdf",
 		}
 
-		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil, nil, nil, &cliFlags{}, config.DefaultConfig())
+		result := convertFile(context.Background(), mockConv, f, &conversionParams{flags: &cliFlags{}, cfg: config.DefaultConfig()})
 
 		if result.Err == nil {
 			t.Error("expected error when read fails")

@@ -63,6 +63,20 @@ type ConversionResult struct {
 	Duration   time.Duration
 }
 
+// conversionParams groups parameters shared across batch/file conversion.
+// This reduces function parameter counts and makes the conversion pipeline clearer.
+type conversionParams struct {
+	css        string
+	footer     *md2pdf.Footer
+	signature  *md2pdf.Signature
+	page       *md2pdf.PageSettings
+	watermark  *md2pdf.Watermark
+	toc        *md2pdf.TOC
+	pageBreaks *md2pdf.PageBreaks
+	flags      *cliFlags
+	cfg        *config.Config
+}
+
 // cliFlags holds parsed command-line flags.
 type cliFlags struct {
 	configName       string
@@ -166,8 +180,21 @@ func run(ctx context.Context, args []string, pool Pool) error {
 	// Build page breaks data
 	pageBreaksData := buildPageBreaksData(flags, cfg)
 
+	// Bundle conversion parameters
+	params := &conversionParams{
+		css:        cssContent,
+		footer:     footerData,
+		signature:  sigData,
+		page:       pageData,
+		watermark:  watermarkData,
+		toc:        tocData,
+		pageBreaks: pageBreaksData,
+		flags:      flags,
+		cfg:        cfg,
+	}
+
 	// Convert files
-	results := convertBatch(ctx, pool, files, cssContent, footerData, sigData, pageData, watermarkData, tocData, pageBreaksData, flags, cfg)
+	results := convertBatch(ctx, pool, files, params)
 
 	// Print results and return appropriate exit code
 	failedCount := printResults(results, flags.quiet, flags.verbose)
@@ -719,7 +746,7 @@ func buildPageBreaksData(flags *cliFlags, cfg *config.Config) *md2pdf.PageBreaks
 // convertBatch processes files concurrently using the service pool.
 // Each worker acquires its own service (browser) for true parallelism.
 // The context is checked for cancellation between file conversions.
-func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings, watermarkData *md2pdf.Watermark, tocData *md2pdf.TOC, pageBreaksData *md2pdf.PageBreaks, flags *cliFlags, cfg *config.Config) []ConversionResult {
+func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, params *conversionParams) []ConversionResult {
 	if len(files) == 0 {
 		return nil
 	}
@@ -753,7 +780,7 @@ func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssCont
 					}
 					continue
 				}
-				results[idx] = convertFile(ctx, svc, files[idx], cssContent, footerData, sigData, pageData, watermarkData, tocData, pageBreaksData, flags, cfg)
+				results[idx] = convertFile(ctx, svc, files[idx], params)
 			}
 		}()
 	}
@@ -770,7 +797,7 @@ func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssCont
 
 // convertFile processes a single file and returns the result.
 // The context is passed to the conversion service for cancellation support.
-func convertFile(ctx context.Context, service Converter, f FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings, watermarkData *md2pdf.Watermark, tocData *md2pdf.TOC, pageBreaksData *md2pdf.PageBreaks, flags *cliFlags, cfg *config.Config) ConversionResult {
+func convertFile(ctx context.Context, service Converter, f FileToConvert, params *conversionParams) ConversionResult {
 	start := time.Now()
 	result := ConversionResult{
 		InputPath:  f.InputPath,
@@ -786,7 +813,7 @@ func convertFile(ctx context.Context, service Converter, f FileToConvert, cssCon
 	}
 
 	// Build cover data (depends on markdown content for H1 extraction)
-	coverData, err := buildCoverData(flags, cfg, string(content), f.InputPath)
+	coverData, err := buildCoverData(params.flags, params.cfg, string(content), f.InputPath)
 	if err != nil {
 		result.Err = fmt.Errorf("building cover data: %w", err)
 		result.Duration = time.Since(start)
@@ -804,14 +831,14 @@ func convertFile(ctx context.Context, service Converter, f FileToConvert, cssCon
 	// Convert via service (returns []byte)
 	pdfBytes, err := service.Convert(ctx, md2pdf.Input{
 		Markdown:   string(content),
-		CSS:        cssContent,
-		Footer:     footerData,
-		Signature:  sigData,
-		Page:       pageData,
-		Watermark:  watermarkData,
+		CSS:        params.css,
+		Footer:     params.footer,
+		Signature:  params.signature,
+		Page:       params.page,
+		Watermark:  params.watermark,
 		Cover:      coverData,
-		TOC:        tocData,
-		PageBreaks: pageBreaksData,
+		TOC:        params.toc,
+		PageBreaks: params.pageBreaks,
 	})
 	if err != nil {
 		result.Err = err
