@@ -22,4 +22,8 @@ var (
 
 	// Watermark validation errors.
 	ErrInvalidWatermarkColor = errors.New("invalid watermark color")
+
+	// Cover validation errors.
+	ErrCoverLogoNotFound = errors.New("cover logo file not found")
+	ErrCoverRender       = errors.New("cover template rendering failed")
 )
