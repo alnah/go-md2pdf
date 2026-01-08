@@ -26,6 +26,16 @@ const (
 	DefaultMargin = 0.5
 )
 
+// Orphan/widow bounds for page break control.
+const (
+	MinOrphans     = 1
+	MaxOrphans     = 5
+	DefaultOrphans = 2
+	MinWidows      = 1
+	MaxWidows      = 5
+	DefaultWidows  = 2
+)
+
 // PageSettings configures PDF page dimensions.
 type PageSettings struct {
 	Size        string  // "letter", "a4", "legal"
@@ -83,16 +93,43 @@ func isValidOrientation(orientation string) bool {
 	return false
 }
 
+// PageBreaks configures page break behavior for PDF output.
+type PageBreaks struct {
+	BeforeH1 bool // Page break before H1 headings (default: false)
+	BeforeH2 bool // Page break before H2 headings (default: false)
+	BeforeH3 bool // Page break before H3 headings (default: false)
+	Orphans  int  // Min lines at page bottom (default: 2, range: 1-5)
+	Widows   int  // Min lines at page top (default: 2, range: 1-5)
+}
+
+// Validate checks that page break settings are valid.
+// Returns nil if pb is nil (nil means use defaults).
+func (pb *PageBreaks) Validate() error {
+	if pb == nil {
+		return nil
+	}
+	// Orphans: 0 means use default, otherwise must be in range
+	if pb.Orphans != 0 && (pb.Orphans < MinOrphans || pb.Orphans > MaxOrphans) {
+		return fmt.Errorf("%w: %d (must be %d-%d)", ErrInvalidOrphans, pb.Orphans, MinOrphans, MaxOrphans)
+	}
+	// Widows: 0 means use default, otherwise must be in range
+	if pb.Widows != 0 && (pb.Widows < MinWidows || pb.Widows > MaxWidows) {
+		return fmt.Errorf("%w: %d (must be %d-%d)", ErrInvalidWidows, pb.Widows, MinWidows, MaxWidows)
+	}
+	return nil
+}
+
 // Input contains conversion parameters.
 type Input struct {
-	Markdown  string        // Markdown content (required)
-	CSS       string        // Custom CSS (optional)
-	Footer    *Footer       // Footer config (optional)
-	Signature *Signature    // Signature config (optional)
-	Page      *PageSettings // Page settings (optional, nil = defaults)
-	Watermark *Watermark    // Watermark config (optional)
-	Cover     *Cover        // Cover page config (optional)
-	TOC       *TOC          // Table of contents config (optional)
+	Markdown   string        // Markdown content (required)
+	CSS        string        // Custom CSS (optional)
+	Footer     *Footer       // Footer config (optional)
+	Signature  *Signature    // Signature config (optional)
+	Page       *PageSettings // Page settings (optional, nil = defaults)
+	Watermark  *Watermark    // Watermark config (optional)
+	Cover      *Cover        // Cover page config (optional)
+	TOC        *TOC          // Table of contents config (optional)
+	PageBreaks *PageBreaks   // Page break config (optional)
 }
 
 // Watermark configures a background text watermark.
