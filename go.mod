@@ -8,10 +8,12 @@ tool (
 )
 
 require (
+	github.com/alecthomas/chroma/v2 v2.2.0
 	github.com/go-rod/rod v0.116.2
 	github.com/goccy/go-yaml v1.19.1
 	github.com/spf13/pflag v1.0.10
 	github.com/yuin/goldmark v1.7.13
+	github.com/yuin/goldmark-highlighting/v2 v2.0.0-20230729083705-37449abec8cc
 	go.uber.org/automaxprocs v1.6.0
 )
 
@@ -22,6 +24,7 @@ require (
 	github.com/BurntSushi/toml v1.4.1-0.20240526193622-a339e1f7089c // indirect
 	github.com/anthropics/anthropic-sdk-go v1.19.0 // indirect
 	github.com/ccojocar/zxcvbn-go v1.0.4 // indirect
+	github.com/dlclark/regexp2 v1.7.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
