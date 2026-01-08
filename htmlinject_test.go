@@ -407,10 +407,10 @@ func TestEscapeCSSString(t *testing.T) {
 
 func TestBuildWatermarkCSS(t *testing.T) {
 	tests := []struct {
-		name          string
-		watermark     *Watermark
-		wantEmpty     bool
-		wantContains  []string
+		name           string
+		watermark      *Watermark
+		wantEmpty      bool
+		wantContains   []string
 		wantNotContain []string
 	}{
 		{
