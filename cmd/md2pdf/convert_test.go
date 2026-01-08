@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	md2pdf "github.com/alnah/go-md2pdf"
@@ -20,8 +21,8 @@ type SignatureConfig = config.SignatureConfig
 type FooterConfig = config.FooterConfig
 type Link = config.Link
 
-// Ensure md2pdf is used (avoid unused import error)
-var _ = md2pdf.New
+// Compile-time interface compliance check (also ensures md2pdf import is used)
+var _ Converter = (*md2pdf.Service)(nil)
 
 func TestParseFlags(t *testing.T) {
 	tests := []struct {
@@ -934,7 +935,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: filepath.Join(blockingFile, "subdir", "out.pdf"),
 		}
 
-		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil)
+		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil, &cliFlags{}, config.DefaultConfig())
 
 		if result.Err == nil {
 			t.Error("expected error when mkdir fails")
@@ -971,7 +972,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: filepath.Join(outDir, "out.pdf"),
 		}
 
-		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil)
+		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil, &cliFlags{}, config.DefaultConfig())
 
 		if result.Err == nil {
 			t.Error("expected error when write fails")
@@ -987,7 +988,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: "/tmp/out.pdf",
 		}
 
-		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil)
+		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil, &cliFlags{}, config.DefaultConfig())
 
 		if result.Err == nil {
 			t.Error("expected error when read fails")
@@ -1229,7 +1230,7 @@ func TestValidateWorkers(t *testing.T) {
 				if !errors.Is(err, ErrInvalidWorkerCount) {
 					t.Errorf("error = %v, want ErrInvalidWorkerCount", err)
 				}
-				if tt.errMsg != "" && !contains(err.Error(), tt.errMsg) {
+				if tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
 					t.Errorf("error message %q should contain %q", err.Error(), tt.errMsg)
 				}
 				return
@@ -1242,22 +1243,11 @@ func TestValidateWorkers(t *testing.T) {
 	}
 }
 
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		(len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))
-}
-
-func findSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}
-
 // WatermarkConfig alias for test file
 type WatermarkConfig = config.WatermarkConfig
+
+// CoverConfig alias for test file
+type CoverConfig = config.CoverConfig
 
 func TestBuildWatermarkData(t *testing.T) {
 	tests := []struct {
@@ -1274,19 +1264,19 @@ func TestBuildWatermarkData(t *testing.T) {
 	}{
 		{
 			name:    "noWatermark flag returns nil",
-			flags:   &cliFlags{noWatermark: true, watermarkAngle: -999},
+			flags:   &cliFlags{noWatermark: true, watermarkAngle: watermarkAngleSentinel},
 			cfg:     &Config{Watermark: WatermarkConfig{Enabled: true, Text: "DRAFT"}},
 			wantNil: true,
 		},
 		{
 			name:    "neither flags nor config returns nil",
-			flags:   &cliFlags{watermarkAngle: -999},
+			flags:   &cliFlags{watermarkAngle: watermarkAngleSentinel},
 			cfg:     &Config{},
 			wantNil: true,
 		},
 		{
 			name:  "config only returns watermark",
-			flags: &cliFlags{watermarkAngle: -999},
+			flags: &cliFlags{watermarkAngle: watermarkAngleSentinel},
 			cfg: &Config{Watermark: WatermarkConfig{
 				Enabled: true,
 				Text:    "CONFIDENTIAL",
@@ -1301,7 +1291,7 @@ func TestBuildWatermarkData(t *testing.T) {
 		},
 		{
 			name:        "flags only returns watermark with defaults",
-			flags:       &cliFlags{watermarkText: "DRAFT", watermarkAngle: -999},
+			flags:       &cliFlags{watermarkText: "DRAFT", watermarkAngle: watermarkAngleSentinel},
 			cfg:         &Config{},
 			wantText:    "DRAFT",
 			wantColor:   "#888888", // default
@@ -1332,7 +1322,7 @@ func TestBuildWatermarkData(t *testing.T) {
 			name: "partial flags override - text only",
 			flags: &cliFlags{
 				watermarkText:  "NEW TEXT",
-				watermarkAngle: -999,
+				watermarkAngle: watermarkAngleSentinel,
 			},
 			cfg: &Config{Watermark: WatermarkConfig{
 				Enabled: true,
@@ -1360,7 +1350,7 @@ func TestBuildWatermarkData(t *testing.T) {
 		},
 		{
 			name:  "config angle zero preserved",
-			flags: &cliFlags{watermarkAngle: -999},
+			flags: &cliFlags{watermarkAngle: watermarkAngleSentinel},
 			cfg: &Config{Watermark: WatermarkConfig{
 				Enabled: true,
 				Text:    "DRAFT",
@@ -1375,7 +1365,7 @@ func TestBuildWatermarkData(t *testing.T) {
 		},
 		{
 			name:        "empty text when enabled returns error",
-			flags:       &cliFlags{watermarkColor: "#888888", watermarkAngle: -999},
+			flags:       &cliFlags{watermarkColor: "#888888", watermarkAngle: watermarkAngleSentinel},
 			cfg:         &Config{Watermark: WatermarkConfig{Enabled: true, Text: ""}},
 			wantErr:     true,
 			errContains: "watermark text is required",
@@ -1427,7 +1417,7 @@ func TestBuildWatermarkData(t *testing.T) {
 			flags: &cliFlags{
 				watermarkText:  "DRAFT",
 				watermarkColor: "red", // invalid - must be hex
-				watermarkAngle: -999,
+				watermarkAngle: watermarkAngleSentinel,
 			},
 			cfg:         &Config{},
 			wantErr:     true,
@@ -1437,7 +1427,7 @@ func TestBuildWatermarkData(t *testing.T) {
 			name: "invalid color from config returns error",
 			flags: &cliFlags{
 				watermarkText:  "DRAFT",
-				watermarkAngle: -999,
+				watermarkAngle: watermarkAngleSentinel,
 			},
 			cfg: &Config{Watermark: WatermarkConfig{
 				Enabled: true,
@@ -1475,7 +1465,7 @@ func TestBuildWatermarkData(t *testing.T) {
 			name: "boundary opacity 0 from config gets default",
 			flags: &cliFlags{
 				watermarkText:  "DRAFT",
-				watermarkAngle: -999,
+				watermarkAngle: watermarkAngleSentinel,
 			},
 			cfg: &Config{Watermark: WatermarkConfig{
 				Enabled: true,
@@ -1510,7 +1500,7 @@ func TestBuildWatermarkData(t *testing.T) {
 				if err == nil {
 					t.Fatal("expected error, got nil")
 				}
-				if tt.errContains != "" && !contains(err.Error(), tt.errContains) {
+				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
 					t.Errorf("error %q should contain %q", err.Error(), tt.errContains)
 				}
 				return
@@ -1544,4 +1534,585 @@ func TestBuildWatermarkData(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExtractFirstHeading(t *testing.T) {
+	tests := []struct {
+		name     string
+		markdown string
+		want     string
+	}{
+		{
+			name:     "simple H1",
+			markdown: "# Hello World\n\nSome content",
+			want:     "Hello World",
+		},
+		{
+			name:     "H1 with leading/trailing spaces trimmed",
+			markdown: "#   Spaced Title   \n\nContent",
+			want:     "Spaced Title",
+		},
+		{
+			name:     "H2 ignored - only H1 extracted",
+			markdown: "## This is H2\n\n# This is H1",
+			want:     "This is H1",
+		},
+		{
+			name:     "no heading returns empty",
+			markdown: "Just some paragraph text.\n\nNo headings here.",
+			want:     "",
+		},
+		{
+			name:     "multiple H1 returns first",
+			markdown: "# First Heading\n\n# Second Heading\n\n# Third",
+			want:     "First Heading",
+		},
+		{
+			name:     "H1 with inline formatting",
+			markdown: "# Title with **bold** and *italic*\n\nContent",
+			want:     "Title with **bold** and *italic*",
+		},
+		{
+			name:     "empty markdown returns empty",
+			markdown: "",
+			want:     "",
+		},
+		{
+			name:     "H1 at end of file",
+			markdown: "Some intro\n\n# Final Heading",
+			want:     "Final Heading",
+		},
+		{
+			name:     "hash in middle of line not H1",
+			markdown: "This has a # in the middle\n\n# Real H1",
+			want:     "Real H1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractFirstHeading(tt.markdown)
+			if got != tt.want {
+				t.Errorf("extractFirstHeading() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestResolveDate(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string // empty means check for YYYY-MM-DD format
+	}{
+		{
+			name:  "auto returns today's date",
+			input: "auto",
+			want:  "", // Will check format
+		},
+		{
+			name:  "AUTO case insensitive",
+			input: "AUTO",
+			want:  "", // Will check format
+		},
+		{
+			name:  "Auto mixed case",
+			input: "Auto",
+			want:  "", // Will check format
+		},
+		{
+			name:  "explicit date preserved",
+			input: "2025-06-15",
+			want:  "2025-06-15",
+		},
+		{
+			name:  "empty string preserved",
+			input: "",
+			want:  "",
+		},
+		{
+			name:  "custom format preserved",
+			input: "January 2025",
+			want:  "January 2025",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := resolveDate(tt.input)
+
+			if tt.want == "" && strings.ToLower(tt.input) == "auto" {
+				// Check that result is in YYYY-MM-DD format
+				if len(got) != 10 || got[4] != '-' || got[7] != '-' {
+					t.Errorf("resolveDate(%q) = %q, want YYYY-MM-DD format", tt.input, got)
+				}
+				return
+			}
+
+			if got != tt.want {
+				t.Errorf("resolveDate(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBuildCoverData(t *testing.T) {
+	// Create a temp file for logo path tests
+	tempDir := t.TempDir()
+	existingLogo := filepath.Join(tempDir, "logo.png")
+	if err := os.WriteFile(existingLogo, []byte("fake png"), 0644); err != nil {
+		t.Fatalf("failed to create test logo: %v", err)
+	}
+
+	t.Run("noCover flag returns nil", func(t *testing.T) {
+		flags := &cliFlags{noCover: true}
+		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Test"}}
+		got, err := buildCoverData(flags, cfg, "# Markdown", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != nil {
+			t.Error("expected nil when noCover=true")
+		}
+	})
+
+	t.Run("cover disabled in config returns nil", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{Cover: CoverConfig{Enabled: false, Title: "Test"}}
+		got, err := buildCoverData(flags, cfg, "# Markdown", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != nil {
+			t.Error("expected nil when cover.enabled=false")
+		}
+	})
+
+	t.Run("title from CLI flag overrides all", func(t *testing.T) {
+		flags := &cliFlags{coverTitle: "CLI Title"}
+		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Config Title"}}
+		got, err := buildCoverData(flags, cfg, "# Markdown H1", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.Title != "CLI Title" {
+			t.Errorf("Title = %q, want %q", got.Title, "CLI Title")
+		}
+	})
+
+	t.Run("title from config when no CLI flag", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Config Title"}}
+		got, err := buildCoverData(flags, cfg, "# Markdown H1", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.Title != "Config Title" {
+			t.Errorf("Title = %q, want %q", got.Title, "Config Title")
+		}
+	})
+
+	t.Run("title extracted from H1 when no config", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{Cover: CoverConfig{Enabled: true}}
+		got, err := buildCoverData(flags, cfg, "# My Document Title\n\nContent here", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.Title != "My Document Title" {
+			t.Errorf("Title = %q, want %q", got.Title, "My Document Title")
+		}
+	})
+
+	t.Run("title fallback to filename when no H1", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{Cover: CoverConfig{Enabled: true}}
+		got, err := buildCoverData(flags, cfg, "No headings here, just content.", "my-document.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.Title != "my-document" {
+			t.Errorf("Title = %q, want %q", got.Title, "my-document")
+		}
+	})
+
+	t.Run("title fallback handles .markdown extension", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{Cover: CoverConfig{Enabled: true}}
+		got, err := buildCoverData(flags, cfg, "No headings", "guide.markdown")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.Title != "guide" {
+			t.Errorf("Title = %q, want %q", got.Title, "guide")
+		}
+	})
+
+	t.Run("subtitle from config", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Title", Subtitle: "A Comprehensive Guide"}}
+		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.Subtitle != "A Comprehensive Guide" {
+			t.Errorf("Subtitle = %q, want %q", got.Subtitle, "A Comprehensive Guide")
+		}
+	})
+
+	t.Run("logo from config", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Title", Logo: existingLogo}}
+		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.Logo != existingLogo {
+			t.Errorf("Logo = %q, want %q", got.Logo, existingLogo)
+		}
+	})
+
+	t.Run("logo URL accepted without validation", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Title", Logo: "https://example.com/logo.png"}}
+		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.Logo != "https://example.com/logo.png" {
+			t.Errorf("Logo = %q, want URL", got.Logo)
+		}
+	})
+
+	t.Run("nonexistent logo path returns error", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Title", Logo: "/nonexistent/logo.png"}}
+		_, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err == nil {
+			t.Fatal("expected error for nonexistent logo path")
+		}
+	})
+
+	t.Run("author from config", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Title", Author: "John Doe"}}
+		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.Author != "John Doe" {
+			t.Errorf("Author = %q, want %q", got.Author, "John Doe")
+		}
+	})
+
+	t.Run("author fallback to signature.name", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{
+			Cover:     CoverConfig{Enabled: true, Title: "Title"},
+			Signature: SignatureConfig{Enabled: true, Name: "Jane Smith"},
+		}
+		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.Author != "Jane Smith" {
+			t.Errorf("Author = %q, want %q", got.Author, "Jane Smith")
+		}
+	})
+
+	t.Run("author config overrides signature fallback", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{
+			Cover:     CoverConfig{Enabled: true, Title: "Title", Author: "Cover Author"},
+			Signature: SignatureConfig{Enabled: true, Name: "Signature Name"},
+		}
+		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.Author != "Cover Author" {
+			t.Errorf("Author = %q, want %q", got.Author, "Cover Author")
+		}
+	})
+
+	t.Run("authorTitle fallback to signature.title", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{
+			Cover:     CoverConfig{Enabled: true, Title: "Title"},
+			Signature: SignatureConfig{Enabled: true, Title: "Senior Developer"},
+		}
+		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.AuthorTitle != "Senior Developer" {
+			t.Errorf("AuthorTitle = %q, want %q", got.AuthorTitle, "Senior Developer")
+		}
+	})
+
+	t.Run("organization from config", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Title", Organization: "Acme Corp"}}
+		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.Organization != "Acme Corp" {
+			t.Errorf("Organization = %q, want %q", got.Organization, "Acme Corp")
+		}
+	})
+
+	t.Run("date auto resolves to today", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Title", Date: "auto"}}
+		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		// Check YYYY-MM-DD format
+		if len(got.Date) != 10 || got.Date[4] != '-' || got.Date[7] != '-' {
+			t.Errorf("Date = %q, want YYYY-MM-DD format", got.Date)
+		}
+	})
+
+	t.Run("date explicit value preserved", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Title", Date: "2025-01-15"}}
+		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.Date != "2025-01-15" {
+			t.Errorf("Date = %q, want %q", got.Date, "2025-01-15")
+		}
+	})
+
+	t.Run("date fallback to footer.date", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{
+			Cover:  CoverConfig{Enabled: true, Title: "Title"},
+			Footer: FooterConfig{Enabled: true, Date: "2025-06-01"},
+		}
+		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.Date != "2025-06-01" {
+			t.Errorf("Date = %q, want %q", got.Date, "2025-06-01")
+		}
+	})
+
+	t.Run("date fallback to footer.date with auto", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{
+			Cover:  CoverConfig{Enabled: true, Title: "Title"},
+			Footer: FooterConfig{Enabled: true, Date: "auto"},
+		}
+		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		// Check YYYY-MM-DD format
+		if len(got.Date) != 10 || got.Date[4] != '-' || got.Date[7] != '-' {
+			t.Errorf("Date = %q, want YYYY-MM-DD format", got.Date)
+		}
+	})
+
+	t.Run("version from config", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Title", Version: "v2.0.0"}}
+		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.Version != "v2.0.0" {
+			t.Errorf("Version = %q, want %q", got.Version, "v2.0.0")
+		}
+	})
+
+	t.Run("version fallback to footer.status", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{
+			Cover:  CoverConfig{Enabled: true, Title: "Title"},
+			Footer: FooterConfig{Enabled: true, Status: "DRAFT"},
+		}
+		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.Version != "DRAFT" {
+			t.Errorf("Version = %q, want %q", got.Version, "DRAFT")
+		}
+	})
+
+	t.Run("all fields populated correctly", func(t *testing.T) {
+		flags := &cliFlags{coverTitle: "CLI Title"}
+		cfg := &Config{
+			Cover: CoverConfig{
+				Enabled:      true,
+				Title:        "Config Title",
+				Subtitle:     "A Subtitle",
+				Logo:         existingLogo,
+				Author:       "Author Name",
+				AuthorTitle:  "Author Role",
+				Organization: "Org Name",
+				Date:         "2025-03-15",
+				Version:      "v1.0.0",
+			},
+		}
+		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		// CLI overrides config for title
+		if got.Title != "CLI Title" {
+			t.Errorf("Title = %q, want %q", got.Title, "CLI Title")
+		}
+		if got.Subtitle != "A Subtitle" {
+			t.Errorf("Subtitle = %q, want %q", got.Subtitle, "A Subtitle")
+		}
+		if got.Logo != existingLogo {
+			t.Errorf("Logo = %q, want %q", got.Logo, existingLogo)
+		}
+		if got.Author != "Author Name" {
+			t.Errorf("Author = %q, want %q", got.Author, "Author Name")
+		}
+		if got.AuthorTitle != "Author Role" {
+			t.Errorf("AuthorTitle = %q, want %q", got.AuthorTitle, "Author Role")
+		}
+		if got.Organization != "Org Name" {
+			t.Errorf("Organization = %q, want %q", got.Organization, "Org Name")
+		}
+		if got.Date != "2025-03-15" {
+			t.Errorf("Date = %q, want %q", got.Date, "2025-03-15")
+		}
+		if got.Version != "v1.0.0" {
+			t.Errorf("Version = %q, want %q", got.Version, "v1.0.0")
+		}
+	})
+
+	t.Run("empty optional fields preserved", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Just Title"}}
+		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.Subtitle != "" {
+			t.Errorf("Subtitle = %q, want empty", got.Subtitle)
+		}
+		if got.Logo != "" {
+			t.Errorf("Logo = %q, want empty", got.Logo)
+		}
+		if got.Author != "" {
+			t.Errorf("Author = %q, want empty", got.Author)
+		}
+		if got.Organization != "" {
+			t.Errorf("Organization = %q, want empty", got.Organization)
+		}
+	})
+
+	t.Run("signature fallback requires signature enabled", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{
+			Cover:     CoverConfig{Enabled: true, Title: "Title"},
+			Signature: SignatureConfig{Enabled: false, Name: "Disabled Name"},
+		}
+		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		// Should NOT fallback when signature is disabled
+		if got.Author != "" {
+			t.Errorf("Author = %q, want empty (signature disabled)", got.Author)
+		}
+	})
+
+	t.Run("footer fallback requires footer enabled", func(t *testing.T) {
+		flags := &cliFlags{}
+		cfg := &Config{
+			Cover:  CoverConfig{Enabled: true, Title: "Title"},
+			Footer: FooterConfig{Enabled: false, Date: "2025-01-01", Status: "FINAL"},
+		}
+		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		// Should NOT fallback when footer is disabled
+		if got.Date != "" {
+			t.Errorf("Date = %q, want empty (footer disabled)", got.Date)
+		}
+		if got.Version != "" {
+			t.Errorf("Version = %q, want empty (footer disabled)", got.Version)
+		}
+	})
 }
