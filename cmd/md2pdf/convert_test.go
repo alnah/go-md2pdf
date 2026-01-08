@@ -934,7 +934,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: filepath.Join(blockingFile, "subdir", "out.pdf"),
 		}
 
-		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil)
+		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil)
 
 		if result.Err == nil {
 			t.Error("expected error when mkdir fails")
@@ -971,7 +971,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: filepath.Join(outDir, "out.pdf"),
 		}
 
-		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil)
+		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil)
 
 		if result.Err == nil {
 			t.Error("expected error when write fails")
@@ -987,7 +987,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: "/tmp/out.pdf",
 		}
 
-		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil)
+		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil)
 
 		if result.Err == nil {
 			t.Error("expected error when read fails")
@@ -1254,4 +1254,294 @@ func findSubstring(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// WatermarkConfig alias for test file
+type WatermarkConfig = config.WatermarkConfig
+
+func TestBuildWatermarkData(t *testing.T) {
+	tests := []struct {
+		name        string
+		flags       *cliFlags
+		cfg         *Config
+		wantNil     bool
+		wantText    string
+		wantColor   string
+		wantOpacity float64
+		wantAngle   float64
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:    "noWatermark flag returns nil",
+			flags:   &cliFlags{noWatermark: true, watermarkAngle: -999},
+			cfg:     &Config{Watermark: WatermarkConfig{Enabled: true, Text: "DRAFT"}},
+			wantNil: true,
+		},
+		{
+			name:    "neither flags nor config returns nil",
+			flags:   &cliFlags{watermarkAngle: -999},
+			cfg:     &Config{},
+			wantNil: true,
+		},
+		{
+			name:  "config only returns watermark",
+			flags: &cliFlags{watermarkAngle: -999},
+			cfg: &Config{Watermark: WatermarkConfig{
+				Enabled: true,
+				Text:    "CONFIDENTIAL",
+				Color:   "#ff0000",
+				Opacity: 0.2,
+				Angle:   -30,
+			}},
+			wantText:    "CONFIDENTIAL",
+			wantColor:   "#ff0000",
+			wantOpacity: 0.2,
+			wantAngle:   -30,
+		},
+		{
+			name:        "flags only returns watermark with defaults",
+			flags:       &cliFlags{watermarkText: "DRAFT", watermarkAngle: -999},
+			cfg:         &Config{},
+			wantText:    "DRAFT",
+			wantColor:   "#888888", // default
+			wantOpacity: 0.1,       // default
+			wantAngle:   -45,       // default
+		},
+		{
+			name: "flags override config",
+			flags: &cliFlags{
+				watermarkText:    "OVERRIDE",
+				watermarkColor:   "#00ff00",
+				watermarkOpacity: 0.5,
+				watermarkAngle:   15,
+			},
+			cfg: &Config{Watermark: WatermarkConfig{
+				Enabled: true,
+				Text:    "ORIGINAL",
+				Color:   "#ff0000",
+				Opacity: 0.2,
+				Angle:   -30,
+			}},
+			wantText:    "OVERRIDE",
+			wantColor:   "#00ff00",
+			wantOpacity: 0.5,
+			wantAngle:   15,
+		},
+		{
+			name: "partial flags override - text only",
+			flags: &cliFlags{
+				watermarkText:  "NEW TEXT",
+				watermarkAngle: -999,
+			},
+			cfg: &Config{Watermark: WatermarkConfig{
+				Enabled: true,
+				Text:    "ORIGINAL",
+				Color:   "#ff0000",
+				Opacity: 0.3,
+				Angle:   -20,
+			}},
+			wantText:    "NEW TEXT",
+			wantColor:   "#ff0000",
+			wantOpacity: 0.3,
+			wantAngle:   -20,
+		},
+		{
+			name: "angle zero is valid (not sentinel)",
+			flags: &cliFlags{
+				watermarkText:  "DRAFT",
+				watermarkAngle: 0,
+			},
+			cfg:         &Config{},
+			wantText:    "DRAFT",
+			wantColor:   "#888888",
+			wantOpacity: 0.1,
+			wantAngle:   0, // explicit zero, not default
+		},
+		{
+			name:  "config angle zero preserved",
+			flags: &cliFlags{watermarkAngle: -999},
+			cfg: &Config{Watermark: WatermarkConfig{
+				Enabled: true,
+				Text:    "DRAFT",
+				Color:   "#888888",
+				Opacity: 0.1,
+				Angle:   0, // explicit zero in config
+			}},
+			wantText:    "DRAFT",
+			wantColor:   "#888888",
+			wantOpacity: 0.1,
+			wantAngle:   0,
+		},
+		{
+			name:        "empty text when enabled returns error",
+			flags:       &cliFlags{watermarkColor: "#888888", watermarkAngle: -999},
+			cfg:         &Config{Watermark: WatermarkConfig{Enabled: true, Text: ""}},
+			wantErr:     true,
+			errContains: "watermark text is required",
+		},
+		{
+			name: "invalid opacity above 1 returns error",
+			flags: &cliFlags{
+				watermarkText:    "DRAFT",
+				watermarkOpacity: 1.5,
+				watermarkAngle:   -999,
+			},
+			cfg:         &Config{},
+			wantErr:     true,
+			errContains: "opacity must be between 0 and 1",
+		},
+		{
+			name: "invalid opacity below 0 returns error",
+			flags: &cliFlags{
+				watermarkText:    "DRAFT",
+				watermarkOpacity: -0.1,
+				watermarkAngle:   -999,
+			},
+			cfg:         &Config{},
+			wantErr:     true,
+			errContains: "opacity must be between 0 and 1",
+		},
+		{
+			name: "invalid angle above 90 returns error",
+			flags: &cliFlags{
+				watermarkText:  "DRAFT",
+				watermarkAngle: 100,
+			},
+			cfg:         &Config{},
+			wantErr:     true,
+			errContains: "angle must be between -90 and 90",
+		},
+		{
+			name: "invalid angle below -90 returns error",
+			flags: &cliFlags{
+				watermarkText:  "DRAFT",
+				watermarkAngle: -100,
+			},
+			cfg:         &Config{},
+			wantErr:     true,
+			errContains: "angle must be between -90 and 90",
+		},
+		{
+			name: "invalid color format returns error",
+			flags: &cliFlags{
+				watermarkText:  "DRAFT",
+				watermarkColor: "red", // invalid - must be hex
+				watermarkAngle: -999,
+			},
+			cfg:         &Config{},
+			wantErr:     true,
+			errContains: "invalid watermark color",
+		},
+		{
+			name: "invalid color from config returns error",
+			flags: &cliFlags{
+				watermarkText:  "DRAFT",
+				watermarkAngle: -999,
+			},
+			cfg: &Config{Watermark: WatermarkConfig{
+				Enabled: true,
+				Text:    "DRAFT",
+				Color:   "invalid",
+			}},
+			wantErr:     true,
+			errContains: "invalid watermark color",
+		},
+		{
+			name: "boundary angle -90 is valid",
+			flags: &cliFlags{
+				watermarkText:  "DRAFT",
+				watermarkAngle: -90,
+			},
+			cfg:         &Config{},
+			wantText:    "DRAFT",
+			wantColor:   "#888888",
+			wantOpacity: 0.1,
+			wantAngle:   -90,
+		},
+		{
+			name: "boundary angle 90 is valid",
+			flags: &cliFlags{
+				watermarkText:  "DRAFT",
+				watermarkAngle: 90,
+			},
+			cfg:         &Config{},
+			wantText:    "DRAFT",
+			wantColor:   "#888888",
+			wantOpacity: 0.1,
+			wantAngle:   90,
+		},
+		{
+			name: "boundary opacity 0 from config gets default",
+			flags: &cliFlags{
+				watermarkText:  "DRAFT",
+				watermarkAngle: -999,
+			},
+			cfg: &Config{Watermark: WatermarkConfig{
+				Enabled: true,
+				Text:    "DRAFT",
+				Opacity: 0, // zero opacity in config - will get default
+			}},
+			wantText:    "DRAFT",
+			wantColor:   "#888888",
+			wantOpacity: 0.1, // default applied because 0 is treated as "not set"
+			wantAngle:   0,   // config angle (0) is preserved when config is enabled
+		},
+		{
+			name: "boundary opacity 1 is valid",
+			flags: &cliFlags{
+				watermarkText:    "DRAFT",
+				watermarkOpacity: 1.0,
+				watermarkAngle:   -999,
+			},
+			cfg:         &Config{},
+			wantText:    "DRAFT",
+			wantColor:   "#888888",
+			wantOpacity: 1.0,
+			wantAngle:   -45,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := buildWatermarkData(tt.flags, tt.cfg)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if tt.errContains != "" && !contains(err.Error(), tt.errContains) {
+					t.Errorf("error %q should contain %q", err.Error(), tt.errContains)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if tt.wantNil {
+				if got != nil {
+					t.Errorf("expected nil, got %+v", got)
+				}
+				return
+			}
+
+			if got == nil {
+				t.Fatal("expected Watermark, got nil")
+			}
+			if got.Text != tt.wantText {
+				t.Errorf("Text = %q, want %q", got.Text, tt.wantText)
+			}
+			if got.Color != tt.wantColor {
+				t.Errorf("Color = %q, want %q", got.Color, tt.wantColor)
+			}
+			if got.Opacity != tt.wantOpacity {
+				t.Errorf("Opacity = %v, want %v", got.Opacity, tt.wantOpacity)
+			}
+			if got.Angle != tt.wantAngle {
+				t.Errorf("Angle = %v, want %v", got.Angle, tt.wantAngle)
+			}
+		})
+	}
 }
