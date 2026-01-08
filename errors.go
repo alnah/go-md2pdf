@@ -19,4 +19,7 @@ var (
 
 	// Footer validation errors.
 	ErrInvalidFooterPosition = errors.New("invalid footer position")
+
+	// Watermark validation errors.
+	ErrInvalidWatermarkColor = errors.New("invalid watermark color")
 )
