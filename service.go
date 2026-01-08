@@ -12,6 +12,7 @@ type Service struct {
 	htmlConverter     htmlConverter
 	cssInjector       cssInjector
 	coverInjector     coverInjector
+	tocInjector       tocInjector
 	signatureInjector signatureInjector
 	pdfConverter      pdfConverter
 }
@@ -25,6 +26,7 @@ func New(opts ...Option) *Service {
 		htmlConverter:     newGoldmarkConverter(),
 		cssInjector:       &cssInjection{},
 		coverInjector:     newCoverInjection(),
+		tocInjector:       newTOCInjection(),
 		signatureInjector: newSignatureInjection(),
 	}
 
@@ -82,6 +84,16 @@ func (s *Service) Convert(ctx context.Context, input Input) ([]byte, error) {
 		return nil, fmt.Errorf("injecting cover: %w", err)
 	}
 
+	// Inject TOC (if provided) - must be after cover
+	var tData *tocData
+	if input.TOC != nil {
+		tData = toTOCData(input.TOC)
+	}
+	htmlContent, err = s.tocInjector.InjectTOC(ctx, htmlContent, tData)
+	if err != nil {
+		return nil, fmt.Errorf("injecting TOC: %w", err)
+	}
+
 	// Inject signature (if provided)
 	var sigData *signatureData
 	if input.Signature != nil {
@@ -136,6 +148,9 @@ func (s *Service) validateInput(input Input) error {
 	if err := input.Cover.Validate(); err != nil {
 		return err
 	}
+	if err := input.TOC.Validate(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -185,5 +200,20 @@ func toCoverData(c *Cover) *coverData {
 		Organization: c.Organization,
 		Date:         c.Date,
 		Version:      c.Version,
+	}
+}
+
+// toTOCData converts the public TOC type to internal tocData.
+func toTOCData(t *TOC) *tocData {
+	if t == nil {
+		return nil
+	}
+	maxDepth := t.MaxDepth
+	if maxDepth == 0 {
+		maxDepth = DefaultTOCDepth
+	}
+	return &tocData{
+		Title:    t.Title,
+		MaxDepth: maxDepth,
 	}
 }
