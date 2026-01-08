@@ -108,6 +108,9 @@ func (s *Service) validateInput(input Input) error {
 	if err := input.Page.Validate(); err != nil {
 		return err
 	}
+	if err := input.Footer.Validate(); err != nil {
+		return err
+	}
 	return nil
 }
 

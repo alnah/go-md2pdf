@@ -1175,3 +1175,83 @@ func TestBuildPageSettings(t *testing.T) {
 
 // PageConfig alias for test file
 type PageConfig = config.PageConfig
+
+func TestValidateWorkers(t *testing.T) {
+	tests := []struct {
+		name    string
+		n       int
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "negative returns error",
+			n:       -1,
+			wantErr: true,
+			errMsg:  "must be >= 0",
+		},
+		{
+			name:    "zero is valid (auto mode)",
+			n:       0,
+			wantErr: false,
+		},
+		{
+			name:    "one is valid",
+			n:       1,
+			wantErr: false,
+		},
+		{
+			name:    "max workers is valid",
+			n:       maxWorkers,
+			wantErr: false,
+		},
+		{
+			name:    "above max returns error",
+			n:       maxWorkers + 1,
+			wantErr: true,
+			errMsg:  "maximum is 32",
+		},
+		{
+			name:    "large number returns error",
+			n:       100,
+			wantErr: true,
+			errMsg:  "maximum is 32",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateWorkers(tt.n)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !errors.Is(err, ErrInvalidWorkerCount) {
+					t.Errorf("error = %v, want ErrInvalidWorkerCount", err)
+				}
+				if tt.errMsg != "" && !contains(err.Error(), tt.errMsg) {
+					t.Errorf("error message %q should contain %q", err.Error(), tt.errMsg)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

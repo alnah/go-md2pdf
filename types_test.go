@@ -3,6 +3,7 @@ package md2pdf
 import (
 	"errors"
 	"testing"
+	"time"
 )
 
 func TestPageSettings_Validate(t *testing.T) {
@@ -242,4 +243,98 @@ func TestIsValidOrientation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFooter_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		footer  *Footer
+		wantErr error
+	}{
+		{
+			name:    "nil is valid",
+			footer:  nil,
+			wantErr: nil,
+		},
+		{
+			name:    "empty position is valid",
+			footer:  &Footer{Position: ""},
+			wantErr: nil,
+		},
+		{
+			name:    "left position is valid",
+			footer:  &Footer{Position: "left"},
+			wantErr: nil,
+		},
+		{
+			name:    "center position is valid",
+			footer:  &Footer{Position: "center"},
+			wantErr: nil,
+		},
+		{
+			name:    "right position is valid",
+			footer:  &Footer{Position: "right"},
+			wantErr: nil,
+		},
+		{
+			name:    "case insensitive LEFT",
+			footer:  &Footer{Position: "LEFT"},
+			wantErr: nil,
+		},
+		{
+			name:    "case insensitive Center",
+			footer:  &Footer{Position: "Center"},
+			wantErr: nil,
+		},
+		{
+			name:    "invalid position returns error",
+			footer:  &Footer{Position: "top"},
+			wantErr: ErrInvalidFooterPosition,
+		},
+		{
+			name:    "invalid position middle",
+			footer:  &Footer{Position: "middle"},
+			wantErr: ErrInvalidFooterPosition,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.footer.Validate()
+
+			if tt.wantErr != nil {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("error = %v, want %v", err, tt.wantErr)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestWithTimeoutPanic(t *testing.T) {
+	t.Run("zero duration panics", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("expected panic for zero duration")
+			}
+		}()
+		WithTimeout(0)
+	})
+
+	t.Run("negative duration panics", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("expected panic for negative duration")
+			}
+		}()
+		WithTimeout(-1 * time.Second)
+	})
 }
