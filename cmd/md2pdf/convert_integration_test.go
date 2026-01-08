@@ -77,10 +77,14 @@ func (p *testPool) Acquire() Converter {
 
 func (p *testPool) Release(c Converter) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
-	if !p.closed {
-		p.sem <- c
+	if p.closed {
+		p.mu.Unlock()
+		return
 	}
+	p.mu.Unlock()
+	// Send outside lock to avoid deadlock: if channel is full,
+	// holding the lock would prevent Close() from running.
+	p.sem <- c
 }
 
 func (p *testPool) Close() error {
