@@ -11,6 +11,7 @@ type Service struct {
 	preprocessor      markdownPreprocessor
 	htmlConverter     htmlConverter
 	cssInjector       cssInjector
+	coverInjector     coverInjector
 	signatureInjector signatureInjector
 	pdfConverter      pdfConverter
 }
@@ -23,6 +24,7 @@ func New(opts ...Option) *Service {
 		preprocessor:      &commonMarkPreprocessor{},
 		htmlConverter:     newGoldmarkConverter(),
 		cssInjector:       &cssInjection{},
+		coverInjector:     newCoverInjection(),
 		signatureInjector: newSignatureInjection(),
 	}
 
@@ -68,6 +70,16 @@ func (s *Service) Convert(ctx context.Context, input Input) ([]byte, error) {
 	htmlContent = s.cssInjector.InjectCSS(ctx, htmlContent, cssContent)
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
+	}
+
+	// Inject cover (if provided)
+	var cvData *coverData
+	if input.Cover != nil {
+		cvData = toCoverData(input.Cover)
+	}
+	htmlContent, err = s.coverInjector.InjectCover(ctx, htmlContent, cvData)
+	if err != nil {
+		return nil, fmt.Errorf("injecting cover: %w", err)
 	}
 
 	// Inject signature (if provided)
@@ -121,6 +133,9 @@ func (s *Service) validateInput(input Input) error {
 	if err := input.Watermark.Validate(); err != nil {
 		return err
 	}
+	if err := input.Cover.Validate(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -153,5 +168,22 @@ func toFooterData(f *Footer) *footerData {
 		Date:           f.Date,
 		Status:         f.Status,
 		Text:           f.Text,
+	}
+}
+
+// toCoverData converts the public Cover type to internal coverData.
+func toCoverData(c *Cover) *coverData {
+	if c == nil {
+		return nil
+	}
+	return &coverData{
+		Title:        c.Title,
+		Subtitle:     c.Subtitle,
+		Logo:         c.Logo,
+		Author:       c.Author,
+		AuthorTitle:  c.AuthorTitle,
+		Organization: c.Organization,
+		Date:         c.Date,
+		Version:      c.Version,
 	}
 }

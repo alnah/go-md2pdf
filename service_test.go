@@ -471,3 +471,74 @@ func TestToFooterData(t *testing.T) {
 		}
 	})
 }
+
+func TestToCoverData(t *testing.T) {
+	t.Run("nil returns nil", func(t *testing.T) {
+		result := toCoverData(nil)
+		if result != nil {
+			t.Error("expected nil for nil input")
+		}
+	})
+
+	t.Run("converts all fields", func(t *testing.T) {
+		cover := &Cover{
+			Title:        "My Document",
+			Subtitle:     "A Comprehensive Guide",
+			Logo:         "/path/to/logo.png",
+			Author:       "John Doe",
+			AuthorTitle:  "Senior Developer",
+			Organization: "Acme Corp",
+			Date:         "2025-01-15",
+			Version:      "v1.0.0",
+		}
+
+		result := toCoverData(cover)
+
+		if result.Title != cover.Title {
+			t.Errorf("Title = %q, want %q", result.Title, cover.Title)
+		}
+		if result.Subtitle != cover.Subtitle {
+			t.Errorf("Subtitle = %q, want %q", result.Subtitle, cover.Subtitle)
+		}
+		if result.Logo != cover.Logo {
+			t.Errorf("Logo = %q, want %q", result.Logo, cover.Logo)
+		}
+		if result.Author != cover.Author {
+			t.Errorf("Author = %q, want %q", result.Author, cover.Author)
+		}
+		if result.AuthorTitle != cover.AuthorTitle {
+			t.Errorf("AuthorTitle = %q, want %q", result.AuthorTitle, cover.AuthorTitle)
+		}
+		if result.Organization != cover.Organization {
+			t.Errorf("Organization = %q, want %q", result.Organization, cover.Organization)
+		}
+		if result.Date != cover.Date {
+			t.Errorf("Date = %q, want %q", result.Date, cover.Date)
+		}
+		if result.Version != cover.Version {
+			t.Errorf("Version = %q, want %q", result.Version, cover.Version)
+		}
+	})
+
+	t.Run("empty fields preserved", func(t *testing.T) {
+		cover := &Cover{
+			Title: "Only Title",
+			// All other fields empty
+		}
+
+		result := toCoverData(cover)
+
+		if result.Title != "Only Title" {
+			t.Errorf("Title = %q, want %q", result.Title, "Only Title")
+		}
+		if result.Subtitle != "" {
+			t.Errorf("Subtitle = %q, want empty", result.Subtitle)
+		}
+		if result.Logo != "" {
+			t.Errorf("Logo = %q, want empty", result.Logo)
+		}
+		if result.Author != "" {
+			t.Errorf("Author = %q, want empty", result.Author)
+		}
+	})
+}
