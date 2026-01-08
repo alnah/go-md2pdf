@@ -935,7 +935,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: filepath.Join(blockingFile, "subdir", "out.pdf"),
 		}
 
-		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil, nil, &cliFlags{}, config.DefaultConfig())
+		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil, nil, nil, &cliFlags{}, config.DefaultConfig())
 
 		if result.Err == nil {
 			t.Error("expected error when mkdir fails")
@@ -972,7 +972,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: filepath.Join(outDir, "out.pdf"),
 		}
 
-		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil, nil, &cliFlags{}, config.DefaultConfig())
+		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil, nil, nil, &cliFlags{}, config.DefaultConfig())
 
 		if result.Err == nil {
 			t.Error("expected error when write fails")
@@ -988,7 +988,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: "/tmp/out.pdf",
 		}
 
-		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil, nil, &cliFlags{}, config.DefaultConfig())
+		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil, nil, nil, &cliFlags{}, config.DefaultConfig())
 
 		if result.Err == nil {
 			t.Error("expected error when read fails")
@@ -2240,6 +2240,343 @@ func TestParseFlags_NoTOC(t *testing.T) {
 		}
 		if !flags.quiet {
 			t.Error("expected quiet=true")
+		}
+	})
+}
+
+// PageBreaksConfig alias for test file
+type PageBreaksConfig = config.PageBreaksConfig
+
+func TestParseBreakBefore(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		wantH1 bool
+		wantH2 bool
+		wantH3 bool
+	}{
+		{
+			name:   "empty string returns all false",
+			input:  "",
+			wantH1: false,
+			wantH2: false,
+			wantH3: false,
+		},
+		{
+			name:   "h1 only",
+			input:  "h1",
+			wantH1: true,
+			wantH2: false,
+			wantH3: false,
+		},
+		{
+			name:   "h2 only",
+			input:  "h2",
+			wantH1: false,
+			wantH2: true,
+			wantH3: false,
+		},
+		{
+			name:   "h3 only",
+			input:  "h3",
+			wantH1: false,
+			wantH2: false,
+			wantH3: true,
+		},
+		{
+			name:   "h1,h2 comma separated",
+			input:  "h1,h2",
+			wantH1: true,
+			wantH2: true,
+			wantH3: false,
+		},
+		{
+			name:   "h2,h3 comma separated",
+			input:  "h2,h3",
+			wantH1: false,
+			wantH2: true,
+			wantH3: true,
+		},
+		{
+			name:   "all headings h1,h2,h3",
+			input:  "h1,h2,h3",
+			wantH1: true,
+			wantH2: true,
+			wantH3: true,
+		},
+		{
+			name:   "case insensitive H1,H2,H3",
+			input:  "H1,H2,H3",
+			wantH1: true,
+			wantH2: true,
+			wantH3: true,
+		},
+		{
+			name:   "mixed case with spaces",
+			input:  " H1 , h2 , H3 ",
+			wantH1: true,
+			wantH2: true,
+			wantH3: true,
+		},
+		{
+			name:   "duplicate entries",
+			input:  "h1,h1,h1",
+			wantH1: true,
+			wantH2: false,
+			wantH3: false,
+		},
+		{
+			name:   "unrecognized entries ignored",
+			input:  "h1,h4,h5,h6,invalid",
+			wantH1: true,
+			wantH2: false,
+			wantH3: false,
+		},
+		{
+			name:   "only unrecognized entries",
+			input:  "h4,h5,h6,invalid",
+			wantH1: false,
+			wantH2: false,
+			wantH3: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotH1, gotH2, gotH3 := parseBreakBefore(tt.input)
+
+			if gotH1 != tt.wantH1 {
+				t.Errorf("h1 = %v, want %v", gotH1, tt.wantH1)
+			}
+			if gotH2 != tt.wantH2 {
+				t.Errorf("h2 = %v, want %v", gotH2, tt.wantH2)
+			}
+			if gotH3 != tt.wantH3 {
+				t.Errorf("h3 = %v, want %v", gotH3, tt.wantH3)
+			}
+		})
+	}
+}
+
+func TestBuildPageBreaksData(t *testing.T) {
+	tests := []struct {
+		name         string
+		flags        *cliFlags
+		cfg          *Config
+		wantNil      bool
+		wantBeforeH1 bool
+		wantBeforeH2 bool
+		wantBeforeH3 bool
+		wantOrphans  int
+		wantWidows   int
+	}{
+		{
+			name:    "noPageBreaks flag returns nil",
+			flags:   &cliFlags{noPageBreaks: true},
+			cfg:     &Config{PageBreaks: PageBreaksConfig{Enabled: true, BeforeH1: true}},
+			wantNil: true,
+		},
+		{
+			name:        "neither flags nor config returns defaults",
+			flags:       &cliFlags{},
+			cfg:         &Config{},
+			wantOrphans: md2pdf.DefaultOrphans,
+			wantWidows:  md2pdf.DefaultWidows,
+		},
+		{
+			name:         "config only returns config values",
+			flags:        &cliFlags{},
+			cfg:          &Config{PageBreaks: PageBreaksConfig{Enabled: true, BeforeH1: true, BeforeH2: true, Orphans: 3, Widows: 4}},
+			wantBeforeH1: true,
+			wantBeforeH2: true,
+			wantBeforeH3: false,
+			wantOrphans:  3,
+			wantWidows:   4,
+		},
+		{
+			name:         "breakBefore flag overrides config",
+			flags:        &cliFlags{breakBefore: "h2,h3"},
+			cfg:          &Config{PageBreaks: PageBreaksConfig{Enabled: true, BeforeH1: true, BeforeH2: false}},
+			wantBeforeH1: false,
+			wantBeforeH2: true,
+			wantBeforeH3: true,
+			wantOrphans:  md2pdf.DefaultOrphans,
+			wantWidows:   md2pdf.DefaultWidows,
+		},
+		{
+			name:        "orphans flag overrides config",
+			flags:       &cliFlags{orphans: 5},
+			cfg:         &Config{PageBreaks: PageBreaksConfig{Enabled: true, Orphans: 3}},
+			wantOrphans: 5,
+			wantWidows:  md2pdf.DefaultWidows,
+		},
+		{
+			name:        "widows flag overrides config",
+			flags:       &cliFlags{widows: 5},
+			cfg:         &Config{PageBreaks: PageBreaksConfig{Enabled: true, Widows: 3}},
+			wantOrphans: md2pdf.DefaultOrphans,
+			wantWidows:  5,
+		},
+		{
+			name:         "all flags override config",
+			flags:        &cliFlags{breakBefore: "h1", orphans: 4, widows: 5},
+			cfg:          &Config{PageBreaks: PageBreaksConfig{Enabled: true, BeforeH2: true, BeforeH3: true, Orphans: 2, Widows: 2}},
+			wantBeforeH1: true,
+			wantBeforeH2: false,
+			wantBeforeH3: false,
+			wantOrphans:  4,
+			wantWidows:   5,
+		},
+		{
+			name:         "config disabled but has values - uses defaults",
+			flags:        &cliFlags{},
+			cfg:          &Config{PageBreaks: PageBreaksConfig{Enabled: false, BeforeH1: true, Orphans: 5}},
+			wantBeforeH1: false,
+			wantOrphans:  md2pdf.DefaultOrphans,
+			wantWidows:   md2pdf.DefaultWidows,
+		},
+		{
+			name:        "config orphans 0 uses default",
+			flags:       &cliFlags{},
+			cfg:         &Config{PageBreaks: PageBreaksConfig{Enabled: true, Orphans: 0, Widows: 3}},
+			wantOrphans: md2pdf.DefaultOrphans,
+			wantWidows:  3,
+		},
+		{
+			name:        "config widows 0 uses default",
+			flags:       &cliFlags{},
+			cfg:         &Config{PageBreaks: PageBreaksConfig{Enabled: true, Orphans: 3, Widows: 0}},
+			wantOrphans: 3,
+			wantWidows:  md2pdf.DefaultWidows,
+		},
+		{
+			name:         "breakBefore flag with empty config",
+			flags:        &cliFlags{breakBefore: "h1,h2,h3"},
+			cfg:          &Config{},
+			wantBeforeH1: true,
+			wantBeforeH2: true,
+			wantBeforeH3: true,
+			wantOrphans:  md2pdf.DefaultOrphans,
+			wantWidows:   md2pdf.DefaultWidows,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildPageBreaksData(tt.flags, tt.cfg)
+
+			if tt.wantNil {
+				if got != nil {
+					t.Errorf("expected nil, got %+v", got)
+				}
+				return
+			}
+
+			if got == nil {
+				t.Fatal("expected PageBreaks, got nil")
+			}
+			if got.BeforeH1 != tt.wantBeforeH1 {
+				t.Errorf("BeforeH1 = %v, want %v", got.BeforeH1, tt.wantBeforeH1)
+			}
+			if got.BeforeH2 != tt.wantBeforeH2 {
+				t.Errorf("BeforeH2 = %v, want %v", got.BeforeH2, tt.wantBeforeH2)
+			}
+			if got.BeforeH3 != tt.wantBeforeH3 {
+				t.Errorf("BeforeH3 = %v, want %v", got.BeforeH3, tt.wantBeforeH3)
+			}
+			if got.Orphans != tt.wantOrphans {
+				t.Errorf("Orphans = %d, want %d", got.Orphans, tt.wantOrphans)
+			}
+			if got.Widows != tt.wantWidows {
+				t.Errorf("Widows = %d, want %d", got.Widows, tt.wantWidows)
+			}
+		})
+	}
+}
+
+func TestParseFlags_PageBreaks(t *testing.T) {
+	t.Run("--no-page-breaks flag sets noPageBreaks true", func(t *testing.T) {
+		flags, _, err := parseFlags([]string{"md2pdf", "--no-page-breaks", "test.md"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !flags.noPageBreaks {
+			t.Error("expected noPageBreaks=true when --no-page-breaks flag provided")
+		}
+	})
+
+	t.Run("--break-before flag parses value", func(t *testing.T) {
+		flags, _, err := parseFlags([]string{"md2pdf", "--break-before", "h1,h2", "test.md"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if flags.breakBefore != "h1,h2" {
+			t.Errorf("breakBefore = %q, want %q", flags.breakBefore, "h1,h2")
+		}
+	})
+
+	t.Run("--orphans flag parses value", func(t *testing.T) {
+		flags, _, err := parseFlags([]string{"md2pdf", "--orphans", "3", "test.md"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if flags.orphans != 3 {
+			t.Errorf("orphans = %d, want 3", flags.orphans)
+		}
+	})
+
+	t.Run("--widows flag parses value", func(t *testing.T) {
+		flags, _, err := parseFlags([]string{"md2pdf", "--widows", "4", "test.md"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if flags.widows != 4 {
+			t.Errorf("widows = %d, want 4", flags.widows)
+		}
+	})
+
+	t.Run("all page break flags combined", func(t *testing.T) {
+		flags, _, err := parseFlags([]string{
+			"md2pdf",
+			"--break-before", "h1,h2,h3",
+			"--orphans", "5",
+			"--widows", "5",
+			"test.md",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if flags.breakBefore != "h1,h2,h3" {
+			t.Errorf("breakBefore = %q, want %q", flags.breakBefore, "h1,h2,h3")
+		}
+		if flags.orphans != 5 {
+			t.Errorf("orphans = %d, want 5", flags.orphans)
+		}
+		if flags.widows != 5 {
+			t.Errorf("widows = %d, want 5", flags.widows)
+		}
+	})
+
+	t.Run("--no-page-breaks with other page break flags", func(t *testing.T) {
+		flags, _, err := parseFlags([]string{
+			"md2pdf",
+			"--no-page-breaks",
+			"--break-before", "h1",
+			"--orphans", "3",
+			"test.md",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !flags.noPageBreaks {
+			t.Error("expected noPageBreaks=true")
+		}
+		// Other flags are still parsed, but noPageBreaks takes precedence
+		if flags.breakBefore != "h1" {
+			t.Errorf("breakBefore = %q, want %q", flags.breakBefore, "h1")
+		}
+		if flags.orphans != 3 {
+			t.Errorf("orphans = %d, want 3", flags.orphans)
 		}
 	})
 }
