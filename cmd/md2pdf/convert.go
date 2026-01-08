@@ -371,7 +371,7 @@ func buildSignatureData(cfg *config.Config, noSignature bool) (*md2pdf.Signature
 	}
 
 	// Validate image path if set (and not a URL)
-	if cfg.Signature.ImagePath != "" && !isURL(cfg.Signature.ImagePath) {
+	if cfg.Signature.ImagePath != "" && !md2pdf.IsURL(cfg.Signature.ImagePath) {
 		if !md2pdf.FileExists(cfg.Signature.ImagePath) {
 			return nil, fmt.Errorf("%w: %s", ErrSignatureImagePath, cfg.Signature.ImagePath)
 		}
@@ -390,11 +390,6 @@ func buildSignatureData(cfg *config.Config, noSignature bool) (*md2pdf.Signature
 		ImagePath: cfg.Signature.ImagePath,
 		Links:     links,
 	}, nil
-}
-
-// isURL returns true if the string looks like a URL.
-func isURL(s string) bool {
-	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
 }
 
 // buildFooterData creates md2pdf.Footer from config if footer is enabled.

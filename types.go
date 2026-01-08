@@ -171,7 +171,7 @@ func (c *Cover) Validate() error {
 		return nil
 	}
 	// Semantic validation: logo path exists if not URL
-	if c.Logo != "" && !isURL(c.Logo) && !FileExists(c.Logo) {
+	if c.Logo != "" && !IsURL(c.Logo) && !FileExists(c.Logo) {
 		return fmt.Errorf("%w: %q", ErrCoverLogoNotFound, c.Logo)
 	}
 	return nil
@@ -202,8 +202,8 @@ func (t *TOC) Validate() error {
 	return nil
 }
 
-// isURL returns true if the string looks like a URL.
-func isURL(s string) bool {
+// IsURL returns true if the string looks like a URL.
+func IsURL(s string) bool {
 	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
 }
 
