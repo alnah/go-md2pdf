@@ -2,6 +2,7 @@ package md2pdf
 
 import (
 	"errors"
+	"os"
 	"testing"
 	"time"
 )
@@ -383,6 +384,96 @@ func TestIsValidHexColor(t *testing.T) {
 			got := isValidHexColor(tt.color)
 			if got != tt.want {
 				t.Errorf("isValidHexColor(%q) = %v, want %v", tt.color, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCover_Validate(t *testing.T) {
+	// Create a temp file for logo path tests
+	tempDir := t.TempDir()
+	existingLogo := tempDir + "/logo.png"
+	if err := os.WriteFile(existingLogo, []byte("fake png"), 0644); err != nil {
+		t.Fatalf("failed to create test logo: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		cover   *Cover
+		wantErr error
+	}{
+		{
+			name:    "nil is valid",
+			cover:   nil,
+			wantErr: nil,
+		},
+		{
+			name:    "empty cover is valid",
+			cover:   &Cover{},
+			wantErr: nil,
+		},
+		{
+			name: "all fields populated is valid",
+			cover: &Cover{
+				Title:        "My Document",
+				Subtitle:     "A Comprehensive Guide",
+				Logo:         existingLogo,
+				Author:       "John Doe",
+				AuthorTitle:  "Senior Developer",
+				Organization: "Acme Corp",
+				Date:         "2025-01-01",
+				Version:      "v1.0.0",
+			},
+			wantErr: nil,
+		},
+		{
+			name:    "logo URL accepted without file validation",
+			cover:   &Cover{Logo: "https://example.com/logo.png"},
+			wantErr: nil,
+		},
+		{
+			name:    "logo http URL accepted",
+			cover:   &Cover{Logo: "http://example.com/logo.png"},
+			wantErr: nil,
+		},
+		{
+			name:    "logo empty is valid",
+			cover:   &Cover{Logo: ""},
+			wantErr: nil,
+		},
+		{
+			name:    "existing logo path is valid",
+			cover:   &Cover{Logo: existingLogo},
+			wantErr: nil,
+		},
+		{
+			name:    "nonexistent logo path returns error",
+			cover:   &Cover{Logo: "/nonexistent/path/to/logo.png"},
+			wantErr: ErrCoverLogoNotFound,
+		},
+		{
+			name:    "relative nonexistent logo returns error",
+			cover:   &Cover{Logo: "nonexistent.png"},
+			wantErr: ErrCoverLogoNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.cover.Validate()
+
+			if tt.wantErr != nil {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("error = %v, want %v", err, tt.wantErr)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
 			}
 		})
 	}

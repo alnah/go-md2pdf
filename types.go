@@ -91,6 +91,7 @@ type Input struct {
 	Signature *Signature    // Signature config (optional)
 	Page      *PageSettings // Page settings (optional, nil = defaults)
 	Watermark *Watermark    // Watermark config (optional)
+	Cover     *Cover        // Cover page config (optional)
 }
 
 // Watermark configures a background text watermark.
@@ -111,6 +112,36 @@ func (w *Watermark) Validate() error {
 		return fmt.Errorf("%w: %q (must be hex format like #RGB or #RRGGBB)", ErrInvalidWatermarkColor, w.Color)
 	}
 	return nil
+}
+
+// Cover configures the cover page.
+type Cover struct {
+	Title        string // Document title (required)
+	Subtitle     string // Optional subtitle
+	Logo         string // Logo path or URL (optional)
+	Author       string // Author name (optional)
+	AuthorTitle  string // Author's professional title (optional)
+	Organization string // Organization name (optional)
+	Date         string // Date string (optional)
+	Version      string // Version string (optional)
+}
+
+// Validate checks that cover settings are valid.
+// Returns nil if c is nil (nil means no cover).
+func (c *Cover) Validate() error {
+	if c == nil {
+		return nil
+	}
+	// Semantic validation: logo path exists if not URL
+	if c.Logo != "" && !isURL(c.Logo) && !FileExists(c.Logo) {
+		return fmt.Errorf("%w: %q", ErrCoverLogoNotFound, c.Logo)
+	}
+	return nil
+}
+
+// isURL returns true if the string looks like a URL.
+func isURL(s string) bool {
+	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
 }
 
 // isValidHexColor checks if color is a valid hex color (#RGB or #RRGGBB).
