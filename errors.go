@@ -29,4 +29,8 @@ var (
 
 	// TOC validation errors.
 	ErrInvalidTOCDepth = errors.New("invalid TOC depth")
+
+	// Page breaks validation errors.
+	ErrInvalidOrphans = errors.New("invalid orphans value")
+	ErrInvalidWidows  = errors.New("invalid widows value")
 )
