@@ -57,8 +57,15 @@ func (s *Service) Convert(ctx context.Context, input Input) ([]byte, error) {
 		return nil, fmt.Errorf("converting to HTML: %w", err)
 	}
 
+	// Build combined CSS (watermark + user CSS)
+	cssContent := input.CSS
+	if input.Watermark != nil {
+		watermarkCSS := buildWatermarkCSS(input.Watermark)
+		cssContent = watermarkCSS + cssContent
+	}
+
 	// Inject CSS
-	htmlContent = s.cssInjector.InjectCSS(ctx, htmlContent, input.CSS)
+	htmlContent = s.cssInjector.InjectCSS(ctx, htmlContent, cssContent)
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -109,6 +116,9 @@ func (s *Service) validateInput(input Input) error {
 		return err
 	}
 	if err := input.Footer.Validate(); err != nil {
+		return err
+	}
+	if err := input.Watermark.Validate(); err != nil {
 		return err
 	}
 	return nil
