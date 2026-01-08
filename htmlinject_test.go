@@ -406,8 +406,8 @@ func TestInjectCover(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		// Cover should be at the start
-		if !strings.HasPrefix(got, "<div class=\"cover-page\">") {
+		// Cover should be at the start (now wrapped in section)
+		if !strings.HasPrefix(got, "<section class=\"cover\"><div class=\"cover-page\">") {
 			t.Errorf("cover should be prepended, got: %q", got[:min(100, len(got))])
 		}
 	})
@@ -680,5 +680,551 @@ func TestBuildWatermarkCSS(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestExtractHeadings(t *testing.T) {
+	tests := []struct {
+		name     string
+		html     string
+		maxDepth int
+		want     []headingInfo
+	}{
+		{
+			name:     "empty HTML returns nil",
+			html:     "",
+			maxDepth: 3,
+			want:     nil,
+		},
+		{
+			name:     "no headings returns nil",
+			html:     "<p>Just a paragraph</p>",
+			maxDepth: 3,
+			want:     nil,
+		},
+		{
+			name:     "heading without id is skipped",
+			html:     "<h1>No ID</h1>",
+			maxDepth: 3,
+			want:     nil,
+		},
+		{
+			name:     "single h1 with id",
+			html:     `<h1 id="intro">Introduction</h1>`,
+			maxDepth: 3,
+			want:     []headingInfo{{Level: 1, ID: "intro", Text: "Introduction"}},
+		},
+		{
+			name:     "multiple headings",
+			html:     `<h1 id="a">A</h1><h2 id="b">B</h2><h3 id="c">C</h3>`,
+			maxDepth: 3,
+			want: []headingInfo{
+				{Level: 1, ID: "a", Text: "A"},
+				{Level: 2, ID: "b", Text: "B"},
+				{Level: 3, ID: "c", Text: "C"},
+			},
+		},
+		{
+			name:     "respects maxDepth limit",
+			html:     `<h1 id="a">A</h1><h2 id="b">B</h2><h3 id="c">C</h3><h4 id="d">D</h4>`,
+			maxDepth: 2,
+			want: []headingInfo{
+				{Level: 1, ID: "a", Text: "A"},
+				{Level: 2, ID: "b", Text: "B"},
+			},
+		},
+		{
+			name:     "case insensitive H1",
+			html:     `<H1 id="test">Test</H1>`,
+			maxDepth: 3,
+			want:     []headingInfo{{Level: 1, ID: "test", Text: "Test"}},
+		},
+		{
+			name:     "mixed case h2",
+			html:     `<H2 ID="mixed">Mixed</H2>`,
+			maxDepth: 3,
+			want:     []headingInfo{{Level: 2, ID: "mixed", Text: "Mixed"}}, // case-insensitive matching
+		},
+		{
+			name:     "heading with extra attributes",
+			html:     `<h1 class="title" id="main" data-foo="bar">Main</h1>`,
+			maxDepth: 3,
+			want:     []headingInfo{{Level: 1, ID: "main", Text: "Main"}},
+		},
+		{
+			name:     "trims whitespace from text",
+			html:     `<h1 id="space">  Spaced Text  </h1>`,
+			maxDepth: 3,
+			want:     []headingInfo{{Level: 1, ID: "space", Text: "Spaced Text"}},
+		},
+		{
+			name:     "maxDepth 6 includes all levels",
+			html:     `<h1 id="h1">H1</h1><h6 id="h6">H6</h6>`,
+			maxDepth: 6,
+			want: []headingInfo{
+				{Level: 1, ID: "h1", Text: "H1"},
+				{Level: 6, ID: "h6", Text: "H6"},
+			},
+		},
+		{
+			name:     "maxDepth 1 only h1",
+			html:     `<h1 id="h1">H1</h1><h2 id="h2">H2</h2>`,
+			maxDepth: 1,
+			want:     []headingInfo{{Level: 1, ID: "h1", Text: "H1"}},
+		},
+		{
+			name:     "inline em tag stripped",
+			html:     `<h1 id="intro"><em>Hello</em> World</h1>`,
+			maxDepth: 3,
+			want:     []headingInfo{{Level: 1, ID: "intro", Text: "Hello World"}},
+		},
+		{
+			name:     "inline code tag stripped",
+			html:     `<h1 id="func"><code>func</code> Main</h1>`,
+			maxDepth: 3,
+			want:     []headingInfo{{Level: 1, ID: "func", Text: "func Main"}},
+		},
+		{
+			name:     "inline strong tag stripped",
+			html:     `<h1 id="bold">Plain <strong>bold</strong> plain</h1>`,
+			maxDepth: 3,
+			want:     []headingInfo{{Level: 1, ID: "bold", Text: "Plain bold plain"}},
+		},
+		{
+			name:     "nested inline tags stripped",
+			html:     `<h1 id="nested"><em><strong>Nested</strong></em></h1>`,
+			maxDepth: 3,
+			want:     []headingInfo{{Level: 1, ID: "nested", Text: "Nested"}},
+		},
+		{
+			name:     "multiple inline tags stripped",
+			html:     `<h1 id="multi"><code>code</code> and <em>emphasis</em></h1>`,
+			maxDepth: 3,
+			want:     []headingInfo{{Level: 1, ID: "multi", Text: "code and emphasis"}},
+		},
+		{
+			name:     "anchor tag inside heading stripped",
+			html:     `<h1 id="link"><a href="#">Link Text</a></h1>`,
+			maxDepth: 3,
+			want:     []headingInfo{{Level: 1, ID: "link", Text: "Link Text"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractHeadings(tt.html, tt.maxDepth)
+
+			if len(got) != len(tt.want) {
+				t.Fatalf("extractHeadings() returned %d headings, want %d", len(got), len(tt.want))
+			}
+
+			for i, want := range tt.want {
+				if got[i].Level != want.Level {
+					t.Errorf("heading[%d].Level = %d, want %d", i, got[i].Level, want.Level)
+				}
+				if got[i].ID != want.ID {
+					t.Errorf("heading[%d].ID = %q, want %q", i, got[i].ID, want.ID)
+				}
+				if got[i].Text != want.Text {
+					t.Errorf("heading[%d].Text = %q, want %q", i, got[i].Text, want.Text)
+				}
+			}
+		})
+	}
+}
+
+func TestStripHTMLTags(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"plain text", "plain text"},
+		{"<em>emphasized</em>", "emphasized"},
+		{"<strong>bold</strong>", "bold"},
+		{"<code>code</code>", "code"},
+		{"<a href=\"#\">link</a>", "link"},
+		{"<em>Hello</em> World", "Hello World"},
+		{"Plain <strong>bold</strong> plain", "Plain bold plain"},
+		{"<em><strong>nested</strong></em>", "nested"},
+		{"  <em>spaced</em>  ", "spaced"},
+		{"", ""},
+		{"no tags", "no tags"},
+		{"<br/>self closing", "self closing"},
+		{"<div class=\"foo\">with attrs</div>", "with attrs"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := stripHTMLTags(tt.input)
+			if got != tt.want {
+				t.Errorf("stripHTMLTags(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNumberingState_Next(t *testing.T) {
+	tests := []struct {
+		name   string
+		levels []int
+		want   []string
+	}{
+		{
+			name:   "sequential h1s",
+			levels: []int{1, 1, 1},
+			want:   []string{"1.", "2.", "3."},
+		},
+		{
+			name:   "h1 then h2s",
+			levels: []int{1, 2, 2},
+			want:   []string{"1.", "1.1.", "1.2."},
+		},
+		{
+			name:   "h1 h2 h3 nested",
+			levels: []int{1, 2, 3},
+			want:   []string{"1.", "1.1.", "1.1.1."},
+		},
+		{
+			name:   "return to h1 resets counters",
+			levels: []int{1, 2, 1},
+			want:   []string{"1.", "1.1.", "2."},
+		},
+		{
+			name:   "return to h2 resets h3",
+			levels: []int{1, 2, 3, 2},
+			want:   []string{"1.", "1.1.", "1.1.1.", "1.2."},
+		},
+		{
+			name:   "normalization starts at h2",
+			levels: []int{2, 2, 3},
+			want:   []string{"1.", "2.", "2.1."},
+		},
+		{
+			name:   "normalization starts at h3",
+			levels: []int{3, 3},
+			want:   []string{"1.", "2."},
+		},
+		{
+			name:   "gap skipping h1 to h3",
+			levels: []int{1, 3},
+			want:   []string{"1.", "1.1."},
+		},
+		{
+			name:   "gap skipping h1 to h4",
+			levels: []int{1, 4, 4},
+			want:   []string{"1.", "1.1.", "1.1.1."}, // consecutive gaps increase depth each time
+		},
+		{
+			name:   "complex sequence",
+			levels: []int{1, 2, 2, 3, 2, 1, 2},
+			want:   []string{"1.", "1.1.", "1.2.", "1.2.1.", "1.3.", "2.", "2.1."},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			state := newNumberingState()
+
+			for i, level := range tt.levels {
+				got, _ := state.next(level)
+				if got != tt.want[i] {
+					t.Errorf("next(%d) at step %d = %q, want %q", level, i, got, tt.want[i])
+				}
+			}
+		})
+	}
+}
+
+func TestNumberingState_Next_EffectiveDepth(t *testing.T) {
+	tests := []struct {
+		name       string
+		levels     []int
+		wantDepths []int
+	}{
+		{
+			name:       "sequential h1s all depth 1",
+			levels:     []int{1, 1, 1},
+			wantDepths: []int{1, 1, 1},
+		},
+		{
+			name:       "h1 h2 h3 increasing depths",
+			levels:     []int{1, 2, 3},
+			wantDepths: []int{1, 2, 3},
+		},
+		{
+			name:       "normalization starts at h2",
+			levels:     []int{2, 3},
+			wantDepths: []int{1, 2},
+		},
+		{
+			name:       "gap skipping h1 to h3",
+			levels:     []int{1, 3},
+			wantDepths: []int{1, 2}, // h3 becomes depth 2 (gap skipped)
+		},
+		{
+			name:       "return to shallower level",
+			levels:     []int{1, 2, 3, 1},
+			wantDepths: []int{1, 2, 3, 1},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			state := newNumberingState()
+
+			for i, level := range tt.levels {
+				_, depth := state.next(level)
+				if depth != tt.wantDepths[i] {
+					t.Errorf("next(%d) at step %d depth = %d, want %d", level, i, depth, tt.wantDepths[i])
+				}
+			}
+		})
+	}
+}
+
+func TestGenerateNumberedTOC(t *testing.T) {
+	tests := []struct {
+		name         string
+		headings     []headingInfo
+		title        string
+		wantEmpty    bool
+		wantContains []string
+	}{
+		{
+			name:      "nil headings returns empty",
+			headings:  nil,
+			title:     "Contents",
+			wantEmpty: true,
+		},
+		{
+			name:      "empty headings returns empty",
+			headings:  []headingInfo{},
+			title:     "Contents",
+			wantEmpty: true,
+		},
+		{
+			name: "single heading with title",
+			headings: []headingInfo{
+				{Level: 1, ID: "intro", Text: "Introduction"},
+			},
+			title: "Table of Contents",
+			wantContains: []string{
+				`<nav class="toc">`,
+				`<h2 class="toc-title">Table of Contents</h2>`,
+				`<ol class="toc-list">`,
+				`href="#intro"`,
+				`1. Introduction`,
+				`</nav>`,
+			},
+		},
+		{
+			name: "single heading without title",
+			headings: []headingInfo{
+				{Level: 1, ID: "intro", Text: "Introduction"},
+			},
+			title: "",
+			wantContains: []string{
+				`<nav class="toc">`,
+				`<ol class="toc-list">`,
+				`href="#intro"`,
+			},
+		},
+		{
+			name: "escapes HTML in heading text",
+			headings: []headingInfo{
+				{Level: 1, ID: "xss", Text: "<script>alert('xss')</script>"},
+			},
+			title: "",
+			wantContains: []string{
+				`&lt;script&gt;`,
+			},
+		},
+		{
+			name: "escapes HTML in ID",
+			headings: []headingInfo{
+				{Level: 1, ID: `test"><script>`, Text: "Test"},
+			},
+			title: "",
+			wantContains: []string{
+				`href="#test&#34;&gt;&lt;script&gt;"`,
+			},
+		},
+		{
+			name: "escapes HTML in title",
+			headings: []headingInfo{
+				{Level: 1, ID: "test", Text: "Test"},
+			},
+			title: "<script>alert('xss')</script>",
+			wantContains: []string{
+				`&lt;script&gt;`,
+			},
+		},
+		{
+			name: "nested headings create nested lists",
+			headings: []headingInfo{
+				{Level: 1, ID: "ch1", Text: "Chapter 1"},
+				{Level: 2, ID: "sec1", Text: "Section 1"},
+			},
+			title: "",
+			wantContains: []string{
+				`1. Chapter 1`,
+				`1.1. Section 1`,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := generateNumberedTOC(tt.headings, tt.title)
+
+			if tt.wantEmpty {
+				if got != "" {
+					t.Errorf("generateNumberedTOC() = %q, want empty", got)
+				}
+				return
+			}
+
+			if got == "" {
+				t.Fatal("generateNumberedTOC() returned empty, want HTML")
+			}
+
+			for _, want := range tt.wantContains {
+				if !strings.Contains(got, want) {
+					t.Errorf("generateNumberedTOC() missing %q\nGot:\n%s", want, got)
+				}
+			}
+		})
+	}
+}
+
+func TestInjectTOC(t *testing.T) {
+	injector := newTOCInjection()
+	ctx := context.Background()
+
+	t.Run("nil data returns HTML unchanged", func(t *testing.T) {
+		html := "<html><body>Hello</body></html>"
+		got, err := injector.InjectTOC(ctx, html, nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != html {
+			t.Errorf("InjectTOC() = %q, want %q", got, html)
+		}
+	})
+
+	t.Run("no headings returns HTML unchanged", func(t *testing.T) {
+		html := "<html><body><p>No headings</p></body></html>"
+		data := &tocData{Title: "TOC", MaxDepth: 3}
+		got, err := injector.InjectTOC(ctx, html, data)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != html {
+			t.Errorf("InjectTOC() should return unchanged HTML when no headings")
+		}
+	})
+
+	t.Run("injects after cover-end marker", func(t *testing.T) {
+		html := `<html><body></div></section><!-- cover-end --><h1 id="ch1">Chapter 1</h1></body></html>`
+		data := &tocData{Title: "Contents", MaxDepth: 3}
+
+		got, err := injector.InjectTOC(ctx, html, data)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// TOC should appear after cover-end marker
+		coverEndIdx := strings.Index(got, "<!-- cover-end -->")
+		tocIdx := strings.Index(got, `<nav class="toc">`)
+		if coverEndIdx == -1 || tocIdx == -1 {
+			t.Fatal("cover-end or toc nav not found")
+		}
+		if tocIdx < coverEndIdx {
+			t.Error("TOC should be inserted after cover-end marker")
+		}
+	})
+
+	t.Run("fallback injects after body tag", func(t *testing.T) {
+		html := `<html><body><h1 id="ch1">Chapter 1</h1></body></html>`
+		data := &tocData{Title: "", MaxDepth: 3}
+
+		got, err := injector.InjectTOC(ctx, html, data)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// TOC should appear after <body>
+		bodyIdx := strings.Index(got, "<body>")
+		tocIdx := strings.Index(got, `<nav class="toc">`)
+		if bodyIdx == -1 || tocIdx == -1 {
+			t.Fatal("body or toc nav not found")
+		}
+		if tocIdx < bodyIdx+6 { // len("<body>") = 6
+			t.Error("TOC should be inserted after <body>")
+		}
+	})
+
+	t.Run("fallback with body attributes", func(t *testing.T) {
+		html := `<html><body class="main"><h1 id="ch1">Chapter 1</h1></body></html>`
+		data := &tocData{MaxDepth: 3}
+
+		got, err := injector.InjectTOC(ctx, html, data)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !strings.Contains(got, `<nav class="toc">`) {
+			t.Error("TOC not injected")
+		}
+	})
+
+	t.Run("last fallback prepends to HTML", func(t *testing.T) {
+		html := `<h1 id="ch1">Chapter 1</h1><p>Content</p>`
+		data := &tocData{MaxDepth: 3}
+
+		got, err := injector.InjectTOC(ctx, html, data)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !strings.HasPrefix(got, `<nav class="toc">`) {
+			t.Errorf("TOC should be prepended, got: %q", got[:min(50, len(got))])
+		}
+	})
+
+	t.Run("respects maxDepth", func(t *testing.T) {
+		html := `<body><h1 id="h1">H1</h1><h2 id="h2">H2</h2><h3 id="h3">H3</h3></body>`
+		data := &tocData{MaxDepth: 2}
+
+		got, err := injector.InjectTOC(ctx, html, data)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !strings.Contains(got, "H1") || !strings.Contains(got, "H2") {
+			t.Error("TOC should contain H1 and H2")
+		}
+		// H3 should not be in TOC (check for the link, not just text)
+		if strings.Contains(got, `href="#h3"`) {
+			t.Error("TOC should not contain H3 link with maxDepth 2")
+		}
+	})
+}
+
+func TestInjectTOC_ContextCancellation(t *testing.T) {
+	injector := newTOCInjection()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	data := &tocData{Title: "TOC", MaxDepth: 3}
+	html := `<body><h1 id="test">Test</h1></body>`
+	_, err := injector.InjectTOC(ctx, html, data)
+
+	if err == nil {
+		t.Fatal("expected error for cancelled context")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("expected context.Canceled, got %v", err)
 	}
 }
