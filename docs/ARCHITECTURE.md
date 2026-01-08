@@ -24,30 +24,33 @@
 ```
 Markdown ──▶ mdtransform ──▶ md2html ──▶ htmlinject ──▶ html2pdf ──▶ PDF
                 │               │             │              │
-           Normalize        Goldmark      Watermark       Chrome
-           Highlights       GFM/TOC IDs   Cover page      Headless
-           Blank lines      Footnotes     TOC inject      Footer
+           Normalize        Goldmark      Page breaks    Chrome
+           Highlights       GFM/TOC IDs   Watermark      Headless
+           Blank lines      Footnotes     Cover page     Footer
+                                          TOC inject
                                           CSS inject
                                           Signature
 ```
 
-| Stage           | Transformation | Tool           |
-| --------------- | -------------- | -------------- |
-| **mdtransform** | MD -> MD       | Regex          |
-| **md2html**     | MD -> HTML     | Goldmark (GFM) |
-| **htmlinject**  | HTML -> HTML   | String/template|
-| **html2pdf**    | HTML -> PDF    | Rod (Chrome)   |
+| Stage           | Transformation | Tool            |
+| --------------- | -------------- | --------------- |
+| **mdtransform** | MD -> MD       | Regex           |
+| **md2html**     | MD -> HTML     | Goldmark (GFM)  |
+| **htmlinject**  | HTML -> HTML   | String/template |
+| **html2pdf**    | HTML -> PDF    | Rod (Chrome)    |
 
 ---
 
 ## Injection Order
 
 ```
-1. CSS + Watermark CSS  ──▶  <head>
-2. Cover page           ──▶  after <body>
-3. TOC                  ──▶  after cover (or <body>)
-4. Signature            ──▶  before </body>
-5. Footer               ──▶  Chrome native footer
+1. Page breaks CSS      ──▶  <head> (lowest priority)
+2. Watermark CSS        ──▶  <head>
+3. User CSS             ──▶  <head> (highest priority)
+4. Cover page           ──▶  after <body>
+5. TOC                  ──▶  after cover (or <body>)
+6. Signature            ──▶  before </body>
+7. Footer               ──▶  Chrome native footer
 ```
 
 ---

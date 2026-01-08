@@ -174,6 +174,20 @@ pdf, err := svc.Convert(ctx, md2pdf.Input{
 })
 ```
 
+### With Page Breaks
+
+```go
+pdf, err := svc.Convert(ctx, md2pdf.Input{
+    Markdown: content,
+    PageBreaks: &md2pdf.PageBreaks{
+        BeforeH1: true, // Page break before H1 headings
+        BeforeH2: true, // Page break before H2 headings
+        Orphans:  3,    // Min 3 lines at page bottom
+        Widows:   3,    // Min 3 lines at page top
+    },
+})
+```
+
 ## CLI Reference
 
 ```
@@ -193,7 +207,11 @@ Flags:
       --no-cover          Disable cover page
       --no-toc            Disable table of contents
       --no-watermark      Disable watermark
+      --no-page-breaks    Disable page break features
       --cover-title       Override cover page title
+      --break-before      Page breaks before headings: h1,h2,h3 (comma-separated)
+      --orphans           Min lines at page bottom (1-5, default: 2)
+      --widows            Min lines at page top (1-5, default: 2)
       --watermark-text    Watermark text (e.g., BRAND)
       --watermark-color   Watermark color in hex (default: #888888)
       --watermark-opacity Watermark opacity 0.0-1.0 (default: 0.1)
@@ -223,6 +241,9 @@ md2pdf --watermark-text "BRAND" --watermark-opacity 0.15 document.md
 
 # Override cover title
 md2pdf --cover-title "Final Report" document.md
+
+# Page breaks before H1 and H2 headings
+md2pdf --break-before h1,h2 document.md
 ```
 
 ### Docker
@@ -280,6 +301,12 @@ Supported formats: `.yaml`, `.yml`
 | `watermark.color`       | string | `"#888888"`  | Watermark color (hex)                          |
 | `watermark.opacity`     | float  | `0.1`        | Watermark opacity (0.0-1.0)                    |
 | `watermark.angle`       | float  | `-45`        | Watermark rotation (degrees)                   |
+| `pageBreaks.enabled`    | bool   | `false`      | Enable page break features                     |
+| `pageBreaks.beforeH1`   | bool   | `false`      | Page break before H1 headings                  |
+| `pageBreaks.beforeH2`   | bool   | `false`      | Page break before H2 headings                  |
+| `pageBreaks.beforeH3`   | bool   | `false`      | Page break before H3 headings                  |
+| `pageBreaks.orphans`    | int    | `2`          | Min lines at page bottom (1-5)                 |
+| `pageBreaks.widows`     | int    | `2`          | Min lines at page top (1-5)                    |
 
 <details>
 <summary>Example config file</summary>
@@ -329,6 +356,14 @@ watermark:
   color: '#888888'
   opacity: 0.1
   angle: -45
+
+pageBreaks:
+  enabled: true
+  beforeH1: true
+  beforeH2: false
+  beforeH3: false
+  orphans: 2
+  widows: 2
 ```
 
 </details>
@@ -339,7 +374,7 @@ watermark:
 go-md2pdf/
 ├── service.go          # Public API: New(), Convert(), Close()
 ├── pool.go             # ServicePool for parallel processing
-├── types.go            # Input, Footer, Signature, Watermark, Cover, TOC
+├── types.go            # Input, Footer, Signature, Watermark, Cover, TOC, PageBreaks
 ├── mdtransform.go      # Markdown preprocessing
 ├── md2html.go          # Markdown to HTML (Goldmark)
 ├── htmlinject.go       # CSS/signature/cover/TOC injection
