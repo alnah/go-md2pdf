@@ -558,6 +558,202 @@ unknownField: "should fail"
 	})
 }
 
+func TestConfig_Validate_PageBreaks(t *testing.T) {
+	t.Run("pageBreaks disabled passes validation", func(t *testing.T) {
+		cfg := &Config{PageBreaks: PageBreaksConfig{Enabled: false}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("pageBreaks enabled with valid orphans passes", func(t *testing.T) {
+		cfg := &Config{PageBreaks: PageBreaksConfig{Enabled: true, Orphans: 3}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("pageBreaks enabled with valid widows passes", func(t *testing.T) {
+		cfg := &Config{PageBreaks: PageBreaksConfig{Enabled: true, Widows: 4}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("pageBreaks orphans 0 passes (uses default)", func(t *testing.T) {
+		cfg := &Config{PageBreaks: PageBreaksConfig{Enabled: true, Orphans: 0}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("pageBreaks widows 0 passes (uses default)", func(t *testing.T) {
+		cfg := &Config{PageBreaks: PageBreaksConfig{Enabled: true, Widows: 0}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("pageBreaks orphans at min boundary passes", func(t *testing.T) {
+		cfg := &Config{PageBreaks: PageBreaksConfig{Enabled: true, Orphans: 1}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("pageBreaks orphans at max boundary passes", func(t *testing.T) {
+		cfg := &Config{PageBreaks: PageBreaksConfig{Enabled: true, Orphans: 5}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("pageBreaks widows at min boundary passes", func(t *testing.T) {
+		cfg := &Config{PageBreaks: PageBreaksConfig{Enabled: true, Widows: 1}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("pageBreaks widows at max boundary passes", func(t *testing.T) {
+		cfg := &Config{PageBreaks: PageBreaksConfig{Enabled: true, Widows: 5}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("pageBreaks orphans below 1 returns error", func(t *testing.T) {
+		cfg := &Config{PageBreaks: PageBreaksConfig{Orphans: -1}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("expected error for invalid orphans")
+		}
+	})
+
+	t.Run("pageBreaks orphans above 5 returns error", func(t *testing.T) {
+		cfg := &Config{PageBreaks: PageBreaksConfig{Orphans: 6}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("expected error for invalid orphans")
+		}
+	})
+
+	t.Run("pageBreaks widows below 1 returns error", func(t *testing.T) {
+		cfg := &Config{PageBreaks: PageBreaksConfig{Widows: -1}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("expected error for invalid widows")
+		}
+	})
+
+	t.Run("pageBreaks widows above 5 returns error", func(t *testing.T) {
+		cfg := &Config{PageBreaks: PageBreaksConfig{Widows: 6}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("expected error for invalid widows")
+		}
+	})
+
+	t.Run("pageBreaks all heading breaks valid", func(t *testing.T) {
+		cfg := &Config{PageBreaks: PageBreaksConfig{
+			Enabled:  true,
+			BeforeH1: true,
+			BeforeH2: true,
+			BeforeH3: true,
+			Orphans:  2,
+			Widows:   2,
+		}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestLoadConfig_PageBreaks(t *testing.T) {
+	t.Run("loads page breaks settings", func(t *testing.T) {
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "test.yaml")
+		content := `pageBreaks:
+  enabled: true
+  beforeH1: true
+  beforeH2: false
+  beforeH3: true
+  orphans: 3
+  widows: 4
+`
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		cfg, err := LoadConfig(configPath)
+		if err != nil {
+			t.Fatalf("LoadConfig() error = %v", err)
+		}
+		if !cfg.PageBreaks.Enabled {
+			t.Error("PageBreaks.Enabled = false, want true")
+		}
+		if !cfg.PageBreaks.BeforeH1 {
+			t.Error("PageBreaks.BeforeH1 = false, want true")
+		}
+		if cfg.PageBreaks.BeforeH2 {
+			t.Error("PageBreaks.BeforeH2 = true, want false")
+		}
+		if !cfg.PageBreaks.BeforeH3 {
+			t.Error("PageBreaks.BeforeH3 = false, want true")
+		}
+		if cfg.PageBreaks.Orphans != 3 {
+			t.Errorf("PageBreaks.Orphans = %d, want 3", cfg.PageBreaks.Orphans)
+		}
+		if cfg.PageBreaks.Widows != 4 {
+			t.Errorf("PageBreaks.Widows = %d, want 4", cfg.PageBreaks.Widows)
+		}
+	})
+
+	t.Run("pageBreaks.orphans invalid range returns error", func(t *testing.T) {
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "test.yaml")
+		content := `pageBreaks:
+  enabled: true
+  orphans: 10
+`
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		_, err := LoadConfig(configPath)
+		if err == nil {
+			t.Fatal("expected error for invalid orphans")
+		}
+	})
+
+	t.Run("pageBreaks.widows invalid range returns error", func(t *testing.T) {
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "test.yaml")
+		content := `pageBreaks:
+  enabled: true
+  widows: 10
+`
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		_, err := LoadConfig(configPath)
+		if err == nil {
+			t.Fatal("expected error for invalid widows")
+		}
+	})
+}
+
 func TestConfig_Validate_TOC(t *testing.T) {
 	t.Run("toc disabled passes validation", func(t *testing.T) {
 		cfg := &Config{TOC: TOCConfig{Enabled: false}}
