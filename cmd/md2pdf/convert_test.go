@@ -817,9 +817,9 @@ func TestIsURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			got := isURL(tt.input)
+			got := md2pdf.IsURL(tt.input)
 			if got != tt.want {
-				t.Errorf("isURL(%q) = %v, want %v", tt.input, got, tt.want)
+				t.Errorf("IsURL(%q) = %v, want %v", tt.input, got, tt.want)
 			}
 		})
 	}
