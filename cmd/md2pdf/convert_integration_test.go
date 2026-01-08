@@ -436,3 +436,143 @@ func TestBatchConversion_ConcurrentExecution(t *testing.T) {
 		}
 	}
 }
+
+func TestBatchConversion_PageBreaksFlags(t *testing.T) {
+	tempDir := setupTestDir(t, map[string]string{
+		"doc.md": "# Chapter 1\n\n## Section 1\n\nContent here.\n\n# Chapter 2\n\nMore content.",
+	})
+
+	mock := newMockConverter()
+	inputPath := filepath.Join(tempDir, "doc.md")
+
+	// Test with page break flags
+	err := runWithTestPool([]string{
+		"md2pdf",
+		"--break-before", "h1,h2",
+		"--orphans", "3",
+		"--widows", "4",
+		inputPath,
+	}, mock)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	calls := mock.getCalls()
+	if len(calls) != 1 {
+		t.Fatalf("expected 1 call, got %d", len(calls))
+	}
+
+	// Verify page breaks settings were passed to converter
+	if calls[0].PageBreaks == nil {
+		t.Fatal("expected PageBreaks to be set")
+	}
+	if !calls[0].PageBreaks.BeforeH1 {
+		t.Error("expected BeforeH1 = true")
+	}
+	if !calls[0].PageBreaks.BeforeH2 {
+		t.Error("expected BeforeH2 = true")
+	}
+	if calls[0].PageBreaks.BeforeH3 {
+		t.Error("expected BeforeH3 = false")
+	}
+	if calls[0].PageBreaks.Orphans != 3 {
+		t.Errorf("Orphans = %d, want 3", calls[0].PageBreaks.Orphans)
+	}
+	if calls[0].PageBreaks.Widows != 4 {
+		t.Errorf("Widows = %d, want 4", calls[0].PageBreaks.Widows)
+	}
+}
+
+func TestBatchConversion_NoPageBreaksFlag(t *testing.T) {
+	tempDir := setupTestDir(t, map[string]string{
+		"doc.md": "# Test",
+	})
+
+	// Create config with page breaks enabled
+	configContent := `pageBreaks:
+  enabled: true
+  beforeH1: true
+  orphans: 5
+`
+	configPath := filepath.Join(tempDir, "test.yaml")
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	mock := newMockConverter()
+	inputPath := filepath.Join(tempDir, "doc.md")
+
+	// Test --no-page-breaks overrides config
+	err := runWithTestPool([]string{
+		"md2pdf",
+		"--config", configPath,
+		"--no-page-breaks",
+		inputPath,
+	}, mock)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	calls := mock.getCalls()
+	if len(calls) != 1 {
+		t.Fatalf("expected 1 call, got %d", len(calls))
+	}
+
+	// Verify page breaks were disabled (nil)
+	if calls[0].PageBreaks != nil {
+		t.Errorf("expected PageBreaks to be nil when --no-page-breaks used, got %+v", calls[0].PageBreaks)
+	}
+}
+
+func TestBatchConversion_PageBreaksFromConfig(t *testing.T) {
+	tempDir := setupTestDir(t, map[string]string{
+		"doc.md": "# Test",
+	})
+
+	// Create config with page breaks settings
+	configContent := `pageBreaks:
+  enabled: true
+  beforeH1: true
+  beforeH2: false
+  beforeH3: true
+  orphans: 4
+  widows: 5
+`
+	configPath := filepath.Join(tempDir, "test.yaml")
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	mock := newMockConverter()
+	inputPath := filepath.Join(tempDir, "doc.md")
+
+	err := runWithTestPool([]string{"md2pdf", "--config", configPath, inputPath}, mock)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	calls := mock.getCalls()
+	if len(calls) != 1 {
+		t.Fatalf("expected 1 call, got %d", len(calls))
+	}
+
+	// Verify config settings were applied
+	if calls[0].PageBreaks == nil {
+		t.Fatal("expected PageBreaks to be set from config")
+	}
+	if !calls[0].PageBreaks.BeforeH1 {
+		t.Error("expected BeforeH1 = true from config")
+	}
+	if calls[0].PageBreaks.BeforeH2 {
+		t.Error("expected BeforeH2 = false from config")
+	}
+	if !calls[0].PageBreaks.BeforeH3 {
+		t.Error("expected BeforeH3 = true from config")
+	}
+	if calls[0].PageBreaks.Orphans != 4 {
+		t.Errorf("Orphans = %d, want 4 from config", calls[0].PageBreaks.Orphans)
+	}
+	if calls[0].PageBreaks.Widows != 5 {
+		t.Errorf("Widows = %d, want 5 from config", calls[0].PageBreaks.Widows)
+	}
+}
