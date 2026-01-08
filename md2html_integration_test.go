@@ -62,6 +62,25 @@ Ceci est un test avec des caracteres speciaux.`
 		}
 	})
 
+	t.Run("code block has syntax highlighting classes", func(t *testing.T) {
+		content := "```go\nfunc main() {}\n```"
+
+		converter := newGoldmarkConverter()
+		got, err := converter.ToHTML(ctx, content)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// Chroma adds class="chroma" to the pre element
+		if !strings.Contains(got, `class="chroma"`) {
+			t.Errorf("expected chroma class on pre element, got %q", got)
+		}
+		// Chroma adds token classes like "kd" (keyword declaration) for syntax tokens
+		if !strings.Contains(got, `class="kd"`) {
+			t.Errorf("expected syntax token classes (e.g., kd for keyword), got %q", got)
+		}
+	})
+
 	t.Run("table markdown", func(t *testing.T) {
 		content := `# Table Test
 
