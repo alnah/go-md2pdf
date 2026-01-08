@@ -20,16 +20,18 @@ var (
 
 // Field length limits for multi-tenant safety.
 const (
-	MaxNameLength        = 100  // Full name (generous)
-	MaxTitleLength       = 100  // Professional title
-	MaxEmailLength       = 254  // RFC 5321
-	MaxURLLength         = 2048 // Browser limit
-	MaxStatusLength      = 50   // "DRAFT", "FINAL", "v1.2.3"
-	MaxDateLength        = 30   // "2025-12-31" or "December 31, 2025"
-	MaxTextLength        = 500  // Footer/free-form text
-	MaxLabelLength       = 100  // Link label
-	MaxPageSizeLength    = 10   // "letter", "a4", "legal"
-	MaxOrientationLength = 10   // "portrait", "landscape"
+	MaxNameLength           = 100  // Full name (generous)
+	MaxTitleLength          = 100  // Professional title
+	MaxEmailLength          = 254  // RFC 5321
+	MaxURLLength            = 2048 // Browser limit
+	MaxStatusLength         = 50   // "DRAFT", "FINAL", "v1.2.3"
+	MaxDateLength           = 30   // "2025-12-31" or "December 31, 2025"
+	MaxTextLength           = 500  // Footer/free-form text
+	MaxLabelLength          = 100  // Link label
+	MaxPageSizeLength       = 10   // "letter", "a4", "legal"
+	MaxOrientationLength    = 10   // "portrait", "landscape"
+	MaxWatermarkTextLength  = 50   // "DRAFT", "CONFIDENTIAL"
+	MaxWatermarkColorLength = 20   // "#888888" or color name
 )
 
 // Config holds all configuration for document generation.
@@ -41,6 +43,7 @@ type Config struct {
 	Signature SignatureConfig `yaml:"signature"`
 	Assets    AssetsConfig    `yaml:"assets"`
 	Page      PageConfig      `yaml:"page"`
+	Watermark WatermarkConfig `yaml:"watermark"`
 }
 
 // InputConfig defines input source options.
@@ -94,6 +97,15 @@ type PageConfig struct {
 	Size        string  `yaml:"size"`        // "letter", "a4", "legal" (default: "letter")
 	Orientation string  `yaml:"orientation"` // "portrait", "landscape" (default: "portrait")
 	Margin      float64 `yaml:"margin"`      // inches (default: 0.5)
+}
+
+// WatermarkConfig defines background watermark options.
+type WatermarkConfig struct {
+	Enabled bool    `yaml:"enabled"`
+	Text    string  `yaml:"text"`    // Text to display (e.g., "DRAFT", "CONFIDENTIAL")
+	Color   string  `yaml:"color"`   // Hex color (default: "#888888")
+	Opacity float64 `yaml:"opacity"` // 0.0 to 1.0 (default: 0.1)
+	Angle   float64 `yaml:"angle"`   // Rotation in degrees (default: -45)
 }
 
 // Validate checks field lengths to prevent abuse in multi-tenant scenarios.
@@ -151,6 +163,25 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	// Validate watermark fields
+	if c.Watermark.Enabled {
+		if c.Watermark.Text == "" {
+			return fmt.Errorf("watermark.text: required when watermark is enabled")
+		}
+		if err := validateFieldLength("watermark.text", c.Watermark.Text, MaxWatermarkTextLength); err != nil {
+			return err
+		}
+		if err := validateFieldLength("watermark.color", c.Watermark.Color, MaxWatermarkColorLength); err != nil {
+			return err
+		}
+		if c.Watermark.Opacity < 0 || c.Watermark.Opacity > 1 {
+			return fmt.Errorf("watermark.opacity: must be between 0 and 1, got %.2f", c.Watermark.Opacity)
+		}
+		if c.Watermark.Angle < -90 || c.Watermark.Angle > 90 {
+			return fmt.Errorf("watermark.angle: must be between -90 and 90, got %.2f", c.Watermark.Angle)
+		}
+	}
+
 	return nil
 }
 
@@ -171,6 +202,7 @@ func DefaultConfig() *Config {
 		Footer:    FooterConfig{Enabled: false},
 		Signature: SignatureConfig{Enabled: false},
 		Assets:    AssetsConfig{BasePath: ""},
+		Watermark: WatermarkConfig{Enabled: false},
 	}
 }
 
