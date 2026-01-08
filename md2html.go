@@ -9,6 +9,7 @@ import (
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
 )
 
@@ -45,6 +46,9 @@ func newGoldmarkConverter() *goldmarkConverter {
 					chromahtml.WithClasses(true), // CSS classes for smaller HTML and external stylesheet control
 				),
 			),
+		),
+		goldmark.WithParserOptions(
+			parser.WithAutoHeadingID(), // Generate IDs for headings (required for TOC)
 		),
 		goldmark.WithRendererOptions(
 			html.WithHardWraps(), // Treat newlines as <br>
