@@ -174,11 +174,13 @@ body::before {
 }
 
 // escapeCSSString escapes a string for safe use in CSS content property.
-// Prevents CSS injection by escaping backslashes, quotes, and newlines.
+// Prevents CSS injection by escaping backslashes, quotes, newlines, and
+// percent signs (to avoid fmt.Sprintf format string issues).
 func escapeCSSString(s string) string {
 	s = strings.ReplaceAll(s, `\`, `\\`)
 	s = strings.ReplaceAll(s, `"`, `\"`)
 	s = strings.ReplaceAll(s, "\n", `\A `)
 	s = strings.ReplaceAll(s, "\r", "")
+	s = strings.ReplaceAll(s, `%`, `%%`)
 	return s
 }
