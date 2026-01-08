@@ -5,12 +5,12 @@ go-md2pdf/                      # package md2pdf (library)
 │
 ├── service.go                  # New(), Convert(), Close()
 ├── pool.go                     # ServicePool, ResolvePoolSize()
-├── types.go                    # Input, Footer, Signature, PageSettings
+├── types.go                    # Input, PageSettings, Footer, Signature, Watermark, Cover, TOC
 ├── errors.go                   # Sentinel errors
 │
 ├── mdtransform.go              # MD -> MD (preprocessing)
 ├── md2html.go                  # MD -> HTML (Goldmark)
-├── htmlinject.go               # HTML -> HTML (CSS, signature)
+├── htmlinject.go               # HTML -> HTML (CSS, watermark, cover, TOC, signature)
 ├── html2pdf.go                 # HTML -> PDF (Rod/Chrome)
 ├── fileutil.go                 # Temp files
 ├── process_{unix,windows}.go   # killProcessGroup per platform
@@ -21,7 +21,7 @@ go-md2pdf/                      # package md2pdf (library)
 │   └── signal_{unix,windows}.go
 │
 ├── internal/
-│   ├── assets/                 # Embedded CSS, templates
+│   ├── assets/                 # Embedded CSS, HTML templates (cover, signature)
 │   ├── config/                 # YAML config, validation
 │   └── yamlutil/               # YAML wrapper with limits
 │

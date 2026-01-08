@@ -1,12 +1,12 @@
 # go-md2pdf
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/alnah/go-md2pdf.svg)](https://pkg.go.dev/github.com/alnah/go-md2pdf)
+[![Go Reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/alnah/go-md2pdf)
 [![Go Report Card](https://goreportcard.com/badge/github.com/alnah/go-md2pdf)](https://goreportcard.com/report/github.com/alnah/go-md2pdf)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/alnah/go-md2pdf/ci.yml?branch=main)](https://github.com/alnah/go-md2pdf/actions)
 [![Coverage](https://codecov.io/gh/alnah/go-md2pdf/branch/main/graph/badge.svg)](https://codecov.io/gh/alnah/go-md2pdf)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)
 
-> Convert Markdown to print-ready PDF in **3 lines of code** - with signatures, footers, and custom styling.
+> Convert Markdown to print-ready PDF in **3 lines of code** - with cover pages, table of contents, signatures, footers, watermarks, and custom styling.
 
 ## Installation
 
@@ -33,10 +33,13 @@ Download pre-built binaries from [GitHub Releases](https://github.com/alnah/go-m
 
 - **CLI + Library** - Use as `md2pdf` command or import in Go
 - **Batch conversion** - Process directories with parallel workers
+- **Cover pages** - Title, subtitle, logo, author, organization, date, version
+- **Table of contents** - Auto-generated from headings with configurable depth
 - **Custom styling** - Embedded themes or your own CSS
 - **Page settings** - Size (letter, A4, legal), orientation, margins
 - **Signatures** - Name, title, email, photo, links
 - **Footers** - Page numbers, dates, status text
+- **Watermarks** - Diagonal background text (BRAND, etc.)
 
 ## Quick Start
 
@@ -78,7 +81,37 @@ func main() {
 
 ## Library Usage
 
-### With Footer and Signature
+### With Cover Page
+
+```go
+pdf, err := svc.Convert(ctx, md2pdf.Input{
+    Markdown: content,
+    Cover: &md2pdf.Cover{
+        Title:        "Project Report",
+        Subtitle:     "Q4 2025 Analysis",
+        Author:       "John Doe",
+        AuthorTitle:  "Senior Analyst",
+        Organization: "Acme Corp",
+        Date:         "2025-12-15",
+        Version:      "v1.0",
+        Logo:         "/path/to/logo.png", // or URL
+    },
+})
+```
+
+### With Table of Contents
+
+```go
+pdf, err := svc.Convert(ctx, md2pdf.Input{
+    Markdown: content,
+    TOC: &md2pdf.TOC{
+        Title:    "Contents",
+        MaxDepth: 3, // Include h1, h2, h3
+    },
+})
+```
+
+### With Footer
 
 ```go
 pdf, err := svc.Convert(ctx, md2pdf.Input{
@@ -86,13 +119,35 @@ pdf, err := svc.Convert(ctx, md2pdf.Input{
     Footer: &md2pdf.Footer{
         ShowPageNumber: true,
         Position:       "center",
-        Date:           "2026-01-15",
+        Date:           "2025-12-15",
         Status:         "DRAFT",
     },
+})
+```
+
+### With Signature
+
+```go
+pdf, err := svc.Convert(ctx, md2pdf.Input{
+    Markdown: content,
     Signature: &md2pdf.Signature{
         Name:  "John Doe",
         Title: "Senior Developer",
         Email: "john@example.com",
+    },
+})
+```
+
+### With Watermark
+
+```go
+pdf, err := svc.Convert(ctx, md2pdf.Input{
+    Markdown: content,
+    Watermark: &md2pdf.Watermark{
+        Text:    "CONFIDENTIAL",
+        Color:   "#888888",
+        Opacity: 0.1,
+        Angle:   -45,
     },
 })
 ```
@@ -125,19 +180,27 @@ pdf, err := svc.Convert(ctx, md2pdf.Input{
 md2pdf [flags] <input>
 
 Flags:
-  -o, --output       Output file or directory
-  -c, --config       Config name (work, personal) or path
-  -w, --workers      Number of parallel workers (default: auto)
-  -p, --page-size    Page size: letter, a4, legal (default: letter)
-      --orientation  Page orientation: portrait, landscape (default: portrait)
-      --margin       Page margin in inches (default: 0.5)
-      --css          Custom CSS file
-      --no-style     Disable default styling
-      --no-footer    Disable footer
-      --no-signature Disable signature
-  -q, --quiet        Only show errors
-  -v, --verbose      Show detailed timing
-      --version      Show version and exit
+  -o, --output            Output file or directory
+  -c, --config            Config name (work, personal) or path
+  -w, --workers           Number of parallel workers (default: auto)
+  -p, --page-size         Page size: letter, a4, legal (default: letter)
+      --orientation       Page orientation: portrait, landscape (default: portrait)
+      --margin            Page margin in inches (default: 0.5)
+      --css               Custom CSS file
+      --no-style          Disable default styling
+      --no-footer         Disable footer
+      --no-signature      Disable signature
+      --no-cover          Disable cover page
+      --no-toc            Disable table of contents
+      --no-watermark      Disable watermark
+      --cover-title       Override cover page title
+      --watermark-text    Watermark text (e.g., BRAND)
+      --watermark-color   Watermark color in hex (default: #888888)
+      --watermark-opacity Watermark opacity 0.0-1.0 (default: 0.1)
+      --watermark-angle   Watermark rotation in degrees (default: -45)
+  -q, --quiet             Only show errors
+  -v, --verbose           Show detailed timing
+      --version           Show version and exit
 ```
 
 ### Examples
@@ -154,6 +217,12 @@ md2pdf --css custom.css --no-footer document.md
 
 # A4 landscape with 1-inch margins
 md2pdf -p a4 --orientation landscape --margin 1.0 document.md
+
+# With watermark
+md2pdf --watermark-text "BRAND" --watermark-opacity 0.15 document.md
+
+# Override cover title
+md2pdf --cover-title "Final Report" document.md
 ```
 
 ### Docker
@@ -174,26 +243,43 @@ docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf ./docs/ -o ./pdfs/
 Config files are loaded from `~/.config/go-md2pdf/` or current directory.
 Supported formats: `.yaml`, `.yml`
 
-| Option                  | Type   | Default      | Description                   |
-| ----------------------- | ------ | ------------ | ----------------------------- |
-| `input.defaultDir`      | string | -            | Default input directory       |
-| `output.defaultDir`     | string | -            | Default output directory      |
-| `css.style`             | string | -            | Embedded style name           |
-| `page.size`             | string | `"letter"`   | letter, a4, legal             |
-| `page.orientation`      | string | `"portrait"` | portrait, landscape           |
-| `page.margin`           | float  | `0.5`        | Margin in inches (0.25-3.0)   |
-| `footer.enabled`        | bool   | `false`      | Show footer                   |
-| `footer.showPageNumber` | bool   | `false`      | Show page numbers             |
-| `footer.position`       | string | `"right"`    | left, center, right           |
-| `footer.date`           | string | -            | Date text                     |
-| `footer.status`         | string | -            | Status text (DRAFT, etc)      |
-| `footer.text`           | string | -            | Custom footer text            |
-| `signature.enabled`     | bool   | `false`      | Show signature block          |
-| `signature.name`        | string | -            | Signer name                   |
-| `signature.title`       | string | -            | Signer title                  |
-| `signature.email`       | string | -            | Signer email                  |
-| `signature.imagePath`   | string | -            | Photo path or URL             |
-| `signature.links`       | array  | -            | Links (label, url)            |
+| Option                  | Type   | Default      | Description                                    |
+| ----------------------- | ------ | ------------ | ---------------------------------------------- |
+| `input.defaultDir`      | string | -            | Default input directory                        |
+| `output.defaultDir`     | string | -            | Default output directory                       |
+| `css.style`             | string | -            | Embedded style name                            |
+| `page.size`             | string | `"letter"`   | letter, a4, legal                              |
+| `page.orientation`      | string | `"portrait"` | portrait, landscape                            |
+| `page.margin`           | float  | `0.5`        | Margin in inches (0.25-3.0)                    |
+| `cover.enabled`         | bool   | `false`      | Show cover page                                |
+| `cover.title`           | string | -            | Cover title (auto: H1 or filename)             |
+| `cover.subtitle`        | string | -            | Cover subtitle                                 |
+| `cover.logo`            | string | -            | Logo path or URL                               |
+| `cover.author`          | string | -            | Author name (fallback: signature.name)         |
+| `cover.authorTitle`     | string | -            | Author title (fallback: signature.title)       |
+| `cover.organization`    | string | -            | Organization name                              |
+| `cover.date`            | string | -            | Date ("auto" for today, fallback: footer.date) |
+| `cover.version`         | string | -            | Version (fallback: footer.status)              |
+| `toc.enabled`           | bool   | `false`      | Show table of contents                         |
+| `toc.title`             | string | -            | TOC title (empty = no title)                   |
+| `toc.maxDepth`          | int    | `3`          | Heading depth (1-6)                            |
+| `footer.enabled`        | bool   | `false`      | Show footer                                    |
+| `footer.showPageNumber` | bool   | `false`      | Show page numbers                              |
+| `footer.position`       | string | `"right"`    | left, center, right                            |
+| `footer.date`           | string | -            | Date text                                      |
+| `footer.status`         | string | -            | Status text (DRAFT, etc)                       |
+| `footer.text`           | string | -            | Custom footer text                             |
+| `signature.enabled`     | bool   | `false`      | Show signature block                           |
+| `signature.name`        | string | -            | Signer name                                    |
+| `signature.title`       | string | -            | Signer title                                   |
+| `signature.email`       | string | -            | Signer email                                   |
+| `signature.imagePath`   | string | -            | Photo path or URL                              |
+| `signature.links`       | array  | -            | Links (label, url)                             |
+| `watermark.enabled`     | bool   | `false`      | Show watermark                                 |
+| `watermark.text`        | string | -            | Watermark text (required if enabled)           |
+| `watermark.color`       | string | `"#888888"`  | Watermark color (hex)                          |
+| `watermark.opacity`     | float  | `0.1`        | Watermark opacity (0.0-1.0)                    |
+| `watermark.angle`       | float  | `-45`        | Watermark rotation (degrees)                   |
 
 <details>
 <summary>Example config file</summary>
@@ -207,13 +293,25 @@ css:
 page:
   size: 'a4'
   orientation: 'portrait'
-  margin: 0.75 # inches (0.5in ≈ 12.7mm, 1in ≈ 25.4mm)
+  margin: 0.75 # inches (0.5in = 12.7mm, 1in = 25.4mm)
+
+cover:
+  enabled: true
+  # title: auto-detected from H1 or filename
+  subtitle: 'Internal Document'
+  logo: '/path/to/company-logo.png'
+  organization: 'Acme Corp'
+  date: 'auto' # resolves to YYYY-MM-DD
+
+toc:
+  enabled: true
+  title: 'Table of Contents'
+  maxDepth: 3
 
 footer:
   enabled: true
   showPageNumber: true
   position: 'center'
-  date: '2026-01-15'
   status: 'DRAFT'
 
 signature:
@@ -224,6 +322,13 @@ signature:
   links:
     - label: 'GitHub'
       url: 'https://github.com/johndoe'
+
+watermark:
+  enabled: true
+  text: 'DRAFT'
+  color: '#888888'
+  opacity: 0.1
+  angle: -45
 ```
 
 </details>
@@ -234,10 +339,10 @@ signature:
 go-md2pdf/
 ├── service.go          # Public API: New(), Convert(), Close()
 ├── pool.go             # ServicePool for parallel processing
-├── types.go            # Input, Footer, Signature, Link
+├── types.go            # Input, Footer, Signature, Watermark, Cover, TOC
 ├── mdtransform.go      # Markdown preprocessing
 ├── md2html.go          # Markdown to HTML (Goldmark)
-├── htmlinject.go       # CSS/signature injection
+├── htmlinject.go       # CSS/signature/cover/TOC injection
 ├── html2pdf.go         # HTML to PDF (headless Chrome)
 ├── cmd/md2pdf/         # CLI binary
 └── internal/           # Assets, config, utilities

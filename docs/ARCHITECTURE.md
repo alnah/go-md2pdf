@@ -24,9 +24,11 @@
 ```
 Markdown ──▶ mdtransform ──▶ md2html ──▶ htmlinject ──▶ html2pdf ──▶ PDF
                 │               │             │              │
-           Normalize        Goldmark      CSS inject      Chrome
-           Highlights       GFM tables    Signature       Headless
-           Blank lines      Footnotes     Footer opts
+           Normalize        Goldmark      Watermark       Chrome
+           Highlights       GFM/TOC IDs   Cover page      Headless
+           Blank lines      Footnotes     TOC inject      Footer
+                                          CSS inject
+                                          Signature
 ```
 
 | Stage           | Transformation | Tool           |
@@ -35,6 +37,18 @@ Markdown ──▶ mdtransform ──▶ md2html ──▶ htmlinject ──▶ 
 | **md2html**     | MD -> HTML     | Goldmark (GFM) |
 | **htmlinject**  | HTML -> HTML   | String/template|
 | **html2pdf**    | HTML -> PDF    | Rod (Chrome)   |
+
+---
+
+## Injection Order
+
+```
+1. CSS + Watermark CSS  ──▶  <head>
+2. Cover page           ──▶  after <body>
+3. TOC                  ──▶  after cover (or <body>)
+4. Signature            ──▶  before </body>
+5. Footer               ──▶  Chrome native footer
+```
 
 ---
 
