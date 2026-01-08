@@ -331,3 +331,178 @@ func TestInjectSignature_TemplateError(t *testing.T) {
 	}
 	// Note: with valid data and template, no error expected
 }
+
+func TestEscapeCSSString(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "simple text",
+			input:    "DRAFT",
+			expected: "DRAFT",
+		},
+		{
+			name:     "text with spaces",
+			input:    "FOR REVIEW",
+			expected: "FOR REVIEW",
+		},
+		{
+			name:     "escapes double quotes",
+			input:    `DRAFT "v1"`,
+			expected: `DRAFT \"v1\"`,
+		},
+		{
+			name:     "escapes backslash",
+			input:    `path\to\file`,
+			expected: `path\\to\\file`,
+		},
+		{
+			name:     "escapes newline",
+			input:    "line1\nline2",
+			expected: `line1\A line2`,
+		},
+		{
+			name:     "removes carriage return",
+			input:    "line1\r\nline2",
+			expected: `line1\A line2`,
+		},
+		{
+			name:     "CSS injection attempt - closing quote",
+			input:    `DRAFT"; } body { display: none } .x { content: "`,
+			expected: `DRAFT\"; } body { display: none } .x { content: \"`,
+		},
+		{
+			name:     "CSS injection attempt - backslash escape",
+			input:    `DRAFT\"; } body { display: none }`,
+			expected: `DRAFT\\\"; } body { display: none }`,
+		},
+		{
+			name:     "unicode preserved",
+			input:    "BROUILLON",
+			expected: "BROUILLON",
+		},
+		{
+			name:     "mixed special characters",
+			input:    "A\"B\\C\nD\rE",
+			expected: `A\"B\\C\A DE`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := escapeCSSString(tt.input)
+			if got != tt.expected {
+				t.Errorf("escapeCSSString(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestBuildWatermarkCSS(t *testing.T) {
+	tests := []struct {
+		name          string
+		watermark     *Watermark
+		wantEmpty     bool
+		wantContains  []string
+		wantNotContain []string
+	}{
+		{
+			name:      "nil watermark returns empty",
+			watermark: nil,
+			wantEmpty: true,
+		},
+		{
+			name:      "empty text returns empty",
+			watermark: &Watermark{Text: "", Color: "#888888", Opacity: 0.1, Angle: -45},
+			wantEmpty: true,
+		},
+		{
+			name:      "simple watermark",
+			watermark: &Watermark{Text: "DRAFT", Color: "#888888", Opacity: 0.1, Angle: -45},
+			wantContains: []string{
+				`content: "DRAFT"`,
+				"color: #888888",
+				"opacity: 0.10",
+				"rotate(-45.0deg)",
+			},
+		},
+		{
+			name:      "watermark with positive angle",
+			watermark: &Watermark{Text: "TEST", Color: "#ff0000", Opacity: 0.5, Angle: 30},
+			wantContains: []string{
+				`content: "TEST"`,
+				"color: #ff0000",
+				"opacity: 0.50",
+				"rotate(30.0deg)",
+			},
+		},
+		{
+			name:      "watermark text with quotes is escaped",
+			watermark: &Watermark{Text: `DRAFT "v1"`, Color: "#888888", Opacity: 0.1, Angle: -45},
+			wantContains: []string{
+				`content: "DRAFT \"v1\""`,
+			},
+			wantNotContain: []string{
+				`content: "DRAFT "v1""`, // unescaped quotes would break CSS
+			},
+		},
+		{
+			name:      "watermark text with backslash is escaped",
+			watermark: &Watermark{Text: `A\B`, Color: "#888888", Opacity: 0.1, Angle: -45},
+			wantContains: []string{
+				`content: "A\\B"`,
+			},
+		},
+		{
+			name:      "CSS injection attempt is escaped",
+			watermark: &Watermark{Text: `"; } body { display: none } .x { content: "`, Color: "#888888", Opacity: 0.1, Angle: -45},
+			wantContains: []string{
+				`content: "\"; } body { display: none } .x { content: \""`,
+				"opacity: 0.10", // verify CSS structure is intact after injection attempt
+			},
+		},
+		{
+			name:      "watermark with newline in text",
+			watermark: &Watermark{Text: "LINE1\nLINE2", Color: "#888888", Opacity: 0.1, Angle: -45},
+			wantContains: []string{
+				`content: "LINE1\A LINE2"`,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildWatermarkCSS(tt.watermark)
+
+			if tt.wantEmpty {
+				if got != "" {
+					t.Errorf("buildWatermarkCSS() = %q, want empty", got)
+				}
+				return
+			}
+
+			if got == "" {
+				t.Fatal("buildWatermarkCSS() returned empty, want CSS")
+			}
+
+			for _, want := range tt.wantContains {
+				if !strings.Contains(got, want) {
+					t.Errorf("buildWatermarkCSS() missing %q\nGot:\n%s", want, got)
+				}
+			}
+
+			for _, notWant := range tt.wantNotContain {
+				if strings.Contains(got, notWant) {
+					t.Errorf("buildWatermarkCSS() should not contain %q\nGot:\n%s", notWant, got)
+				}
+			}
+		})
+	}
+}
