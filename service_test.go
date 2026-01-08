@@ -3,6 +3,7 @@ package md2pdf
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -225,8 +226,13 @@ func TestConvert_Success(t *testing.T) {
 	if cssInj.inputHTML != "<html>converted</html>" {
 		t.Errorf("cssInjector inputHTML = %q, want %q", cssInj.inputHTML, "<html>converted</html>")
 	}
-	if cssInj.inputCSS != "body {}" {
-		t.Errorf("cssInjector inputCSS = %q, want %q", cssInj.inputCSS, "body {}")
+	// Page breaks CSS is always prepended, user CSS should be at the end
+	if !strings.HasSuffix(cssInj.inputCSS, "body {}") {
+		t.Errorf("cssInjector inputCSS should end with user CSS %q, got %q", "body {}", cssInj.inputCSS)
+	}
+	// Verify page breaks CSS is present
+	if !strings.Contains(cssInj.inputCSS, "break-after: avoid") {
+		t.Errorf("cssInjector inputCSS should contain page breaks CSS, got %q", cssInj.inputCSS)
 	}
 
 	if !sigInjector.called {
@@ -344,8 +350,13 @@ func TestConvert_NoCSSByDefault(t *testing.T) {
 		t.Fatalf("Convert() unexpected error: %v", err)
 	}
 
-	if cssInj.inputCSS != "" {
-		t.Errorf("cssInjector should receive empty CSS by default, got %q", cssInj.inputCSS)
+	// Page breaks CSS is always generated, so we should get at least that
+	if !strings.Contains(cssInj.inputCSS, "break-after: avoid") {
+		t.Errorf("cssInjector should receive page breaks CSS by default, got %q", cssInj.inputCSS)
+	}
+	// But no user CSS should be appended
+	if strings.Contains(cssInj.inputCSS, "body") {
+		t.Errorf("cssInjector should not contain user CSS rules, got %q", cssInj.inputCSS)
 	}
 }
 
