@@ -61,12 +61,16 @@ func (s *Service) Convert(ctx context.Context, input Input) ([]byte, error) {
 		return nil, fmt.Errorf("converting to HTML: %w", err)
 	}
 
-	// Build combined CSS (watermark + user CSS)
+	// Build combined CSS (page breaks + watermark + user CSS)
+	// Order matters: page breaks first (lowest priority), user CSS last (can override)
 	cssContent := input.CSS
 	if input.Watermark != nil {
 		watermarkCSS := buildWatermarkCSS(input.Watermark)
 		cssContent = watermarkCSS + cssContent
 	}
+	// Page breaks CSS always generated (includes hardcoded rules + configurable)
+	pageBreaksCSS := buildPageBreaksCSS(input.PageBreaks)
+	cssContent = pageBreaksCSS + cssContent
 
 	// Inject CSS
 	htmlContent = s.cssInjector.InjectCSS(ctx, htmlContent, cssContent)
@@ -149,6 +153,9 @@ func (s *Service) validateInput(input Input) error {
 		return err
 	}
 	if err := input.TOC.Validate(); err != nil {
+		return err
+	}
+	if err := input.PageBreaks.Validate(); err != nil {
 		return err
 	}
 	return nil
