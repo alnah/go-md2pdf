@@ -632,7 +632,53 @@ img {
   color: var(--heading-blue);
 }
 
-/* 12. PRINT SETTINGS */
+/* 12. TABLE OF CONTENTS */
+.toc {
+  page-break-after: always;
+  padding: 2rem 0;
+}
+
+.toc-title {
+  background: var(--heading-yellow);
+  color: white;
+  padding: 0.35em 0.7em;
+  border-radius: 0.5em;
+  width: fit-content;
+  margin-bottom: 1.5rem;
+}
+
+.toc-list {
+  list-style: none !important;
+  padding-left: 0 !important;
+  margin: 0 !important;
+}
+
+.toc-list ol {
+  list-style: none !important;
+  padding-left: 1.5em !important;
+  margin: 0.25em 0 !important;
+}
+
+.toc-list li {
+  margin: 0.5em 0 !important;
+  line-height: 1.4 !important;
+}
+
+.toc-list li::before {
+  content: none !important;
+}
+
+.toc-list a {
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.toc-list a:hover {
+  color: var(--heading-orange);
+  text-decoration: underline;
+}
+
+/* 13. PRINT SETTINGS */
 @page {
   margin: 2cm 2cm 2.5cm 2cm;
 }
