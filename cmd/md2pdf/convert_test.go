@@ -935,7 +935,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: filepath.Join(blockingFile, "subdir", "out.pdf"),
 		}
 
-		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil, &cliFlags{}, config.DefaultConfig())
+		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil, nil, &cliFlags{}, config.DefaultConfig())
 
 		if result.Err == nil {
 			t.Error("expected error when mkdir fails")
@@ -972,7 +972,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: filepath.Join(outDir, "out.pdf"),
 		}
 
-		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil, &cliFlags{}, config.DefaultConfig())
+		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil, nil, &cliFlags{}, config.DefaultConfig())
 
 		if result.Err == nil {
 			t.Error("expected error when write fails")
@@ -988,7 +988,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: "/tmp/out.pdf",
 		}
 
-		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil, &cliFlags{}, config.DefaultConfig())
+		result := convertFile(context.Background(), mockConv, f, "", nil, nil, nil, nil, nil, &cliFlags{}, config.DefaultConfig())
 
 		if result.Err == nil {
 			t.Error("expected error when read fails")
@@ -2113,6 +2113,133 @@ func TestBuildCoverData(t *testing.T) {
 		}
 		if got.Version != "" {
 			t.Errorf("Version = %q, want empty (footer disabled)", got.Version)
+		}
+	})
+}
+
+// TOCConfig alias for test file
+type TOCConfig = config.TOCConfig
+
+func TestBuildTOCData(t *testing.T) {
+	tests := []struct {
+		name         string
+		cfg          *Config
+		noTOC        bool
+		wantNil      bool
+		wantTitle    string
+		wantMaxDepth int
+	}{
+		{
+			name:    "noTOC flag returns nil",
+			cfg:     &Config{TOC: TOCConfig{Enabled: true, Title: "Contents", MaxDepth: 3}},
+			noTOC:   true,
+			wantNil: true,
+		},
+		{
+			name:    "config disabled returns nil",
+			cfg:     &Config{TOC: TOCConfig{Enabled: false, Title: "Contents", MaxDepth: 3}},
+			noTOC:   false,
+			wantNil: true,
+		},
+		{
+			name:    "neither flag nor config enabled returns nil",
+			cfg:     &Config{},
+			noTOC:   false,
+			wantNil: true,
+		},
+		{
+			name:         "config enabled with title and depth",
+			cfg:          &Config{TOC: TOCConfig{Enabled: true, Title: "Table of Contents", MaxDepth: 4}},
+			noTOC:        false,
+			wantTitle:    "Table of Contents",
+			wantMaxDepth: 4,
+		},
+		{
+			name:         "config enabled empty title preserved",
+			cfg:          &Config{TOC: TOCConfig{Enabled: true, Title: "", MaxDepth: 3}},
+			noTOC:        false,
+			wantTitle:    "",
+			wantMaxDepth: 3,
+		},
+		{
+			name:         "config depth 0 gets default",
+			cfg:          &Config{TOC: TOCConfig{Enabled: true, Title: "TOC", MaxDepth: 0}},
+			noTOC:        false,
+			wantTitle:    "TOC",
+			wantMaxDepth: md2pdf.DefaultTOCDepth,
+		},
+		{
+			name:         "config depth 1 boundary",
+			cfg:          &Config{TOC: TOCConfig{Enabled: true, MaxDepth: 1}},
+			noTOC:        false,
+			wantMaxDepth: 1,
+		},
+		{
+			name:         "config depth 6 boundary",
+			cfg:          &Config{TOC: TOCConfig{Enabled: true, MaxDepth: 6}},
+			noTOC:        false,
+			wantMaxDepth: 6,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildTOCData(tt.cfg, tt.noTOC)
+
+			if tt.wantNil {
+				if got != nil {
+					t.Errorf("expected nil, got %+v", got)
+				}
+				return
+			}
+
+			if got == nil {
+				t.Fatal("expected TOC, got nil")
+			}
+			if got.Title != tt.wantTitle {
+				t.Errorf("Title = %q, want %q", got.Title, tt.wantTitle)
+			}
+			if got.MaxDepth != tt.wantMaxDepth {
+				t.Errorf("MaxDepth = %d, want %d", got.MaxDepth, tt.wantMaxDepth)
+			}
+		})
+	}
+}
+
+func TestParseFlags_NoTOC(t *testing.T) {
+	t.Run("--no-toc flag sets noTOC true", func(t *testing.T) {
+		flags, _, err := parseFlags([]string{"md2pdf", "--no-toc", "test.md"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !flags.noTOC {
+			t.Error("expected noTOC=true when --no-toc flag provided")
+		}
+	})
+
+	t.Run("no --no-toc flag leaves noTOC false", func(t *testing.T) {
+		flags, _, err := parseFlags([]string{"md2pdf", "test.md"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if flags.noTOC {
+			t.Error("expected noTOC=false when --no-toc flag not provided")
+		}
+	})
+
+	t.Run("--no-toc combined with other flags", func(t *testing.T) {
+		flags, _, err := parseFlags([]string{"md2pdf", "--no-toc", "--no-cover", "--quiet", "test.md"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !flags.noTOC {
+			t.Error("expected noTOC=true")
+		}
+		if !flags.noCover {
+			t.Error("expected noCover=true")
+		}
+		if !flags.quiet {
+			t.Error("expected quiet=true")
 		}
 	})
 }
