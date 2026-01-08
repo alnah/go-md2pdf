@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/go-rod/rod"
@@ -155,9 +154,9 @@ func (r *rodRenderer) Close() error {
 
 		// Force kill the Chrome process group (kills all child processes too)
 		if pid > 0 {
-			// Kill the entire process group by sending signal to negative PID
-			// This ensures GPU, renderer, and other Chrome child processes are killed
-			_ = syscall.Kill(-pid, syscall.SIGKILL)
+			// Kill the entire process group to ensure GPU, renderer,
+			// and other Chrome child processes are terminated.
+			killProcessGroup(pid)
 		}
 
 		// Also call launcher.Kill() as fallback and cleanup user-data-dir
