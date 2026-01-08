@@ -563,6 +563,120 @@ func TestWatermark_Validate(t *testing.T) {
 	}
 }
 
+func TestPageBreaks_Validate(t *testing.T) {
+	tests := []struct {
+		name       string
+		pageBreaks *PageBreaks
+		wantErr    error
+	}{
+		{
+			name:       "nil is valid",
+			pageBreaks: nil,
+			wantErr:    nil,
+		},
+		{
+			name:       "empty struct is valid (uses defaults)",
+			pageBreaks: &PageBreaks{},
+			wantErr:    nil,
+		},
+		{
+			name:       "orphans 0 is valid (means use default)",
+			pageBreaks: &PageBreaks{Orphans: 0},
+			wantErr:    nil,
+		},
+		{
+			name:       "widows 0 is valid (means use default)",
+			pageBreaks: &PageBreaks{Widows: 0},
+			wantErr:    nil,
+		},
+		{
+			name:       "valid orphans at minimum",
+			pageBreaks: &PageBreaks{Orphans: MinOrphans},
+			wantErr:    nil,
+		},
+		{
+			name:       "valid orphans at maximum",
+			pageBreaks: &PageBreaks{Orphans: MaxOrphans},
+			wantErr:    nil,
+		},
+		{
+			name:       "valid widows at minimum",
+			pageBreaks: &PageBreaks{Widows: MinWidows},
+			wantErr:    nil,
+		},
+		{
+			name:       "valid widows at maximum",
+			pageBreaks: &PageBreaks{Widows: MaxWidows},
+			wantErr:    nil,
+		},
+		{
+			name:       "valid orphans and widows mid range",
+			pageBreaks: &PageBreaks{Orphans: 3, Widows: 3},
+			wantErr:    nil,
+		},
+		{
+			name:       "valid with all heading breaks enabled",
+			pageBreaks: &PageBreaks{BeforeH1: true, BeforeH2: true, BeforeH3: true, Orphans: 2, Widows: 2},
+			wantErr:    nil,
+		},
+		{
+			name:       "invalid orphans below minimum",
+			pageBreaks: &PageBreaks{Orphans: -1},
+			wantErr:    ErrInvalidOrphans,
+		},
+		{
+			name:       "invalid orphans above maximum",
+			pageBreaks: &PageBreaks{Orphans: MaxOrphans + 1},
+			wantErr:    ErrInvalidOrphans,
+		},
+		{
+			name:       "invalid orphans large value",
+			pageBreaks: &PageBreaks{Orphans: 100},
+			wantErr:    ErrInvalidOrphans,
+		},
+		{
+			name:       "invalid widows below minimum",
+			pageBreaks: &PageBreaks{Widows: -1},
+			wantErr:    ErrInvalidWidows,
+		},
+		{
+			name:       "invalid widows above maximum",
+			pageBreaks: &PageBreaks{Widows: MaxWidows + 1},
+			wantErr:    ErrInvalidWidows,
+		},
+		{
+			name:       "invalid widows large value",
+			pageBreaks: &PageBreaks{Widows: 100},
+			wantErr:    ErrInvalidWidows,
+		},
+		{
+			name:       "orphans validated before widows",
+			pageBreaks: &PageBreaks{Orphans: -1, Widows: -1},
+			wantErr:    ErrInvalidOrphans,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.pageBreaks.Validate()
+
+			if tt.wantErr != nil {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("error = %v, want %v", err, tt.wantErr)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
 func TestTOC_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
