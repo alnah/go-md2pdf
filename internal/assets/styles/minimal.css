@@ -1,0 +1,641 @@
+/*
+ * GitHub Light theme
+ * Used for Markdown → PDF conversion
+ */
+
+/* 1. CSS VARIABLES - Central configuration */
+:root {
+  /* GitHub Light color palette */
+  --color-fg-default: #1f2328;
+  --color-fg-muted: #656d76;
+  --color-fg-subtle: #6e7781;
+  --color-fg-on-emphasis: #ffffff;
+
+  --color-canvas-default: #ffffff;
+  --color-canvas-subtle: #f6f8fa;
+
+  --color-border-default: #d0d7de;
+  --color-border-muted: #d8dee4;
+
+  --color-accent-fg: #0969da;
+  --color-accent-emphasis: #0969da;
+
+  --color-success-fg: #1a7f37;
+  --color-attention-fg: #9a6700;
+  --color-danger-fg: #d1242f;
+
+  /* Syntax highlighting - GitHub Prettylights */
+  --color-prettylights-syntax-comment: #57606a;
+  --color-prettylights-syntax-constant: #0550ae;
+  --color-prettylights-syntax-entity: #8250df;
+  --color-prettylights-syntax-storage-modifier-import: #24292f;
+  --color-prettylights-syntax-entity-tag: #116329;
+  --color-prettylights-syntax-keyword: #cf222e;
+  --color-prettylights-syntax-string: #0a3069;
+  --color-prettylights-syntax-variable: #953800;
+  --color-prettylights-syntax-brackethighlighter-unmatched: #82071e;
+  --color-prettylights-syntax-invalid-illegal-text: #f6f8fa;
+  --color-prettylights-syntax-invalid-illegal-bg: #82071e;
+  --color-prettylights-syntax-carriage-return-text: #f6f8fa;
+  --color-prettylights-syntax-carriage-return-bg: #cf222e;
+  --color-prettylights-syntax-string-regexp: #116329;
+  --color-prettylights-syntax-markup-list: #3b2300;
+  --color-prettylights-syntax-markup-heading: #0550ae;
+  --color-prettylights-syntax-markup-italic: #24292f;
+  --color-prettylights-syntax-markup-bold: #24292f;
+  --color-prettylights-syntax-markup-deleted-text: #82071e;
+  --color-prettylights-syntax-markup-deleted-bg: #ffebe9;
+  --color-prettylights-syntax-markup-inserted-text: #116329;
+  --color-prettylights-syntax-markup-inserted-bg: #dafbe1;
+  --color-prettylights-syntax-markup-changed-text: #953800;
+  --color-prettylights-syntax-markup-changed-bg: #ffd8b5;
+  --color-prettylights-syntax-markup-ignored-text: #eaeef2;
+  --color-prettylights-syntax-markup-ignored-bg: #0550ae;
+  --color-prettylights-syntax-meta-diff-range: #8250df;
+  --color-prettylights-syntax-sublimelinter-gutter-mark: #8c959f;
+
+  /* Standard spacing */
+  --spacing-xs: 0.25em;
+  --spacing-sm: 0.5em;
+  --spacing-md: 1em;
+  --spacing-lg: 1.5em;
+  --spacing-xl: 2em;
+
+  /* Font sizes */
+  --font-size-base: 14px;
+  --font-size-small: 0.9em;
+  --font-size-tiny: 0.8em;
+  --line-height: 1.6;
+
+  /* Component-specific values */
+  --checkbox-offset-top: -2px;
+  --checkbox-offset-left: 2px;
+  --signature-margin-top: 30px;
+}
+
+/* 2. RESET AND BASE STYLES */
+* {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height);
+  color: var(--color-fg-default);
+  background: var(--color-canvas-default);
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Paragraph justification */
+p {
+  text-align: justify;
+  text-justify: inter-word;
+  margin: var(--spacing-md) 0;
+}
+
+/* 3. TYPOGRAPHY - Headings and hierarchy */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 600;
+  page-break-after: avoid;
+  color: var(--color-fg-default);
+  margin-top: var(--spacing-xl);
+  margin-bottom: var(--spacing-md);
+}
+
+h1 {
+  font-size: 2em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--color-border-muted);
+}
+
+h2 {
+  font-size: 1.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--color-border-muted);
+}
+
+h3 {
+  font-size: 1.25em;
+}
+
+h4 {
+  font-size: 1em;
+}
+
+h5 {
+  font-size: 0.875em;
+}
+
+h6 {
+  font-size: 0.85em;
+  color: var(--color-fg-muted);
+}
+
+/* 4. TEXT FORMATTING */
+strong,
+b {
+  font-weight: 600;
+}
+
+em,
+i {
+  font-style: italic;
+}
+
+strong em,
+em strong,
+b i,
+i b {
+  font-weight: 600;
+  font-style: italic;
+}
+
+/* Highlight */
+mark {
+  background-color: #fff8c5;
+  color: var(--color-fg-default);
+  padding: 0.1em 0.2em;
+  border-radius: 3px;
+}
+
+/* Links */
+a {
+  color: var(--color-accent-fg);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Horizontal rules */
+hr {
+  border: none;
+  height: 0.25em;
+  background: var(--color-border-default);
+  margin: var(--spacing-xl) 0;
+  padding: 0;
+}
+
+/* 5. COMPONENTS - Blockquotes */
+blockquote {
+  margin: var(--spacing-sm) 0;
+  padding: 0 var(--spacing-md);
+  border-left: 0.25em solid var(--color-border-default);
+  background: transparent;
+  color: var(--color-fg-muted);
+  page-break-inside: avoid;
+  text-align: justify;
+}
+
+/* Reduce spacing for first element in blockquote */
+blockquote > *:first-child {
+  margin-top: 0;
+}
+
+/* Reduce spacing for last element in blockquote */
+blockquote > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Lists inside blockquotes: use dashes instead of bullets */
+blockquote ul {
+  list-style-type: none !important;
+  padding-left: 1.5em !important;
+  margin: 0 !important;
+}
+
+blockquote ul > li {
+  list-style: none !important;
+  position: relative;
+}
+
+blockquote ul > li::before {
+  content: '–';
+  position: absolute;
+  left: -1.2em;
+}
+
+blockquote blockquote {
+  margin-left: var(--spacing-md);
+}
+
+/* 6. COMPONENTS - Lists */
+
+/* Base styles for all lists */
+ul,
+ol {
+  margin: var(--spacing-md) 0;
+  padding-left: 2em;
+  display: block;
+}
+
+li {
+  margin: var(--spacing-xs) 0;
+  line-height: var(--line-height);
+  page-break-inside: avoid;
+  display: list-item;
+}
+
+li + li {
+  margin-top: var(--spacing-xs);
+}
+
+/* Unordered lists: standard bullets (GitHub style) */
+ul:not(.task-list) {
+  list-style-type: disc;
+}
+
+ul ul {
+  list-style-type: circle;
+  margin: var(--spacing-xs) 0;
+}
+
+ul ul ul {
+  list-style-type: square;
+}
+
+/* Ordered lists */
+ol {
+  list-style-type: decimal;
+}
+
+/* Task lists (checkboxes) */
+ul.task-list,
+ul.contains-task-list {
+  padding-left: 0;
+  list-style: none;
+}
+
+li.task-list-item {
+  list-style: none;
+  margin: var(--spacing-xs) 0;
+  display: flex;
+  align-items: flex-start;
+}
+
+li.task-list-item::before {
+  content: none;
+}
+
+.task-list-item input[type='checkbox'] {
+  flex-shrink: 0;
+  margin: 0.3em var(--spacing-sm) 0 0;
+  width: 1em;
+  height: 1em;
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: var(--color-canvas-default);
+  border: 1px solid var(--color-border-default);
+  border-radius: 3px;
+  position: relative;
+}
+
+.task-list-item input[type='checkbox']:checked {
+  background-color: var(--color-accent-emphasis);
+  border-color: var(--color-accent-emphasis);
+}
+
+.task-list-item input[type='checkbox']:checked::after {
+  content: '✓';
+  position: absolute;
+  top: var(--checkbox-offset-top);
+  left: var(--checkbox-offset-left);
+  color: var(--color-fg-on-emphasis);
+  font-size: 0.85em;
+  font-weight: bold;
+}
+
+/* 7. COMPONENTS - Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--spacing-md) 0;
+  page-break-inside: avoid;
+  border-spacing: 0;
+}
+
+table thead th {
+  font-weight: 600;
+  padding: 6px 13px;
+  text-align: left;
+  border: 1px solid var(--color-border-default);
+  background: var(--color-canvas-subtle);
+}
+
+table tbody td {
+  padding: 6px 13px;
+  border: 1px solid var(--color-border-default);
+}
+
+table tbody tr:nth-child(even) {
+  background: var(--color-canvas-subtle);
+}
+
+/* 8. CODE AND SYNTAX HIGHLIGHTING */
+
+/* Inline code */
+code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: var(--font-size-small);
+  background: rgba(175, 184, 193, 0.2);
+  color: var(--color-fg-default);
+  padding: 0.2em 0.4em;
+  border-radius: 6px;
+}
+
+/* Code blocks */
+pre {
+  background: var(--color-canvas-subtle);
+  border-radius: 6px;
+  padding: var(--spacing-md);
+  margin: var(--spacing-md) 0;
+  overflow-x: auto;
+  page-break-inside: avoid;
+  font-size: 85%;
+  line-height: 1.45;
+}
+
+pre code {
+  background: none;
+  color: var(--color-fg-default);
+  padding: 0;
+  font-size: inherit;
+  border-radius: 0;
+}
+
+/* Syntax highlighting - GitHub Light (Chroma/Goldmark classes) */
+
+/* Comments */
+.c, .ch, .cm, .c1, .cs, .cp, .cpf {
+  color: var(--color-prettylights-syntax-comment);
+}
+
+/* Keywords */
+.k, .kc, .kd, .kn, .kp, .kr, .kt {
+  color: var(--color-prettylights-syntax-keyword);
+}
+
+/* Strings */
+.s, .sa, .sb, .sc, .sd, .se, .sh, .si, .sr, .ss, .sx, .s1, .s2 {
+  color: var(--color-prettylights-syntax-string);
+}
+
+/* Numbers */
+.m, .mb, .mf, .mh, .mi, .mo, .il {
+  color: var(--color-prettylights-syntax-constant);
+}
+
+/* Names - functions, classes, etc */
+.nf, .fm {
+  color: var(--color-prettylights-syntax-entity);
+}
+
+.nc, .nd, .ne, .ni, .nl {
+  color: var(--color-prettylights-syntax-entity);
+}
+
+/* Name - variables */
+.nv, .vc, .vg, .vi, .vm {
+  color: var(--color-prettylights-syntax-variable);
+}
+
+/* Name - builtins */
+.nb, .bp {
+  color: var(--color-prettylights-syntax-entity);
+}
+
+/* Name - tags (HTML/XML) */
+.nt {
+  color: var(--color-prettylights-syntax-entity-tag);
+}
+
+/* Name - attributes */
+.na {
+  color: var(--color-prettylights-syntax-constant);
+}
+
+/* Name - namespace/imports */
+.nn, .kn {
+  color: var(--color-prettylights-syntax-storage-modifier-import);
+}
+
+/* Operators */
+.o, .ow {
+  color: var(--color-prettylights-syntax-keyword);
+}
+
+/* Punctuation */
+.p {
+  color: var(--color-fg-default);
+}
+
+/* Error */
+.err {
+  color: var(--color-danger-fg);
+}
+
+/* Generic - diff highlighting */
+.gd {
+  color: var(--color-prettylights-syntax-markup-deleted-text);
+  background: var(--color-prettylights-syntax-markup-deleted-bg);
+}
+
+.gi {
+  color: var(--color-prettylights-syntax-markup-inserted-text);
+  background: var(--color-prettylights-syntax-markup-inserted-bg);
+}
+
+.gh, .gu {
+  color: var(--color-prettylights-syntax-meta-diff-range);
+}
+
+/* Generic - emphasis */
+.ge { font-style: italic; }
+.gs { font-weight: bold; }
+
+/* Line numbers */
+.ln, .lnt {
+  color: var(--color-prettylights-syntax-sublimelinter-gutter-mark);
+}
+
+/* Chroma wrapper */
+.chroma {
+  background: var(--color-canvas-subtle);
+}
+
+/* 9. IMAGES AND MEDIA */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: var(--spacing-md) auto;
+  background-color: var(--color-canvas-default);
+}
+
+/* Footnotes */
+.footnote-ref {
+  color: var(--color-accent-fg);
+  font-size: var(--font-size-tiny);
+  vertical-align: super;
+}
+
+/* Signature */
+.signature-block {
+  page-break-inside: avoid;
+  margin-top: var(--signature-margin-top) !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 12px 15px;
+  background: var(--color-canvas-subtle);
+  border: 1px solid var(--color-border-default);
+  border-radius: 6px;
+}
+
+.signature-block img {
+  width: 60px !important;
+  height: 60px !important;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-default);
+  object-fit: cover;
+  margin-right: 15px;
+  flex-shrink: 0;
+}
+
+.signature-block > div {
+  flex: 1;
+  line-height: 1.2;
+}
+
+.signature-block strong {
+  color: var(--color-fg-default);
+  font-size: 0.95em;
+}
+
+.signature-block em {
+  color: var(--color-fg-muted);
+  font-size: 0.8em;
+  font-style: normal;
+}
+
+.signature-block a {
+  color: var(--color-accent-fg);
+  font-size: 0.85em;
+}
+
+.footnotes {
+  margin-top: 3em;
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-default);
+  font-size: var(--font-size-small);
+}
+
+/* 10. TEACHER SIGNATURE */
+.signature-block {
+  page-break-inside: avoid;
+  margin-top: var(--signature-margin-top) !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/*
+ * 11. CHROME PDF SPECIFIC RULES
+ * Chrome print rendering has quirks with list display.
+ * The !important overrides are necessary to force correct
+ * rendering when converting to PDF via Chrome headless.
+ */
+@media all {
+  /* Force correct list rendering for Chrome */
+  ul,
+  ol {
+    display: block !important;
+    margin: var(--spacing-md) 0 !important;
+    padding-left: 2em !important;
+  }
+
+  li {
+    display: list-item !important;
+    margin: var(--spacing-xs) 0 !important;
+    line-height: var(--line-height) !important;
+    white-space: normal !important;
+  }
+
+  li strong,
+  li b {
+    display: inline !important;
+  }
+
+  ul:not(.task-list) > li {
+    list-style-type: disc !important;
+  }
+
+  ul ul:not(.task-list) > li {
+    list-style-type: circle !important;
+  }
+
+  ul ul ul:not(.task-list) > li {
+    list-style-type: square !important;
+  }
+
+  ol > li {
+    list-style: decimal outside !important;
+  }
+}
+
+/* 12. PRINT SETTINGS */
+@page {
+  margin: 2cm 2cm 2.5cm 2cm;
+}
+
+@media print {
+  body {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    font-size: 11pt;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    page-break-after: avoid;
+  }
+
+  table,
+  figure,
+  blockquote,
+  pre {
+    page-break-inside: avoid;
+  }
+
+  li {
+    page-break-inside: avoid;
+  }
+
+  ul,
+  ol {
+    display: block !important;
+  }
+
+  ul > li,
+  ol > li {
+    display: list-item !important;
+    margin: var(--spacing-xs) 0 !important;
+  }
+
+  ul:not(.task-list) > li {
+    list-style-type: disc !important;
+  }
+}
