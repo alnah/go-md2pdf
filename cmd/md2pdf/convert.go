@@ -457,8 +457,7 @@ func buildWatermarkData(flags *cliFlags, cfg *config.Config) (*md2pdf.Watermark,
 	if w.Opacity == 0 {
 		w.Opacity = 0.1
 	}
-	// Angle defaults to -45, but 0 is a valid value so we use a sentinel
-	if flags.watermarkAngle == watermarkAngleSentinel && cfg.Watermark.Angle == 0 && !cfg.Watermark.Enabled {
+	if shouldApplyDefaultAngle(flags, cfg) {
 		w.Angle = -45
 	}
 
@@ -477,6 +476,18 @@ func buildWatermarkData(flags *cliFlags, cfg *config.Config) (*md2pdf.Watermark,
 	}
 
 	return w, nil
+}
+
+// shouldApplyDefaultAngle returns true if the watermark angle should be set to
+// the default value (-45). This is needed because 0 is a valid angle, so we use
+// a sentinel value to detect "not set". We only apply the default when:
+// - CLI flag was not set (sentinel value)
+// - Config didn't specify an angle (zero value)
+// - Watermark wasn't enabled via config (CLI-only watermark)
+func shouldApplyDefaultAngle(flags *cliFlags, cfg *config.Config) bool {
+	flagNotSet := flags.watermarkAngle == watermarkAngleSentinel
+	configNotSet := cfg.Watermark.Angle == 0 && !cfg.Watermark.Enabled
+	return flagNotSet && configNotSet
 }
 
 // buildPageSettings creates md2pdf.PageSettings from flags and config.
