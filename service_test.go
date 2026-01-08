@@ -542,3 +542,92 @@ func TestToCoverData(t *testing.T) {
 		}
 	})
 }
+
+func TestToTOCData(t *testing.T) {
+	t.Run("nil returns nil", func(t *testing.T) {
+		result := toTOCData(nil)
+		if result != nil {
+			t.Error("expected nil for nil input")
+		}
+	})
+
+	t.Run("converts all fields", func(t *testing.T) {
+		toc := &TOC{
+			Title:    "Table of Contents",
+			MaxDepth: 4,
+		}
+
+		result := toTOCData(toc)
+
+		if result.Title != toc.Title {
+			t.Errorf("Title = %q, want %q", result.Title, toc.Title)
+		}
+		if result.MaxDepth != toc.MaxDepth {
+			t.Errorf("MaxDepth = %d, want %d", result.MaxDepth, toc.MaxDepth)
+		}
+	})
+
+	t.Run("zero MaxDepth gets default", func(t *testing.T) {
+		toc := &TOC{
+			Title:    "Contents",
+			MaxDepth: 0,
+		}
+
+		result := toTOCData(toc)
+
+		if result.MaxDepth != DefaultTOCDepth {
+			t.Errorf("MaxDepth = %d, want %d (default)", result.MaxDepth, DefaultTOCDepth)
+		}
+	})
+
+	t.Run("empty title preserved", func(t *testing.T) {
+		toc := &TOC{
+			Title:    "",
+			MaxDepth: 3,
+		}
+
+		result := toTOCData(toc)
+
+		if result.Title != "" {
+			t.Errorf("Title = %q, want empty", result.Title)
+		}
+	})
+}
+
+func TestValidateInput_TOC(t *testing.T) {
+	service := New()
+	defer service.Close()
+
+	t.Run("nil TOC is valid", func(t *testing.T) {
+		input := Input{Markdown: "# Hello", TOC: nil}
+		err := service.validateInput(input)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("valid TOC passes", func(t *testing.T) {
+		input := Input{
+			Markdown: "# Hello",
+			TOC:      &TOC{Title: "Contents", MaxDepth: 3},
+		}
+		err := service.validateInput(input)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("invalid TOC depth fails", func(t *testing.T) {
+		input := Input{
+			Markdown: "# Hello",
+			TOC:      &TOC{MaxDepth: 7},
+		}
+		err := service.validateInput(input)
+		if err == nil {
+			t.Fatal("expected error for invalid TOC depth")
+		}
+		if !errors.Is(err, ErrInvalidTOCDepth) {
+			t.Errorf("error = %v, want ErrInvalidTOCDepth", err)
+		}
+	})
+}
