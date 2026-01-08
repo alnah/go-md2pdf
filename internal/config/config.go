@@ -36,6 +36,7 @@ const (
 	MaxSubtitleLength       = 200  // Cover page subtitle
 	MaxOrganizationLength   = 100  // Organization name
 	MaxVersionLength        = 50   // Version string
+	MaxTOCTitleLength       = 100  // TOC title
 )
 
 // Config holds all configuration for document generation.
@@ -49,6 +50,7 @@ type Config struct {
 	Page      PageConfig      `yaml:"page"`
 	Watermark WatermarkConfig `yaml:"watermark"`
 	Cover     CoverConfig     `yaml:"cover"`
+	TOC       TOCConfig       `yaml:"toc"`
 }
 
 // InputConfig defines input source options.
@@ -124,6 +126,13 @@ type CoverConfig struct {
 	Organization string `yaml:"organization"` // Optional, no fallback
 	Date         string `yaml:"date"`         // "auto" = YYYY-MM-DD, fallback → footer.date
 	Version      string `yaml:"version"`      // Fallback → footer.status
+}
+
+// TOCConfig defines table of contents options.
+type TOCConfig struct {
+	Enabled  bool   `yaml:"enabled"`
+	Title    string `yaml:"title"`    // Empty = no title above TOC
+	MaxDepth int    `yaml:"maxDepth"` // 1-6, default 3
 }
 
 // Validate checks field lengths to prevent abuse in multi-tenant scenarios.
@@ -226,6 +235,16 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	// Validate TOC fields
+	if err := validateFieldLength("toc.title", c.TOC.Title, MaxTOCTitleLength); err != nil {
+		return err
+	}
+	if c.TOC.Enabled && c.TOC.MaxDepth != 0 {
+		if c.TOC.MaxDepth < 1 || c.TOC.MaxDepth > 6 {
+			return fmt.Errorf("toc.maxDepth: must be between 1 and 6, got %d", c.TOC.MaxDepth)
+		}
+	}
+
 	return nil
 }
 
@@ -248,6 +267,7 @@ func DefaultConfig() *Config {
 		Assets:    AssetsConfig{BasePath: ""},
 		Watermark: WatermarkConfig{Enabled: false},
 		Cover:     CoverConfig{Enabled: false},
+		TOC:       TOCConfig{Enabled: false},
 	}
 }
 
