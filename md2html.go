@@ -5,7 +5,9 @@ import (
 	"context"
 	"fmt"
 
+	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/yuin/goldmark"
+	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/renderer/html"
 )
@@ -32,12 +34,17 @@ type goldmarkConverter struct {
 	md goldmark.Markdown
 }
 
-// newGoldmarkConverter creates a goldmarkConverter with GFM extensions.
+// newGoldmarkConverter creates a goldmarkConverter with GFM extensions and syntax highlighting.
 func newGoldmarkConverter() *goldmarkConverter {
 	md := goldmark.New(
 		goldmark.WithExtensions(
 			extension.GFM,      // Tables, strikethrough, autolinks, task lists
 			extension.Footnote, // [^1] footnotes
+			highlighting.NewHighlighting(
+				highlighting.WithFormatOptions(
+					chromahtml.WithClasses(true), // CSS classes for smaller HTML and external stylesheet control
+				),
+			),
 		),
 		goldmark.WithRendererOptions(
 			html.WithHardWraps(), // Treat newlines as <br>
