@@ -76,6 +76,7 @@ type cliFlags struct {
 	noWatermark      bool
 	noCover          bool
 	noTOC            bool
+	noPageBreaks     bool
 	coverTitle       string
 	version          bool
 	workers          int
@@ -86,6 +87,9 @@ type cliFlags struct {
 	watermarkColor   string
 	watermarkOpacity float64
 	watermarkAngle   float64
+	breakBefore      string
+	orphans          int
+	widows           int
 }
 
 // run parses arguments, discovers files, and orchestrates batch conversion.
@@ -159,8 +163,11 @@ func run(ctx context.Context, args []string, pool Pool) error {
 	// Build TOC data
 	tocData := buildTOCData(cfg, flags.noTOC)
 
+	// Build page breaks data
+	pageBreaksData := buildPageBreaksData(flags, cfg)
+
 	// Convert files
-	results := convertBatch(ctx, pool, files, cssContent, footerData, sigData, pageData, watermarkData, tocData, flags, cfg)
+	results := convertBatch(ctx, pool, files, cssContent, footerData, sigData, pageData, watermarkData, tocData, pageBreaksData, flags, cfg)
 
 	// Print results and return appropriate exit code
 	failedCount := printResults(results, flags.quiet, flags.verbose)
@@ -198,6 +205,10 @@ func parseFlags(args []string) (*cliFlags, []string, error) {
 	flagSet.StringVar(&flags.watermarkColor, "watermark-color", "", "watermark color in hex (default: #888888)")
 	flagSet.Float64Var(&flags.watermarkOpacity, "watermark-opacity", 0, "watermark opacity 0.0-1.0 (default: 0.1)")
 	flagSet.Float64Var(&flags.watermarkAngle, "watermark-angle", watermarkAngleSentinel, "watermark rotation in degrees (default: -45)")
+	flagSet.BoolVar(&flags.noPageBreaks, "no-page-breaks", false, "disable page break features")
+	flagSet.StringVar(&flags.breakBefore, "break-before", "", "page breaks before headings: h1,h2,h3 (comma-separated)")
+	flagSet.IntVar(&flags.orphans, "orphans", 0, "min lines at page bottom (1-5, default: 2)")
+	flagSet.IntVar(&flags.widows, "widows", 0, "min lines at page top (1-5, default: 2)")
 
 	flagSet.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: md2pdf [flags] <input> [flags]\n\n")
@@ -636,10 +647,73 @@ func buildTOCData(cfg *config.Config, noTOC bool) *md2pdf.TOC {
 	}
 }
 
+// parseBreakBefore parses "--break-before=h1,h2,h3" into individual bools.
+// Pure function for testability.
+func parseBreakBefore(value string) (h1, h2, h3 bool) {
+	if value == "" {
+		return false, false, false
+	}
+	parts := strings.Split(strings.ToLower(value), ",")
+	for _, p := range parts {
+		switch strings.TrimSpace(p) {
+		case "h1":
+			h1 = true
+		case "h2":
+			h2 = true
+		case "h3":
+			h3 = true
+		}
+	}
+	return h1, h2, h3
+}
+
+// buildPageBreaksData creates md2pdf.PageBreaks from flags and config.
+// Priority: --no-page-breaks > CLI flags > config > defaults.
+// Returns nil only if --no-page-breaks is set (disables all page break features).
+func buildPageBreaksData(flags *cliFlags, cfg *config.Config) *md2pdf.PageBreaks {
+	if flags.noPageBreaks {
+		return nil
+	}
+
+	pb := &md2pdf.PageBreaks{
+		Orphans: md2pdf.DefaultOrphans,
+		Widows:  md2pdf.DefaultWidows,
+	}
+
+	// Apply config values if enabled
+	if cfg.PageBreaks.Enabled {
+		pb.BeforeH1 = cfg.PageBreaks.BeforeH1
+		pb.BeforeH2 = cfg.PageBreaks.BeforeH2
+		pb.BeforeH3 = cfg.PageBreaks.BeforeH3
+		if cfg.PageBreaks.Orphans > 0 {
+			pb.Orphans = cfg.PageBreaks.Orphans
+		}
+		if cfg.PageBreaks.Widows > 0 {
+			pb.Widows = cfg.PageBreaks.Widows
+		}
+	}
+
+	// CLI flags override config
+	if flags.breakBefore != "" {
+		h1, h2, h3 := parseBreakBefore(flags.breakBefore)
+		pb.BeforeH1 = h1
+		pb.BeforeH2 = h2
+		pb.BeforeH3 = h3
+	}
+	if flags.orphans > 0 {
+		pb.Orphans = flags.orphans
+	}
+	if flags.widows > 0 {
+		pb.Widows = flags.widows
+	}
+
+	return pb
+}
+
 // convertBatch processes files concurrently using the service pool.
 // Each worker acquires its own service (browser) for true parallelism.
 // The context is checked for cancellation between file conversions.
-func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings, watermarkData *md2pdf.Watermark, tocData *md2pdf.TOC, flags *cliFlags, cfg *config.Config) []ConversionResult {
+func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings, watermarkData *md2pdf.Watermark, tocData *md2pdf.TOC, pageBreaksData *md2pdf.PageBreaks, flags *cliFlags, cfg *config.Config) []ConversionResult {
 	if len(files) == 0 {
 		return nil
 	}
@@ -673,7 +747,7 @@ func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssCont
 					}
 					continue
 				}
-				results[idx] = convertFile(ctx, svc, files[idx], cssContent, footerData, sigData, pageData, watermarkData, tocData, flags, cfg)
+				results[idx] = convertFile(ctx, svc, files[idx], cssContent, footerData, sigData, pageData, watermarkData, tocData, pageBreaksData, flags, cfg)
 			}
 		}()
 	}
@@ -690,7 +764,7 @@ func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, cssCont
 
 // convertFile processes a single file and returns the result.
 // The context is passed to the conversion service for cancellation support.
-func convertFile(ctx context.Context, service Converter, f FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings, watermarkData *md2pdf.Watermark, tocData *md2pdf.TOC, flags *cliFlags, cfg *config.Config) ConversionResult {
+func convertFile(ctx context.Context, service Converter, f FileToConvert, cssContent string, footerData *md2pdf.Footer, sigData *md2pdf.Signature, pageData *md2pdf.PageSettings, watermarkData *md2pdf.Watermark, tocData *md2pdf.TOC, pageBreaksData *md2pdf.PageBreaks, flags *cliFlags, cfg *config.Config) ConversionResult {
 	start := time.Now()
 	result := ConversionResult{
 		InputPath:  f.InputPath,
@@ -723,14 +797,15 @@ func convertFile(ctx context.Context, service Converter, f FileToConvert, cssCon
 
 	// Convert via service (returns []byte)
 	pdfBytes, err := service.Convert(ctx, md2pdf.Input{
-		Markdown:  string(content),
-		CSS:       cssContent,
-		Footer:    footerData,
-		Signature: sigData,
-		Page:      pageData,
-		Watermark: watermarkData,
-		Cover:     coverData,
-		TOC:       tocData,
+		Markdown:   string(content),
+		CSS:        cssContent,
+		Footer:     footerData,
+		Signature:  sigData,
+		Page:       pageData,
+		Watermark:  watermarkData,
+		Cover:      coverData,
+		TOC:        tocData,
+		PageBreaks: pageBreaksData,
 	})
 	if err != nil {
 		result.Err = err
