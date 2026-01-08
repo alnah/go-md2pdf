@@ -332,6 +332,182 @@ func TestInjectSignature_TemplateError(t *testing.T) {
 	// Note: with valid data and template, no error expected
 }
 
+func TestInjectCover(t *testing.T) {
+	injector := newCoverInjection()
+	ctx := context.Background()
+
+	t.Run("nil data returns HTML unchanged", func(t *testing.T) {
+		html := "<html><body>Hello</body></html>"
+		got, err := injector.InjectCover(ctx, html, nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != html {
+			t.Errorf("InjectCover() = %q, want %q", got, html)
+		}
+	})
+
+	t.Run("injects cover after <body>", func(t *testing.T) {
+		html := "<html><body>Content</body></html>"
+		data := &coverData{Title: "My Document"}
+
+		got, err := injector.InjectCover(ctx, html, data)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// Verify cover is injected after <body>
+		if !strings.Contains(got, "My Document") {
+			t.Error("cover title not found in output")
+		}
+
+		// Verify position: cover should appear after <body>
+		bodyIdx := strings.Index(got, "<body>")
+		coverIdx := strings.Index(got, "cover-page")
+		if bodyIdx == -1 || coverIdx == -1 || coverIdx < bodyIdx {
+			t.Error("cover should be inserted after <body>")
+		}
+	})
+
+	t.Run("injects after <body> with attributes", func(t *testing.T) {
+		html := `<html><body class="main">Content</body></html>`
+		data := &coverData{Title: "Test"}
+
+		got, err := injector.InjectCover(ctx, html, data)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !strings.Contains(got, "Test") {
+			t.Error("cover title not found in output")
+		}
+	})
+
+	t.Run("injects after <BODY> mixed case", func(t *testing.T) {
+		html := "<html><BODY>Content</BODY></html>"
+		data := &coverData{Title: "Test"}
+
+		got, err := injector.InjectCover(ctx, html, data)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !strings.Contains(got, "Test") {
+			t.Error("cover title not found in output")
+		}
+	})
+
+	t.Run("prepends when no <body>", func(t *testing.T) {
+		html := "<p>Content</p>"
+		data := &coverData{Title: "Test"}
+
+		got, err := injector.InjectCover(ctx, html, data)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// Cover should be at the start
+		if !strings.HasPrefix(got, "<div class=\"cover-page\">") {
+			t.Errorf("cover should be prepended, got: %q", got[:min(100, len(got))])
+		}
+	})
+
+	t.Run("renders all cover fields", func(t *testing.T) {
+		html := "<html><body></body></html>"
+		data := &coverData{
+			Title:        "My Document",
+			Subtitle:     "A Comprehensive Guide",
+			Logo:         "https://example.com/logo.png",
+			Author:       "John Doe",
+			AuthorTitle:  "Senior Developer",
+			Organization: "Acme Corp",
+			Date:         "2025-01-15",
+			Version:      "v1.0.0",
+		}
+
+		got, err := injector.InjectCover(ctx, html, data)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// Verify all fields are rendered
+		expectedParts := []string{
+			"My Document",
+			"A Comprehensive Guide",
+			"https://example.com/logo.png",
+			"John Doe",
+			"Senior Developer",
+			"Acme Corp",
+			"2025-01-15",
+			"v1.0.0",
+		}
+		for _, part := range expectedParts {
+			if !strings.Contains(got, part) {
+				t.Errorf("expected %q in output", part)
+			}
+		}
+	})
+
+	t.Run("optional fields can be empty", func(t *testing.T) {
+		html := "<html><body></body></html>"
+		data := &coverData{
+			Title: "Minimal",
+			// All other fields empty
+		}
+
+		got, err := injector.InjectCover(ctx, html, data)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if !strings.Contains(got, "Minimal") {
+			t.Error("title should be rendered")
+		}
+		if !strings.Contains(got, "cover-page") {
+			t.Error("cover page class should be present")
+		}
+	})
+
+	t.Run("HTML escapes special characters", func(t *testing.T) {
+		html := "<html><body></body></html>"
+		data := &coverData{
+			Title:  "<script>alert('xss')</script>",
+			Author: "John & Jane",
+		}
+
+		got, err := injector.InjectCover(ctx, html, data)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// HTML template should escape these
+		if strings.Contains(got, "<script>alert") {
+			t.Error("script tag should be escaped")
+		}
+		if !strings.Contains(got, "&lt;script&gt;") && !strings.Contains(got, "&#") {
+			// Either HTML entity or numeric escape is acceptable
+			t.Log("Note: checking for HTML escaping of script tag")
+		}
+	})
+}
+
+func TestInjectCover_ContextCancellation(t *testing.T) {
+	injector := newCoverInjection()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	data := &coverData{Title: "Test"}
+	_, err := injector.InjectCover(ctx, "<body></body>", data)
+
+	if err == nil {
+		t.Fatal("expected error for cancelled context")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("expected context.Canceled, got %v", err)
+	}
+}
+
 func TestEscapeCSSString(t *testing.T) {
 	tests := []struct {
 		name     string
