@@ -683,6 +683,171 @@ func TestBuildWatermarkCSS(t *testing.T) {
 	}
 }
 
+func TestBuildPageBreaksCSS(t *testing.T) {
+	tests := []struct {
+		name           string
+		pageBreaks     *PageBreaks
+		wantContains   []string
+		wantNotContain []string
+	}{
+		{
+			name:       "nil pageBreaks uses defaults",
+			pageBreaks: nil,
+			wantContains: []string{
+				"break-after: avoid",
+				"page-break-after: avoid",
+				"break-inside: avoid",
+				"page-break-inside: avoid",
+				"orphans: 2",
+				"widows: 2",
+			},
+			wantNotContain: []string{
+				"break-before: page",
+			},
+		},
+		{
+			name:       "empty pageBreaks uses defaults",
+			pageBreaks: &PageBreaks{},
+			wantContains: []string{
+				"orphans: 2",
+				"widows: 2",
+				"break-after: avoid",
+			},
+			wantNotContain: []string{
+				"break-before: page",
+			},
+		},
+		{
+			name:       "custom orphans and widows",
+			pageBreaks: &PageBreaks{Orphans: 3, Widows: 4},
+			wantContains: []string{
+				"orphans: 3",
+				"widows: 4",
+			},
+		},
+		{
+			name:       "orphans 0 uses default",
+			pageBreaks: &PageBreaks{Orphans: 0, Widows: 3},
+			wantContains: []string{
+				"orphans: 2",
+				"widows: 3",
+			},
+		},
+		{
+			name:       "widows 0 uses default",
+			pageBreaks: &PageBreaks{Orphans: 4, Widows: 0},
+			wantContains: []string{
+				"orphans: 4",
+				"widows: 2",
+			},
+		},
+		{
+			name:       "BeforeH1 adds page break CSS",
+			pageBreaks: &PageBreaks{BeforeH1: true},
+			wantContains: []string{
+				"/* Page breaks: before H1 */",
+				"h1 {",
+				"break-before: page",
+				"page-break-before: always",
+				"/* Exception: no break before first H1 if it's first element in body */",
+				"body > h1:first-child",
+			},
+			wantNotContain: []string{
+				"/* Page breaks: before H2 */",
+				"/* Page breaks: before H3 */",
+			},
+		},
+		{
+			name:       "BeforeH2 adds page break CSS",
+			pageBreaks: &PageBreaks{BeforeH2: true},
+			wantContains: []string{
+				"/* Page breaks: before H2 */",
+				"h2 {",
+				"break-before: page",
+				"page-break-before: always",
+			},
+			wantNotContain: []string{
+				"/* Page breaks: before H1 */",
+				"/* Page breaks: before H3 */",
+			},
+		},
+		{
+			name:       "BeforeH3 adds page break CSS",
+			pageBreaks: &PageBreaks{BeforeH3: true},
+			wantContains: []string{
+				"/* Page breaks: before H3 */",
+				"h3 {",
+				"break-before: page",
+				"page-break-before: always",
+			},
+			wantNotContain: []string{
+				"/* Page breaks: before H1 */",
+				"/* Page breaks: before H2 */",
+			},
+		},
+		{
+			name:       "all heading breaks enabled",
+			pageBreaks: &PageBreaks{BeforeH1: true, BeforeH2: true, BeforeH3: true},
+			wantContains: []string{
+				"/* Page breaks: before H1 */",
+				"/* Page breaks: before H2 */",
+				"/* Page breaks: before H3 */",
+			},
+		},
+		{
+			name:       "heading breaks with custom orphans widows",
+			pageBreaks: &PageBreaks{BeforeH1: true, Orphans: 5, Widows: 5},
+			wantContains: []string{
+				"orphans: 5",
+				"widows: 5",
+				"/* Page breaks: before H1 */",
+			},
+		},
+		{
+			name:       "always includes hardcoded heading protection",
+			pageBreaks: &PageBreaks{BeforeH2: true},
+			wantContains: []string{
+				"h1, h2, h3, h4, h5, h6 {",
+				"break-after: avoid",
+				"page-break-after: avoid",
+				"break-inside: avoid",
+				"page-break-inside: avoid",
+			},
+		},
+		{
+			name:       "always includes orphan widow rules for content elements",
+			pageBreaks: &PageBreaks{},
+			wantContains: []string{
+				"p, li, dd, dt, blockquote {",
+				"orphans:",
+				"widows:",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildPageBreaksCSS(tt.pageBreaks)
+
+			if got == "" {
+				t.Fatal("buildPageBreaksCSS() returned empty, want CSS")
+			}
+
+			for _, want := range tt.wantContains {
+				if !strings.Contains(got, want) {
+					t.Errorf("buildPageBreaksCSS() missing %q\nGot:\n%s", want, got)
+				}
+			}
+
+			for _, notWant := range tt.wantNotContain {
+				if strings.Contains(got, notWant) {
+					t.Errorf("buildPageBreaksCSS() should not contain %q\nGot:\n%s", notWant, got)
+				}
+			}
+		})
+	}
+}
+
 func TestExtractHeadings(t *testing.T) {
 	tests := []struct {
 		name     string
