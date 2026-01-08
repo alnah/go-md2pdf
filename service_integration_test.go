@@ -192,3 +192,137 @@ func TestConversionService_PageSettingsWithFooter_Integration(t *testing.T) {
 		t.Error("output does not have PDF magic bytes")
 	}
 }
+
+func TestConversionService_PageBreaks_Integration(t *testing.T) {
+	// Test various page break configurations to ensure they produce valid PDF output
+	tests := []struct {
+		name       string
+		pageBreaks *PageBreaks
+	}{
+		{
+			name:       "nil uses defaults",
+			pageBreaks: nil,
+		},
+		{
+			name:       "empty struct uses defaults",
+			pageBreaks: &PageBreaks{},
+		},
+		{
+			name:       "custom orphans and widows",
+			pageBreaks: &PageBreaks{Orphans: 3, Widows: 4},
+		},
+		{
+			name:       "break before H1",
+			pageBreaks: &PageBreaks{BeforeH1: true},
+		},
+		{
+			name:       "break before H2",
+			pageBreaks: &PageBreaks{BeforeH2: true},
+		},
+		{
+			name:       "break before H3",
+			pageBreaks: &PageBreaks{BeforeH3: true},
+		},
+		{
+			name:       "all heading breaks enabled",
+			pageBreaks: &PageBreaks{BeforeH1: true, BeforeH2: true, BeforeH3: true},
+		},
+		{
+			name:       "full configuration",
+			pageBreaks: &PageBreaks{BeforeH1: true, BeforeH2: true, BeforeH3: true, Orphans: 5, Widows: 5},
+		},
+		{
+			name:       "minimum orphans and widows",
+			pageBreaks: &PageBreaks{Orphans: MinOrphans, Widows: MinWidows},
+		},
+		{
+			name:       "maximum orphans and widows",
+			pageBreaks: &PageBreaks{Orphans: MaxOrphans, Widows: MaxWidows},
+		},
+	}
+
+	service := New()
+	defer service.Close()
+
+	// Markdown with multiple headings to test page breaks
+	markdown := `# Chapter 1
+
+This is the first chapter with some content.
+
+## Section 1.1
+
+Some content in section 1.1.
+
+### Subsection 1.1.1
+
+Details in subsection.
+
+# Chapter 2
+
+This is the second chapter.
+
+## Section 2.1
+
+More content here.
+`
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			input := Input{
+				Markdown:   markdown,
+				PageBreaks: tt.pageBreaks,
+			}
+
+			data, err := service.Convert(ctx, input)
+			if err != nil {
+				t.Fatalf("Convert() failed: %v", err)
+			}
+
+			// Verify PDF magic bytes
+			if !bytes.HasPrefix(data, []byte("%PDF-")) {
+				t.Error("output does not have PDF magic bytes")
+			}
+
+			// Ensure PDF is not suspiciously small
+			if len(data) < 100 {
+				t.Errorf("PDF data suspiciously small: %d bytes", len(data))
+			}
+		})
+	}
+}
+
+func TestConversionService_PageBreaksWithOtherFeatures_Integration(t *testing.T) {
+	service := New()
+	defer service.Close()
+
+	ctx := context.Background()
+	input := Input{
+		Markdown: "# Test with Page Breaks\n\n## Section One\n\nContent here.\n\n## Section Two\n\nMore content.",
+		CSS:      "body { font-family: sans-serif; }",
+		Page:     &PageSettings{Size: PageSizeA4, Orientation: OrientationPortrait, Margin: 1.0},
+		PageBreaks: &PageBreaks{
+			BeforeH1: true,
+			BeforeH2: true,
+			Orphans:  3,
+			Widows:   3,
+		},
+		Footer: &Footer{
+			Position:       "center",
+			ShowPageNumber: true,
+		},
+	}
+
+	data, err := service.Convert(ctx, input)
+	if err != nil {
+		t.Fatalf("Convert() failed: %v", err)
+	}
+
+	if !bytes.HasPrefix(data, []byte("%PDF-")) {
+		t.Error("output does not have PDF magic bytes")
+	}
+
+	if len(data) < 100 {
+		t.Errorf("PDF data suspiciously small: %d bytes", len(data))
+	}
+}
