@@ -56,6 +56,8 @@ jobs:
 
       - name: Run integration tests with coverage
         run: go test -race -tags=integration -coverprofile=coverage-integration.out -covermode=atomic ./...
+        env:
+          ROD_NO_SANDBOX: "1"
 
       - name: Upload integration coverage to Codecov
         uses: codecov/codecov-action@v5

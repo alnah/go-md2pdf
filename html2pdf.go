@@ -73,6 +73,11 @@ func (r *rodRenderer) ensureBrowser() error {
 	// We compensate by explicitly calling Kill() and Cleanup() in Close().
 	l := launcher.New().Headless(true).Leakless(false).Set("disable-gpu")
 
+	// Allow disabling sandbox for CI/Docker environments that lack kernel support.
+	if os.Getenv("ROD_NO_SANDBOX") == "1" {
+		l = l.NoSandbox(true)
+	}
+
 	// Optional: allow explicit browser override for CI/debugging.
 	// DO NOT auto-detect system Chrome - it causes corruption issues.
 	if bin := os.Getenv("ROD_BROWSER_BIN"); bin != "" {
