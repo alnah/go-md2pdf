@@ -50,9 +50,9 @@ const (
 
 // Footer styling constants.
 const (
-	footerFontSize   = "10px"
-	footerColor      = "#aaa"
-	footerPaddingH   = "0.5in"
+	footerFontSize = "10px"
+	footerColor    = "#aaa"
+	footerPaddingH = "0.5in"
 )
 
 // pageDimensions maps page size to (width, height) in inches.
