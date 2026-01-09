@@ -46,9 +46,9 @@ Download pre-built binaries from [GitHub Releases](https://github.com/alnah/go-m
 ### CLI
 
 ```bash
-md2pdf document.md                        # Single file
-md2pdf ./docs/ -o ./output/               # Batch convert
-md2pdf --config work document.md          # With config
+md2pdf convert document.md                # Single file
+md2pdf convert ./docs/ -o ./output/       # Batch convert
+md2pdf convert -c work document.md        # With config
 ```
 
 ### Library
@@ -191,72 +191,107 @@ pdf, err := svc.Convert(ctx, md2pdf.Input{
 ## CLI Reference
 
 ```
-md2pdf [flags] <input>
+md2pdf convert <input> [flags]
 
-Flags:
-  -o, --output            Output file or directory
-  -c, --config            Config name (work, personal) or path
-  -w, --workers           Number of parallel workers (default: auto)
-  -p, --page-size         Page size: letter, a4, legal (default: letter)
-      --orientation       Page orientation: portrait, landscape (default: portrait)
-      --margin            Page margin in inches (default: 0.5)
-      --css               Custom CSS file
-      --no-style          Disable default styling
-      --no-footer         Disable footer
-      --no-signature      Disable signature
-      --no-cover          Disable cover page
-      --no-toc            Disable table of contents
-      --no-watermark      Disable watermark
-      --no-page-breaks    Disable page break features
-      --cover-title       Override cover page title
-      --break-before      Page breaks before headings: h1,h2,h3 (comma-separated)
-      --orphans           Min lines at page bottom (1-5, default: 2)
-      --widows            Min lines at page top (1-5, default: 2)
-      --watermark-text    Watermark text (e.g., BRAND)
-      --watermark-color   Watermark color in hex (default: #888888)
-      --watermark-opacity Watermark opacity 0.0-1.0 (default: 0.1)
-      --watermark-angle   Watermark rotation in degrees (default: -45)
-  -q, --quiet             Only show errors
-  -v, --verbose           Show detailed timing
-      --version           Show version and exit
+Input/Output:
+  -o, --output <path>       Output file or directory
+  -c, --config <name>       Config file name or path
+  -w, --workers <n>         Parallel workers (0 = auto)
+
+Author:
+      --author-name <s>     Author name
+      --author-title <s>    Author professional title
+      --author-email <s>    Author email
+      --author-org <s>      Organization name
+
+Document:
+      --doc-title <s>       Document title ("" = auto from H1)
+      --doc-subtitle <s>    Document subtitle
+      --doc-version <s>     Version string
+      --doc-date <s>        Date ("auto" = today's date)
+
+Page:
+  -p, --page-size <s>       Page size: letter, a4, legal
+      --orientation <s>     Orientation: portrait, landscape
+      --margin <f>          Margin in inches (0.25-3.0)
+
+Footer:
+      --footer-position <s> Position: left, center, right
+      --footer-text <s>     Custom footer text
+      --footer-page-number  Show page numbers
+      --no-footer           Disable footer
+
+Cover:
+      --cover-logo <path>   Logo path or URL
+      --no-cover            Disable cover page
+
+Signature:
+      --sig-image <path>    Signature image path
+      --no-signature        Disable signature block
+
+Table of Contents:
+      --toc-title <s>       TOC heading text
+      --toc-depth <n>       Max heading depth (1-6)
+      --no-toc              Disable table of contents
+
+Watermark:
+      --wm-text <s>         Watermark text
+      --wm-color <s>        Watermark color (hex)
+      --wm-opacity <f>      Watermark opacity (0.0-1.0)
+      --wm-angle <f>        Watermark angle in degrees
+      --no-watermark        Disable watermark
+
+Page Breaks:
+      --break-before <s>    Break before headings: h1,h2,h3
+      --orphans <n>         Min lines at page bottom (1-5)
+      --widows <n>          Min lines at page top (1-5)
+      --no-page-breaks      Disable page break features
+
+Styling:
+      --css <path>          External CSS file
+      --no-style            Disable CSS styling
+
+Output Control:
+  -q, --quiet               Only show errors
+  -v, --verbose             Show detailed timing
 ```
 
 ### Examples
 
 ```bash
 # Single file with custom output
-md2pdf -o report.pdf input.md
+md2pdf convert -o report.pdf input.md
 
 # Batch with config
-md2pdf --config work ./docs/ -o ./pdfs/
+md2pdf convert -c work ./docs/ -o ./pdfs/
 
 # Custom CSS, no footer
-md2pdf --css custom.css --no-footer document.md
+md2pdf convert --css custom.css --no-footer document.md
 
 # A4 landscape with 1-inch margins
-md2pdf -p a4 --orientation landscape --margin 1.0 document.md
+md2pdf convert -p a4 --orientation landscape --margin 1.0 document.md
 
 # With watermark
-md2pdf --watermark-text "BRAND" --watermark-opacity 0.15 document.md
+md2pdf convert --wm-text "DRAFT" --wm-opacity 0.15 document.md
 
-# Override cover title
-md2pdf --cover-title "Final Report" document.md
+# Override document title
+md2pdf convert --doc-title "Final Report" document.md
 
 # Page breaks before H1 and H2 headings
-md2pdf --break-before h1,h2 document.md
+md2pdf convert --break-before h1,h2 document.md
 ```
 
 ### Docker
 
 ```bash
 # Convert a single file
-docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf document.md
+docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf convert document.md
 
 # Convert with output path
-docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf -o output.pdf input.md
+docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf convert -o output.pdf input.md
 
 # Batch convert directory
-docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf ./docs/ -o ./pdfs/
+docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf convert ./docs/ -o ./pdfs/
 ```
 
 ## Configuration
@@ -266,6 +301,14 @@ Supported formats: `.yaml`, `.yml`
 
 | Option                  | Type   | Default      | Description                                    |
 | ----------------------- | ------ | ------------ | ---------------------------------------------- |
+| `author.name`           | string | -            | Author name (used by cover, signature)         |
+| `author.title`          | string | -            | Author professional title                      |
+| `author.email`          | string | -            | Author email                                   |
+| `author.organization`   | string | -            | Organization name                              |
+| `document.title`        | string | -            | Document title ("" = auto from H1)             |
+| `document.subtitle`     | string | -            | Document subtitle                              |
+| `document.version`      | string | -            | Version string (used in cover, footer)         |
+| `document.date`         | string | -            | Date ("auto" = today's date)                   |
 | `input.defaultDir`      | string | -            | Default input directory                        |
 | `output.defaultDir`     | string | -            | Default output directory                       |
 | `css.style`             | string | -            | Embedded style name                            |
@@ -273,27 +316,15 @@ Supported formats: `.yaml`, `.yml`
 | `page.orientation`      | string | `"portrait"` | portrait, landscape                            |
 | `page.margin`           | float  | `0.5`        | Margin in inches (0.25-3.0)                    |
 | `cover.enabled`         | bool   | `false`      | Show cover page                                |
-| `cover.title`           | string | -            | Cover title (auto: H1 or filename)             |
-| `cover.subtitle`        | string | -            | Cover subtitle                                 |
 | `cover.logo`            | string | -            | Logo path or URL                               |
-| `cover.author`          | string | -            | Author name (fallback: signature.name)         |
-| `cover.authorTitle`     | string | -            | Author title (fallback: signature.title)       |
-| `cover.organization`    | string | -            | Organization name                              |
-| `cover.date`            | string | -            | Date ("auto" for today, fallback: footer.date) |
-| `cover.version`         | string | -            | Version (fallback: footer.status)              |
 | `toc.enabled`           | bool   | `false`      | Show table of contents                         |
 | `toc.title`             | string | -            | TOC title (empty = no title)                   |
 | `toc.maxDepth`          | int    | `3`          | Heading depth (1-6)                            |
 | `footer.enabled`        | bool   | `false`      | Show footer                                    |
 | `footer.showPageNumber` | bool   | `false`      | Show page numbers                              |
 | `footer.position`       | string | `"right"`    | left, center, right                            |
-| `footer.date`           | string | -            | Date text                                      |
-| `footer.status`         | string | -            | Status text (DRAFT, etc)                       |
 | `footer.text`           | string | -            | Custom footer text                             |
 | `signature.enabled`     | bool   | `false`      | Show signature block                           |
-| `signature.name`        | string | -            | Signer name                                    |
-| `signature.title`       | string | -            | Signer title                                   |
-| `signature.email`       | string | -            | Signer email                                   |
 | `signature.imagePath`   | string | -            | Photo path or URL                              |
 | `signature.links`       | array  | -            | Links (label, url)                             |
 | `watermark.enabled`     | bool   | `false`      | Show watermark                                 |
@@ -314,6 +345,20 @@ Supported formats: `.yaml`, `.yml`
 ```yaml
 # ~/.config/go-md2pdf/work.yaml
 
+# Shared author info (used by cover and signature)
+author:
+  name: 'John Doe'
+  title: 'Developer'
+  email: 'john@example.com'
+  organization: 'Acme Corp'
+
+# Shared document metadata (used by cover and footer)
+document:
+  # title: auto-detected from H1 or filename
+  subtitle: 'Internal Document'
+  version: 'v1.0'
+  date: 'auto' # resolves to YYYY-MM-DD
+
 css:
   style: 'nord' # add your styles to internal/assets/styles/, and build or install
 
@@ -324,11 +369,7 @@ page:
 
 cover:
   enabled: true
-  # title: auto-detected from H1 or filename
-  subtitle: 'Internal Document'
   logo: '/path/to/company-logo.png'
-  organization: 'Acme Corp'
-  date: 'auto' # resolves to YYYY-MM-DD
 
 toc:
   enabled: true
@@ -339,13 +380,11 @@ footer:
   enabled: true
   showPageNumber: true
   position: 'center'
-  status: 'DRAFT'
+  text: '' # optional custom text
 
 signature:
   enabled: true
-  name: 'John Doe'
-  title: 'Developer'
-  email: 'john@example.com'
+  imagePath: '/path/to/signature.png' # optional
   links:
     - label: 'GitHub'
       url: 'https://github.com/johndoe'
