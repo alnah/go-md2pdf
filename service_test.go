@@ -139,6 +139,8 @@ func withPDFConverter(c pdfConverter) Option {
 }
 
 func TestValidateInput(t *testing.T) {
+	t.Parallel()
+
 	service := New()
 	defer service.Close()
 
@@ -166,6 +168,8 @@ func TestValidateInput(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := service.validateInput(tt.input)
 			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("validateInput() error = %v, wantErr %v", err, tt.wantErr)
@@ -175,6 +179,8 @@ func TestValidateInput(t *testing.T) {
 }
 
 func TestConvert_Success(t *testing.T) {
+	t.Parallel()
+
 	preprocessor := &mockPreprocessor{output: "preprocessed"}
 	htmlConv := &mockHTMLConverter{output: "<html>converted</html>"}
 	cssInj := &mockCSSInjector{output: "<html>with-css</html>"}
@@ -251,6 +257,8 @@ func TestConvert_Success(t *testing.T) {
 }
 
 func TestConvert_ValidationError(t *testing.T) {
+	t.Parallel()
+
 	service := New()
 	defer service.Close()
 
@@ -263,6 +271,8 @@ func TestConvert_ValidationError(t *testing.T) {
 }
 
 func TestConvert_HTMLConverterError(t *testing.T) {
+	t.Parallel()
+
 	htmlErr := errors.New("pandoc failed")
 
 	service := New(
@@ -286,6 +296,8 @@ func TestConvert_HTMLConverterError(t *testing.T) {
 }
 
 func TestConvert_PDFConverterError(t *testing.T) {
+	t.Parallel()
+
 	pdfErr := errors.New("chrome failed")
 
 	service := New(
@@ -309,6 +321,8 @@ func TestConvert_PDFConverterError(t *testing.T) {
 }
 
 func TestConvert_SignatureInjectorError(t *testing.T) {
+	t.Parallel()
+
 	sigErr := errors.New("signature template failed")
 
 	service := New(
@@ -332,6 +346,8 @@ func TestConvert_SignatureInjectorError(t *testing.T) {
 }
 
 func TestConvert_NoCSSByDefault(t *testing.T) {
+	t.Parallel()
+
 	cssInj := &mockCSSInjector{}
 
 	service := New(
@@ -361,6 +377,8 @@ func TestConvert_NoCSSByDefault(t *testing.T) {
 }
 
 func TestNew(t *testing.T) {
+	t.Parallel()
+
 	service := New()
 	defer service.Close()
 
@@ -382,6 +400,8 @@ func TestNew(t *testing.T) {
 }
 
 func TestWithTimeout(t *testing.T) {
+	t.Parallel()
+
 	service := New(WithTimeout(60 * defaultTimeout))
 	defer service.Close()
 
@@ -391,6 +411,8 @@ func TestWithTimeout(t *testing.T) {
 }
 
 func TestService_Close(t *testing.T) {
+	t.Parallel()
+
 	service := New()
 
 	// Close should not error
@@ -405,7 +427,10 @@ func TestService_Close(t *testing.T) {
 }
 
 func TestToSignatureData(t *testing.T) {
+	t.Parallel()
+
 	t.Run("nil returns nil", func(t *testing.T) {
+		t.Parallel()
 		result := toSignatureData(nil)
 		if result != nil {
 			t.Error("expected nil for nil input")
@@ -413,6 +438,8 @@ func TestToSignatureData(t *testing.T) {
 	})
 
 	t.Run("converts all fields", func(t *testing.T) {
+		t.Parallel()
+
 		sig := &Signature{
 			Name:      "John Doe",
 			Title:     "Developer",
@@ -447,7 +474,10 @@ func TestToSignatureData(t *testing.T) {
 }
 
 func TestToFooterData(t *testing.T) {
+	t.Parallel()
+
 	t.Run("nil returns nil", func(t *testing.T) {
+		t.Parallel()
 		result := toFooterData(nil)
 		if result != nil {
 			t.Error("expected nil for nil input")
@@ -455,6 +485,8 @@ func TestToFooterData(t *testing.T) {
 	})
 
 	t.Run("converts all fields", func(t *testing.T) {
+		t.Parallel()
+
 		footer := &Footer{
 			Position:       "center",
 			ShowPageNumber: true,
@@ -484,7 +516,10 @@ func TestToFooterData(t *testing.T) {
 }
 
 func TestToCoverData(t *testing.T) {
+	t.Parallel()
+
 	t.Run("nil returns nil", func(t *testing.T) {
+		t.Parallel()
 		result := toCoverData(nil)
 		if result != nil {
 			t.Error("expected nil for nil input")
@@ -492,6 +527,8 @@ func TestToCoverData(t *testing.T) {
 	})
 
 	t.Run("converts all fields", func(t *testing.T) {
+		t.Parallel()
+
 		cover := &Cover{
 			Title:        "My Document",
 			Subtitle:     "A Comprehensive Guide",
@@ -532,6 +569,8 @@ func TestToCoverData(t *testing.T) {
 	})
 
 	t.Run("empty fields preserved", func(t *testing.T) {
+		t.Parallel()
+
 		cover := &Cover{
 			Title: "Only Title",
 			// All other fields empty
@@ -555,7 +594,10 @@ func TestToCoverData(t *testing.T) {
 }
 
 func TestToTOCData(t *testing.T) {
+	t.Parallel()
+
 	t.Run("nil returns nil", func(t *testing.T) {
+		t.Parallel()
 		result := toTOCData(nil)
 		if result != nil {
 			t.Error("expected nil for nil input")
@@ -563,6 +605,8 @@ func TestToTOCData(t *testing.T) {
 	})
 
 	t.Run("converts all fields", func(t *testing.T) {
+		t.Parallel()
+
 		toc := &TOC{
 			Title:    "Table of Contents",
 			MaxDepth: 4,
@@ -579,6 +623,8 @@ func TestToTOCData(t *testing.T) {
 	})
 
 	t.Run("zero MaxDepth gets default", func(t *testing.T) {
+		t.Parallel()
+
 		toc := &TOC{
 			Title:    "Contents",
 			MaxDepth: 0,
@@ -592,6 +638,8 @@ func TestToTOCData(t *testing.T) {
 	})
 
 	t.Run("empty title preserved", func(t *testing.T) {
+		t.Parallel()
+
 		toc := &TOC{
 			Title:    "",
 			MaxDepth: 3,
@@ -606,10 +654,13 @@ func TestToTOCData(t *testing.T) {
 }
 
 func TestValidateInput_TOC(t *testing.T) {
+	t.Parallel()
+
 	service := New()
 	defer service.Close()
 
 	t.Run("nil TOC is valid", func(t *testing.T) {
+		t.Parallel()
 		input := Input{Markdown: "# Hello", TOC: nil}
 		err := service.validateInput(input)
 		if err != nil {
@@ -618,6 +669,8 @@ func TestValidateInput_TOC(t *testing.T) {
 	})
 
 	t.Run("valid TOC passes", func(t *testing.T) {
+		t.Parallel()
+
 		input := Input{
 			Markdown: "# Hello",
 			TOC:      &TOC{Title: "Contents", MaxDepth: 3},
@@ -629,6 +682,8 @@ func TestValidateInput_TOC(t *testing.T) {
 	})
 
 	t.Run("invalid TOC depth fails", func(t *testing.T) {
+		t.Parallel()
+
 		input := Input{
 			Markdown: "# Hello",
 			TOC:      &TOC{MaxDepth: 7},

@@ -8,6 +8,8 @@ import (
 )
 
 func TestPageSettings_Validate(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		ps      *PageSettings
@@ -157,6 +159,8 @@ func TestPageSettings_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := tt.ps.Validate()
 
 			if tt.wantErr != nil {
@@ -177,6 +181,8 @@ func TestPageSettings_Validate(t *testing.T) {
 }
 
 func TestDefaultPageSettings(t *testing.T) {
+	t.Parallel()
+
 	ps := DefaultPageSettings()
 
 	if ps.Size != PageSizeLetter {
@@ -196,6 +202,8 @@ func TestDefaultPageSettings(t *testing.T) {
 }
 
 func TestIsValidPageSize(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		size string
 		want bool
@@ -213,6 +221,8 @@ func TestIsValidPageSize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.size, func(t *testing.T) {
+			t.Parallel()
+
 			got := isValidPageSize(tt.size)
 			if got != tt.want {
 				t.Errorf("isValidPageSize(%q) = %v, want %v", tt.size, got, tt.want)
@@ -222,6 +232,8 @@ func TestIsValidPageSize(t *testing.T) {
 }
 
 func TestIsValidOrientation(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		orientation string
 		want        bool
@@ -238,6 +250,8 @@ func TestIsValidOrientation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.orientation, func(t *testing.T) {
+			t.Parallel()
+
 			got := isValidOrientation(tt.orientation)
 			if got != tt.want {
 				t.Errorf("isValidOrientation(%q) = %v, want %v", tt.orientation, got, tt.want)
@@ -247,6 +261,8 @@ func TestIsValidOrientation(t *testing.T) {
 }
 
 func TestFooter_Validate(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		footer  *Footer
@@ -301,6 +317,8 @@ func TestFooter_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := tt.footer.Validate()
 
 			if tt.wantErr != nil {
@@ -321,7 +339,10 @@ func TestFooter_Validate(t *testing.T) {
 }
 
 func TestWithTimeoutPanic(t *testing.T) {
+	t.Parallel()
+
 	t.Run("zero duration panics", func(t *testing.T) {
+		t.Parallel()
 		defer func() {
 			if r := recover(); r == nil {
 				t.Error("expected panic for zero duration")
@@ -331,6 +352,8 @@ func TestWithTimeoutPanic(t *testing.T) {
 	})
 
 	t.Run("negative duration panics", func(t *testing.T) {
+		t.Parallel()
+
 		defer func() {
 			if r := recover(); r == nil {
 				t.Error("expected panic for negative duration")
@@ -341,6 +364,8 @@ func TestWithTimeoutPanic(t *testing.T) {
 }
 
 func TestIsValidHexColor(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		color string
 		want  bool
@@ -381,6 +406,8 @@ func TestIsValidHexColor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.color, func(t *testing.T) {
+			t.Parallel()
+
 			got := isValidHexColor(tt.color)
 			if got != tt.want {
 				t.Errorf("isValidHexColor(%q) = %v, want %v", tt.color, got, tt.want)
@@ -390,6 +417,8 @@ func TestIsValidHexColor(t *testing.T) {
 }
 
 func TestCover_Validate(t *testing.T) {
+	t.Parallel()
+
 	// Create a temp file for logo path tests
 	tempDir := t.TempDir()
 	existingLogo := tempDir + "/logo.png"
@@ -460,6 +489,8 @@ func TestCover_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := tt.cover.Validate()
 
 			if tt.wantErr != nil {
@@ -480,6 +511,8 @@ func TestCover_Validate(t *testing.T) {
 }
 
 func TestWatermark_Validate(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		watermark *Watermark
@@ -544,6 +577,8 @@ func TestWatermark_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := tt.watermark.Validate()
 
 			if tt.wantErr != nil {
@@ -564,6 +599,8 @@ func TestWatermark_Validate(t *testing.T) {
 }
 
 func TestPageBreaks_Validate(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name       string
 		pageBreaks *PageBreaks
@@ -658,6 +695,8 @@ func TestPageBreaks_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := tt.pageBreaks.Validate()
 
 			if tt.wantErr != nil {
@@ -678,6 +717,8 @@ func TestPageBreaks_Validate(t *testing.T) {
 }
 
 func TestTOC_Validate(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		toc     *TOC
@@ -747,6 +788,8 @@ func TestTOC_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := tt.toc.Validate()
 
 			if tt.wantErr != nil {

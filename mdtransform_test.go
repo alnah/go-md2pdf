@@ -6,6 +6,8 @@ import (
 )
 
 func TestNormalizeLineEndings(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		input    string
@@ -40,6 +42,8 @@ func TestNormalizeLineEndings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := normalizeLineEndings(tt.input)
 			if got != tt.expected {
 				t.Errorf("normalizeLineEndings() = %q, want %q", got, tt.expected)
@@ -49,6 +53,8 @@ func TestNormalizeLineEndings(t *testing.T) {
 }
 
 func TestCompressBlankLines(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		input    string
@@ -88,6 +94,8 @@ func TestCompressBlankLines(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := compressBlankLines(tt.input)
 			if got != tt.expected {
 				t.Errorf("compressBlankLines() = %q, want %q", got, tt.expected)
@@ -97,6 +105,8 @@ func TestCompressBlankLines(t *testing.T) {
 }
 
 func TestConvertHighlights(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		input    string
@@ -151,6 +161,8 @@ func TestConvertHighlights(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := convertHighlights(tt.input)
 			if got != tt.expected {
 				t.Errorf("convertHighlights() = %q, want %q", got, tt.expected)
@@ -160,6 +172,8 @@ func TestConvertHighlights(t *testing.T) {
 }
 
 func TestCommonMarkPreprocessor_PreprocessMarkdown(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		input    string
@@ -212,6 +226,8 @@ func TestCommonMarkPreprocessor_PreprocessMarkdown(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := preprocessor.PreprocessMarkdown(ctx, tt.input)
 			if got != tt.expected {
 				t.Errorf("PreprocessMarkdown():\ngot:  %q\nwant: %q", got, tt.expected)
