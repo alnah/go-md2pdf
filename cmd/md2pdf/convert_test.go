@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	md2pdf "github.com/alnah/go-md2pdf"
 	"github.com/alnah/go-md2pdf/internal/config"
@@ -19,7 +20,27 @@ type OutputConfig = config.OutputConfig
 type CSSConfig = config.CSSConfig
 type SignatureConfig = config.SignatureConfig
 type FooterConfig = config.FooterConfig
+type AuthorConfig = config.AuthorConfig
+type DocumentConfig = config.DocumentConfig
 type Link = config.Link
+
+// cliFlags is an alias for convertFlags (backward compatibility for tests)
+type cliFlags = convertFlags
+
+// parseFlags is a compatibility wrapper for tests (maps to parseConvertFlags).
+func parseFlags(args []string) (*convertFlags, []string, error) {
+	// Skip program name if present (legacy behavior)
+	if len(args) > 0 {
+		return parseConvertFlags(args[1:])
+	}
+	return parseConvertFlags(args)
+}
+
+// printResults is a compatibility wrapper for tests.
+func printResults(results []ConversionResult, quiet, verbose bool) int {
+	deps := DefaultDeps()
+	return printResultsWithWriter(results, quiet, verbose, deps)
+}
 
 // Compile-time interface compliance check (also ensures md2pdf import is used)
 var _ Converter = (*md2pdf.Service)(nil)
@@ -207,41 +228,41 @@ func TestParseFlags(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			if flags.configName != tt.wantConfig {
-				t.Errorf("configName = %q, want %q", flags.configName, tt.wantConfig)
+			if flags.common.config != tt.wantConfig {
+				t.Errorf("configName = %q, want %q", flags.common.config, tt.wantConfig)
 			}
-			if flags.outputPath != tt.wantOutput {
-				t.Errorf("outputPath = %q, want %q", flags.outputPath, tt.wantOutput)
+			if flags.output != tt.wantOutput {
+				t.Errorf("outputPath = %q, want %q", flags.output, tt.wantOutput)
 			}
-			if flags.cssFile != tt.wantCSS {
-				t.Errorf("cssFile = %q, want %q", flags.cssFile, tt.wantCSS)
+			if flags.style.css != tt.wantCSS {
+				t.Errorf("cssFile = %q, want %q", flags.style.css, tt.wantCSS)
 			}
-			if flags.quiet != tt.wantQuiet {
-				t.Errorf("quiet = %v, want %v", flags.quiet, tt.wantQuiet)
+			if flags.common.quiet != tt.wantQuiet {
+				t.Errorf("quiet = %v, want %v", flags.common.quiet, tt.wantQuiet)
 			}
-			if flags.verbose != tt.wantVerbose {
-				t.Errorf("verbose = %v, want %v", flags.verbose, tt.wantVerbose)
+			if flags.common.verbose != tt.wantVerbose {
+				t.Errorf("verbose = %v, want %v", flags.common.verbose, tt.wantVerbose)
 			}
-			if flags.noSignature != tt.wantNoSignature {
-				t.Errorf("noSignature = %v, want %v", flags.noSignature, tt.wantNoSignature)
+			if flags.signature.disabled != tt.wantNoSignature {
+				t.Errorf("noSignature = %v, want %v", flags.signature.disabled, tt.wantNoSignature)
 			}
-			if flags.noStyle != tt.wantNoStyle {
-				t.Errorf("noStyle = %v, want %v", flags.noStyle, tt.wantNoStyle)
+			if flags.style.disabled != tt.wantNoStyle {
+				t.Errorf("noStyle = %v, want %v", flags.style.disabled, tt.wantNoStyle)
 			}
-			if flags.noFooter != tt.wantNoFooter {
-				t.Errorf("noFooter = %v, want %v", flags.noFooter, tt.wantNoFooter)
+			if flags.footer.disabled != tt.wantNoFooter {
+				t.Errorf("noFooter = %v, want %v", flags.footer.disabled, tt.wantNoFooter)
 			}
 			if flags.version != tt.wantVersion {
 				t.Errorf("version = %v, want %v", flags.version, tt.wantVersion)
 			}
-			if flags.pageSize != tt.wantPageSize {
-				t.Errorf("pageSize = %q, want %q", flags.pageSize, tt.wantPageSize)
+			if flags.page.size != tt.wantPageSize {
+				t.Errorf("pageSize = %q, want %q", flags.page.size, tt.wantPageSize)
 			}
-			if flags.orientation != tt.wantOrientation {
-				t.Errorf("orientation = %q, want %q", flags.orientation, tt.wantOrientation)
+			if flags.page.orientation != tt.wantOrientation {
+				t.Errorf("orientation = %q, want %q", flags.page.orientation, tt.wantOrientation)
 			}
-			if flags.margin != tt.wantMargin {
-				t.Errorf("margin = %v, want %v", flags.margin, tt.wantMargin)
+			if flags.page.margin != tt.wantMargin {
+				t.Errorf("margin = %v, want %v", flags.page.margin, tt.wantMargin)
 			}
 			if len(positional) != len(tt.wantPositional) {
 				t.Errorf("positional args = %v, want %v", positional, tt.wantPositional)
@@ -673,7 +694,10 @@ func TestPrintResults(t *testing.T) {
 
 func TestBuildSignatureData(t *testing.T) {
 	t.Run("noSignature flag returns nil", func(t *testing.T) {
-		cfg := &Config{Signature: SignatureConfig{Enabled: true, Name: "Test"}}
+		cfg := &Config{
+			Author:    AuthorConfig{Name: "Test"},
+			Signature: SignatureConfig{Enabled: true},
+		}
 		got, err := buildSignatureData(cfg, true)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -684,7 +708,10 @@ func TestBuildSignatureData(t *testing.T) {
 	})
 
 	t.Run("signature disabled in config returns nil", func(t *testing.T) {
-		cfg := &Config{Signature: SignatureConfig{Enabled: false, Name: "Test"}}
+		cfg := &Config{
+			Author:    AuthorConfig{Name: "Test"},
+			Signature: SignatureConfig{Enabled: false},
+		}
 		got, err := buildSignatureData(cfg, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -695,15 +722,19 @@ func TestBuildSignatureData(t *testing.T) {
 	})
 
 	t.Run("valid signature config returns SignatureData", func(t *testing.T) {
-		cfg := &Config{Signature: SignatureConfig{
-			Enabled: true,
-			Name:    "John Doe",
-			Title:   "Developer",
-			Email:   "john@example.com",
-			Links: []Link{
-				{Label: "GitHub", URL: "https://github.com/johndoe"},
+		cfg := &Config{
+			Author: AuthorConfig{
+				Name:  "John Doe",
+				Title: "Developer",
+				Email: "john@example.com",
 			},
-		}}
+			Signature: SignatureConfig{
+				Enabled: true,
+				Links: []Link{
+					{Label: "GitHub", URL: "https://github.com/johndoe"},
+				},
+			},
+		}
 		got, err := buildSignatureData(cfg, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -729,11 +760,13 @@ func TestBuildSignatureData(t *testing.T) {
 	})
 
 	t.Run("URL image path is accepted without file validation", func(t *testing.T) {
-		cfg := &Config{Signature: SignatureConfig{
-			Enabled:   true,
-			Name:      "Test",
-			ImagePath: "https://example.com/logo.png",
-		}}
+		cfg := &Config{
+			Author: AuthorConfig{Name: "Test"},
+			Signature: SignatureConfig{
+				Enabled:   true,
+				ImagePath: "https://example.com/logo.png",
+			},
+		}
 		got, err := buildSignatureData(cfg, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -747,11 +780,13 @@ func TestBuildSignatureData(t *testing.T) {
 	})
 
 	t.Run("nonexistent local image path returns error", func(t *testing.T) {
-		cfg := &Config{Signature: SignatureConfig{
-			Enabled:   true,
-			Name:      "Test",
-			ImagePath: "/nonexistent/path/to/image.png",
-		}}
+		cfg := &Config{
+			Author: AuthorConfig{Name: "Test"},
+			Signature: SignatureConfig{
+				Enabled:   true,
+				ImagePath: "/nonexistent/path/to/image.png",
+			},
+		}
 		_, err := buildSignatureData(cfg, false)
 		if err == nil {
 			t.Fatal("expected error for nonexistent image path")
@@ -768,11 +803,13 @@ func TestBuildSignatureData(t *testing.T) {
 			t.Fatalf("failed to create test image: %v", err)
 		}
 
-		cfg := &Config{Signature: SignatureConfig{
-			Enabled:   true,
-			Name:      "Test",
-			ImagePath: imagePath,
-		}}
+		cfg := &Config{
+			Author: AuthorConfig{Name: "Test"},
+			Signature: SignatureConfig{
+				Enabled:   true,
+				ImagePath: imagePath,
+			},
+		}
 		got, err := buildSignatureData(cfg, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -786,11 +823,10 @@ func TestBuildSignatureData(t *testing.T) {
 	})
 
 	t.Run("empty image path is accepted", func(t *testing.T) {
-		cfg := &Config{Signature: SignatureConfig{
-			Enabled:   true,
-			Name:      "Test",
-			ImagePath: "",
-		}}
+		cfg := &Config{
+			Author:    AuthorConfig{Name: "Test"},
+			Signature: SignatureConfig{Enabled: true},
+		}
 		got, err := buildSignatureData(cfg, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -840,14 +876,18 @@ func TestBuildFooterData(t *testing.T) {
 	})
 
 	t.Run("footer enabled returns FooterData", func(t *testing.T) {
-		cfg := &Config{Footer: FooterConfig{
-			Enabled:        true,
-			Position:       "center",
-			ShowPageNumber: true,
-			Date:           "2025-01-15",
-			Status:         "DRAFT",
-			Text:           "Footer Text",
-		}}
+		cfg := &Config{
+			Document: DocumentConfig{
+				Date:    "2025-01-15",
+				Version: "DRAFT",
+			},
+			Footer: FooterConfig{
+				Enabled:        true,
+				Position:       "center",
+				ShowPageNumber: true,
+				Text:           "Footer Text",
+			},
+		}
 		got := buildFooterData(cfg, false)
 		if got == nil {
 			t.Fatal("expected FooterData, got nil")
@@ -935,7 +975,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: filepath.Join(blockingFile, "subdir", "out.pdf"),
 		}
 
-		result := convertFile(context.Background(), mockConv, f, &conversionParams{flags: &cliFlags{}, cfg: config.DefaultConfig()})
+		result := convertFile(context.Background(), mockConv, f, &conversionParams{cfg: config.DefaultConfig()})
 
 		if result.Err == nil {
 			t.Error("expected error when mkdir fails")
@@ -972,7 +1012,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: filepath.Join(outDir, "out.pdf"),
 		}
 
-		result := convertFile(context.Background(), mockConv, f, &conversionParams{flags: &cliFlags{}, cfg: config.DefaultConfig()})
+		result := convertFile(context.Background(), mockConv, f, &conversionParams{cfg: config.DefaultConfig()})
 
 		if result.Err == nil {
 			t.Error("expected error when write fails")
@@ -988,7 +1028,7 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			OutputPath: "/tmp/out.pdf",
 		}
 
-		result := convertFile(context.Background(), mockConv, f, &conversionParams{flags: &cliFlags{}, cfg: config.DefaultConfig()})
+		result := convertFile(context.Background(), mockConv, f, &conversionParams{cfg: config.DefaultConfig()})
 
 		if result.Err == nil {
 			t.Error("expected error when read fails")
@@ -1028,7 +1068,7 @@ func TestBuildPageSettings(t *testing.T) {
 		},
 		{
 			name:            "flags only",
-			flags:           &cliFlags{pageSize: "a4", orientation: "landscape", margin: 1.0},
+			flags:           &cliFlags{page: pageFlags{size: "a4", orientation: "landscape", margin: 1.0}},
 			cfg:             &Config{},
 			wantSize:        "a4",
 			wantOrientation: "landscape",
@@ -1048,7 +1088,7 @@ func TestBuildPageSettings(t *testing.T) {
 		},
 		{
 			name:  "flags override config",
-			flags: &cliFlags{pageSize: "a4", orientation: "landscape", margin: 1.5},
+			flags: &cliFlags{page: pageFlags{size: "a4", orientation: "landscape", margin: 1.5}},
 			cfg: &Config{Page: PageConfig{
 				Size:        "legal",
 				Orientation: "portrait",
@@ -1060,7 +1100,7 @@ func TestBuildPageSettings(t *testing.T) {
 		},
 		{
 			name:  "partial flags override - size only",
-			flags: &cliFlags{pageSize: "a4"},
+			flags: &cliFlags{page: pageFlags{size: "a4"}},
 			cfg: &Config{Page: PageConfig{
 				Size:        "letter",
 				Orientation: "landscape",
@@ -1072,7 +1112,7 @@ func TestBuildPageSettings(t *testing.T) {
 		},
 		{
 			name:  "partial flags override - orientation only",
-			flags: &cliFlags{orientation: "landscape"},
+			flags: &cliFlags{page: pageFlags{orientation: "landscape"}},
 			cfg: &Config{Page: PageConfig{
 				Size:        "a4",
 				Orientation: "portrait",
@@ -1084,7 +1124,7 @@ func TestBuildPageSettings(t *testing.T) {
 		},
 		{
 			name:  "partial flags override - margin only",
-			flags: &cliFlags{margin: 2.0},
+			flags: &cliFlags{page: pageFlags{margin: 2.0}},
 			cfg: &Config{Page: PageConfig{
 				Size:        "legal",
 				Orientation: "landscape",
@@ -1104,7 +1144,7 @@ func TestBuildPageSettings(t *testing.T) {
 		},
 		{
 			name:            "flags trigger validation with defaults",
-			flags:           &cliFlags{pageSize: "letter"},
+			flags:           &cliFlags{page: pageFlags{size: "letter"}},
 			cfg:             &Config{},
 			wantSize:        "letter",
 			wantOrientation: md2pdf.OrientationPortrait,
@@ -1112,25 +1152,25 @@ func TestBuildPageSettings(t *testing.T) {
 		},
 		{
 			name:    "invalid size returns error",
-			flags:   &cliFlags{pageSize: "tabloid"},
+			flags:   &cliFlags{page: pageFlags{size: "tabloid"}},
 			cfg:     &Config{},
 			wantErr: true,
 		},
 		{
 			name:    "invalid orientation returns error",
-			flags:   &cliFlags{orientation: "diagonal"},
+			flags:   &cliFlags{page: pageFlags{orientation: "diagonal"}},
 			cfg:     &Config{},
 			wantErr: true,
 		},
 		{
 			name:    "invalid margin returns error",
-			flags:   &cliFlags{margin: 10.0},
+			flags:   &cliFlags{page: pageFlags{margin: 10.0}},
 			cfg:     &Config{},
 			wantErr: true,
 		},
 		{
 			name:    "margin below minimum returns error",
-			flags:   &cliFlags{margin: 0.1},
+			flags:   &cliFlags{page: pageFlags{margin: 0.1}},
 			cfg:     &Config{},
 			wantErr: true,
 		},
@@ -1264,19 +1304,19 @@ func TestBuildWatermarkData(t *testing.T) {
 	}{
 		{
 			name:    "noWatermark flag returns nil",
-			flags:   &cliFlags{noWatermark: true, watermarkAngle: watermarkAngleSentinel},
+			flags:   &cliFlags{watermark: watermarkFlags{disabled: true, angle: watermarkAngleSentinel}},
 			cfg:     &Config{Watermark: WatermarkConfig{Enabled: true, Text: "DRAFT"}},
 			wantNil: true,
 		},
 		{
 			name:    "neither flags nor config returns nil",
-			flags:   &cliFlags{watermarkAngle: watermarkAngleSentinel},
+			flags:   &cliFlags{watermark: watermarkFlags{angle: watermarkAngleSentinel}},
 			cfg:     &Config{},
 			wantNil: true,
 		},
 		{
 			name:  "config only returns watermark",
-			flags: &cliFlags{watermarkAngle: watermarkAngleSentinel},
+			flags: &cliFlags{watermark: watermarkFlags{angle: watermarkAngleSentinel}},
 			cfg: &Config{Watermark: WatermarkConfig{
 				Enabled: true,
 				Text:    "CONFIDENTIAL",
@@ -1291,7 +1331,7 @@ func TestBuildWatermarkData(t *testing.T) {
 		},
 		{
 			name:        "flags only returns watermark with defaults",
-			flags:       &cliFlags{watermarkText: "DRAFT", watermarkAngle: watermarkAngleSentinel},
+			flags:       &cliFlags{watermark: watermarkFlags{text: "DRAFT", angle: watermarkAngleSentinel}},
 			cfg:         &Config{},
 			wantText:    "DRAFT",
 			wantColor:   "#888888", // default
@@ -1300,12 +1340,12 @@ func TestBuildWatermarkData(t *testing.T) {
 		},
 		{
 			name: "flags override config",
-			flags: &cliFlags{
-				watermarkText:    "OVERRIDE",
-				watermarkColor:   "#00ff00",
-				watermarkOpacity: 0.5,
-				watermarkAngle:   15,
-			},
+			flags: &cliFlags{watermark: watermarkFlags{
+				text:    "OVERRIDE",
+				color:   "#00ff00",
+				opacity: 0.5,
+				angle:   15,
+			}},
 			cfg: &Config{Watermark: WatermarkConfig{
 				Enabled: true,
 				Text:    "ORIGINAL",
@@ -1320,10 +1360,10 @@ func TestBuildWatermarkData(t *testing.T) {
 		},
 		{
 			name: "partial flags override - text only",
-			flags: &cliFlags{
-				watermarkText:  "NEW TEXT",
-				watermarkAngle: watermarkAngleSentinel,
-			},
+			flags: &cliFlags{watermark: watermarkFlags{
+				text:  "NEW TEXT",
+				angle: watermarkAngleSentinel,
+			}},
 			cfg: &Config{Watermark: WatermarkConfig{
 				Enabled: true,
 				Text:    "ORIGINAL",
@@ -1338,10 +1378,10 @@ func TestBuildWatermarkData(t *testing.T) {
 		},
 		{
 			name: "angle zero is valid (not sentinel)",
-			flags: &cliFlags{
-				watermarkText:  "DRAFT",
-				watermarkAngle: 0,
-			},
+			flags: &cliFlags{watermark: watermarkFlags{
+				text:  "DRAFT",
+				angle: 0,
+			}},
 			cfg:         &Config{},
 			wantText:    "DRAFT",
 			wantColor:   "#888888",
@@ -1350,7 +1390,7 @@ func TestBuildWatermarkData(t *testing.T) {
 		},
 		{
 			name:  "config angle zero preserved",
-			flags: &cliFlags{watermarkAngle: watermarkAngleSentinel},
+			flags: &cliFlags{watermark: watermarkFlags{angle: watermarkAngleSentinel}},
 			cfg: &Config{Watermark: WatermarkConfig{
 				Enabled: true,
 				Text:    "DRAFT",
@@ -1365,70 +1405,70 @@ func TestBuildWatermarkData(t *testing.T) {
 		},
 		{
 			name:        "empty text when enabled returns error",
-			flags:       &cliFlags{watermarkColor: "#888888", watermarkAngle: watermarkAngleSentinel},
+			flags:       &cliFlags{watermark: watermarkFlags{color: "#888888", angle: watermarkAngleSentinel}},
 			cfg:         &Config{Watermark: WatermarkConfig{Enabled: true, Text: ""}},
 			wantErr:     true,
 			errContains: "watermark text is required",
 		},
 		{
 			name: "invalid opacity above 1 returns error",
-			flags: &cliFlags{
-				watermarkText:    "DRAFT",
-				watermarkOpacity: 1.5,
-				watermarkAngle:   -999,
-			},
+			flags: &cliFlags{watermark: watermarkFlags{
+				text:    "DRAFT",
+				opacity: 1.5,
+				angle:   -999,
+			}},
 			cfg:         &Config{},
 			wantErr:     true,
 			errContains: "opacity must be between 0 and 1",
 		},
 		{
 			name: "invalid opacity below 0 returns error",
-			flags: &cliFlags{
-				watermarkText:    "DRAFT",
-				watermarkOpacity: -0.1,
-				watermarkAngle:   -999,
-			},
+			flags: &cliFlags{watermark: watermarkFlags{
+				text:    "DRAFT",
+				opacity: -0.1,
+				angle:   -999,
+			}},
 			cfg:         &Config{},
 			wantErr:     true,
 			errContains: "opacity must be between 0 and 1",
 		},
 		{
 			name: "invalid angle above 90 returns error",
-			flags: &cliFlags{
-				watermarkText:  "DRAFT",
-				watermarkAngle: 100,
-			},
+			flags: &cliFlags{watermark: watermarkFlags{
+				text:  "DRAFT",
+				angle: 100,
+			}},
 			cfg:         &Config{},
 			wantErr:     true,
 			errContains: "angle must be between -90 and 90",
 		},
 		{
 			name: "invalid angle below -90 returns error",
-			flags: &cliFlags{
-				watermarkText:  "DRAFT",
-				watermarkAngle: -100,
-			},
+			flags: &cliFlags{watermark: watermarkFlags{
+				text:  "DRAFT",
+				angle: -100,
+			}},
 			cfg:         &Config{},
 			wantErr:     true,
 			errContains: "angle must be between -90 and 90",
 		},
 		{
 			name: "invalid color format returns error",
-			flags: &cliFlags{
-				watermarkText:  "DRAFT",
-				watermarkColor: "red", // invalid - must be hex
-				watermarkAngle: watermarkAngleSentinel,
-			},
+			flags: &cliFlags{watermark: watermarkFlags{
+				text:  "DRAFT",
+				color: "red", // invalid - must be hex
+				angle: watermarkAngleSentinel,
+			}},
 			cfg:         &Config{},
 			wantErr:     true,
 			errContains: "invalid watermark color",
 		},
 		{
 			name: "invalid color from config returns error",
-			flags: &cliFlags{
-				watermarkText:  "DRAFT",
-				watermarkAngle: watermarkAngleSentinel,
-			},
+			flags: &cliFlags{watermark: watermarkFlags{
+				text:  "DRAFT",
+				angle: watermarkAngleSentinel,
+			}},
 			cfg: &Config{Watermark: WatermarkConfig{
 				Enabled: true,
 				Text:    "DRAFT",
@@ -1439,10 +1479,10 @@ func TestBuildWatermarkData(t *testing.T) {
 		},
 		{
 			name: "boundary angle -90 is valid",
-			flags: &cliFlags{
-				watermarkText:  "DRAFT",
-				watermarkAngle: -90,
-			},
+			flags: &cliFlags{watermark: watermarkFlags{
+				text:  "DRAFT",
+				angle: -90,
+			}},
 			cfg:         &Config{},
 			wantText:    "DRAFT",
 			wantColor:   "#888888",
@@ -1451,10 +1491,10 @@ func TestBuildWatermarkData(t *testing.T) {
 		},
 		{
 			name: "boundary angle 90 is valid",
-			flags: &cliFlags{
-				watermarkText:  "DRAFT",
-				watermarkAngle: 90,
-			},
+			flags: &cliFlags{watermark: watermarkFlags{
+				text:  "DRAFT",
+				angle: 90,
+			}},
 			cfg:         &Config{},
 			wantText:    "DRAFT",
 			wantColor:   "#888888",
@@ -1463,10 +1503,10 @@ func TestBuildWatermarkData(t *testing.T) {
 		},
 		{
 			name: "boundary opacity 0 from config gets default",
-			flags: &cliFlags{
-				watermarkText:  "DRAFT",
-				watermarkAngle: watermarkAngleSentinel,
-			},
+			flags: &cliFlags{watermark: watermarkFlags{
+				text:  "DRAFT",
+				angle: watermarkAngleSentinel,
+			}},
 			cfg: &Config{Watermark: WatermarkConfig{
 				Enabled: true,
 				Text:    "DRAFT",
@@ -1479,11 +1519,11 @@ func TestBuildWatermarkData(t *testing.T) {
 		},
 		{
 			name: "boundary opacity 1 is valid",
-			flags: &cliFlags{
-				watermarkText:    "DRAFT",
-				watermarkOpacity: 1.0,
-				watermarkAngle:   -999,
-			},
+			flags: &cliFlags{watermark: watermarkFlags{
+				text:    "DRAFT",
+				opacity: 1.0,
+				angle:   -999,
+			}},
 			cfg:         &Config{},
 			wantText:    "DRAFT",
 			wantColor:   "#888888",
@@ -1599,31 +1639,34 @@ func TestExtractFirstHeading(t *testing.T) {
 	}
 }
 
-func TestResolveDate(t *testing.T) {
+func TestResolveDateWithTime(t *testing.T) {
+	fixedTime := time.Date(2025, 6, 15, 12, 0, 0, 0, time.UTC)
+	mockNow := func() time.Time { return fixedTime }
+
 	tests := []struct {
 		name  string
 		input string
-		want  string // empty means check for YYYY-MM-DD format
+		want  string
 	}{
 		{
-			name:  "auto returns today's date",
+			name:  "auto returns fixed date",
 			input: "auto",
-			want:  "", // Will check format
+			want:  "2025-06-15",
 		},
 		{
 			name:  "AUTO case insensitive",
 			input: "AUTO",
-			want:  "", // Will check format
+			want:  "2025-06-15",
 		},
 		{
 			name:  "Auto mixed case",
 			input: "Auto",
-			want:  "", // Will check format
+			want:  "2025-06-15",
 		},
 		{
 			name:  "explicit date preserved",
-			input: "2025-06-15",
-			want:  "2025-06-15",
+			input: "2025-01-01",
+			want:  "2025-01-01",
 		},
 		{
 			name:  "empty string preserved",
@@ -1639,18 +1682,9 @@ func TestResolveDate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := resolveDate(tt.input)
-
-			if tt.want == "" && strings.ToLower(tt.input) == "auto" {
-				// Check that result is in YYYY-MM-DD format
-				if len(got) != 10 || got[4] != '-' || got[7] != '-' {
-					t.Errorf("resolveDate(%q) = %q, want YYYY-MM-DD format", tt.input, got)
-				}
-				return
-			}
-
+			got := resolveDateWithTime(tt.input, mockNow)
 			if got != tt.want {
-				t.Errorf("resolveDate(%q) = %q, want %q", tt.input, got, tt.want)
+				t.Errorf("resolveDateWithTime(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
 	}
@@ -1664,22 +1698,9 @@ func TestBuildCoverData(t *testing.T) {
 		t.Fatalf("failed to create test logo: %v", err)
 	}
 
-	t.Run("noCover flag returns nil", func(t *testing.T) {
-		flags := &cliFlags{noCover: true}
-		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Test"}}
-		got, err := buildCoverData(flags, cfg, "# Markdown", "doc.md")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if got != nil {
-			t.Error("expected nil when noCover=true")
-		}
-	})
-
 	t.Run("cover disabled in config returns nil", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{Cover: CoverConfig{Enabled: false, Title: "Test"}}
-		got, err := buildCoverData(flags, cfg, "# Markdown", "doc.md")
+		cfg := &Config{Cover: CoverConfig{Enabled: false}}
+		got, err := buildCoverData(cfg, "# Markdown", "doc.md")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1688,25 +1709,12 @@ func TestBuildCoverData(t *testing.T) {
 		}
 	})
 
-	t.Run("title from CLI flag overrides all", func(t *testing.T) {
-		flags := &cliFlags{coverTitle: "CLI Title"}
-		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Config Title"}}
-		got, err := buildCoverData(flags, cfg, "# Markdown H1", "doc.md")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+	t.Run("title from document config", func(t *testing.T) {
+		cfg := &Config{
+			Document: DocumentConfig{Title: "Config Title"},
+			Cover:    CoverConfig{Enabled: true},
 		}
-		if got == nil {
-			t.Fatal("expected Cover, got nil")
-		}
-		if got.Title != "CLI Title" {
-			t.Errorf("Title = %q, want %q", got.Title, "CLI Title")
-		}
-	})
-
-	t.Run("title from config when no CLI flag", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Config Title"}}
-		got, err := buildCoverData(flags, cfg, "# Markdown H1", "doc.md")
+		got, err := buildCoverData(cfg, "# Markdown H1", "doc.md")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1718,10 +1726,9 @@ func TestBuildCoverData(t *testing.T) {
 		}
 	})
 
-	t.Run("title extracted from H1 when no config", func(t *testing.T) {
-		flags := &cliFlags{}
+	t.Run("title extracted from H1 when no document title", func(t *testing.T) {
 		cfg := &Config{Cover: CoverConfig{Enabled: true}}
-		got, err := buildCoverData(flags, cfg, "# My Document Title\n\nContent here", "doc.md")
+		got, err := buildCoverData(cfg, "# My Document Title\n\nContent here", "doc.md")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1734,9 +1741,8 @@ func TestBuildCoverData(t *testing.T) {
 	})
 
 	t.Run("title fallback to filename when no H1", func(t *testing.T) {
-		flags := &cliFlags{}
 		cfg := &Config{Cover: CoverConfig{Enabled: true}}
-		got, err := buildCoverData(flags, cfg, "No headings here, just content.", "my-document.md")
+		got, err := buildCoverData(cfg, "No headings here, just content.", "my-document.md")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1748,25 +1754,12 @@ func TestBuildCoverData(t *testing.T) {
 		}
 	})
 
-	t.Run("title fallback handles .markdown extension", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{Cover: CoverConfig{Enabled: true}}
-		got, err := buildCoverData(flags, cfg, "No headings", "guide.markdown")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+	t.Run("subtitle from document config", func(t *testing.T) {
+		cfg := &Config{
+			Document: DocumentConfig{Title: "Title", Subtitle: "A Comprehensive Guide"},
+			Cover:    CoverConfig{Enabled: true},
 		}
-		if got == nil {
-			t.Fatal("expected Cover, got nil")
-		}
-		if got.Title != "guide" {
-			t.Errorf("Title = %q, want %q", got.Title, "guide")
-		}
-	})
-
-	t.Run("subtitle from config", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Title", Subtitle: "A Comprehensive Guide"}}
-		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		got, err := buildCoverData(cfg, "", "doc.md")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1778,10 +1771,12 @@ func TestBuildCoverData(t *testing.T) {
 		}
 	})
 
-	t.Run("logo from config", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Title", Logo: existingLogo}}
-		got, err := buildCoverData(flags, cfg, "", "doc.md")
+	t.Run("logo from cover config", func(t *testing.T) {
+		cfg := &Config{
+			Document: DocumentConfig{Title: "Title"},
+			Cover:    CoverConfig{Enabled: true, Logo: existingLogo},
+		}
+		got, err := buildCoverData(cfg, "", "doc.md")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1794,9 +1789,11 @@ func TestBuildCoverData(t *testing.T) {
 	})
 
 	t.Run("logo URL accepted without validation", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Title", Logo: "https://example.com/logo.png"}}
-		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		cfg := &Config{
+			Document: DocumentConfig{Title: "Title"},
+			Cover:    CoverConfig{Enabled: true, Logo: "https://example.com/logo.png"},
+		}
+		got, err := buildCoverData(cfg, "", "doc.md")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1808,19 +1805,13 @@ func TestBuildCoverData(t *testing.T) {
 		}
 	})
 
-	t.Run("nonexistent logo path returns error", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Title", Logo: "/nonexistent/logo.png"}}
-		_, err := buildCoverData(flags, cfg, "", "doc.md")
-		if err == nil {
-			t.Fatal("expected error for nonexistent logo path")
+	t.Run("author from author config", func(t *testing.T) {
+		cfg := &Config{
+			Author:   AuthorConfig{Name: "John Doe"},
+			Document: DocumentConfig{Title: "Title"},
+			Cover:    CoverConfig{Enabled: true},
 		}
-	})
-
-	t.Run("author from config", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Title", Author: "John Doe"}}
-		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		got, err := buildCoverData(cfg, "", "doc.md")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1832,49 +1823,13 @@ func TestBuildCoverData(t *testing.T) {
 		}
 	})
 
-	t.Run("author fallback to signature.name", func(t *testing.T) {
-		flags := &cliFlags{}
+	t.Run("authorTitle from author config", func(t *testing.T) {
 		cfg := &Config{
-			Cover:     CoverConfig{Enabled: true, Title: "Title"},
-			Signature: SignatureConfig{Enabled: true, Name: "Jane Smith"},
+			Author:   AuthorConfig{Name: "John", Title: "Senior Developer"},
+			Document: DocumentConfig{Title: "Title"},
+			Cover:    CoverConfig{Enabled: true},
 		}
-		got, err := buildCoverData(flags, cfg, "", "doc.md")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if got == nil {
-			t.Fatal("expected Cover, got nil")
-		}
-		if got.Author != "Jane Smith" {
-			t.Errorf("Author = %q, want %q", got.Author, "Jane Smith")
-		}
-	})
-
-	t.Run("author config overrides signature fallback", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{
-			Cover:     CoverConfig{Enabled: true, Title: "Title", Author: "Cover Author"},
-			Signature: SignatureConfig{Enabled: true, Name: "Signature Name"},
-		}
-		got, err := buildCoverData(flags, cfg, "", "doc.md")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if got == nil {
-			t.Fatal("expected Cover, got nil")
-		}
-		if got.Author != "Cover Author" {
-			t.Errorf("Author = %q, want %q", got.Author, "Cover Author")
-		}
-	})
-
-	t.Run("authorTitle fallback to signature.title", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{
-			Cover:     CoverConfig{Enabled: true, Title: "Title"},
-			Signature: SignatureConfig{Enabled: true, Title: "Senior Developer"},
-		}
-		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		got, err := buildCoverData(cfg, "", "doc.md")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1886,10 +1841,13 @@ func TestBuildCoverData(t *testing.T) {
 		}
 	})
 
-	t.Run("organization from config", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Title", Organization: "Acme Corp"}}
-		got, err := buildCoverData(flags, cfg, "", "doc.md")
+	t.Run("organization from author config", func(t *testing.T) {
+		cfg := &Config{
+			Author:   AuthorConfig{Organization: "Acme Corp"},
+			Document: DocumentConfig{Title: "Title"},
+			Cover:    CoverConfig{Enabled: true},
+		}
+		got, err := buildCoverData(cfg, "", "doc.md")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1901,26 +1859,12 @@ func TestBuildCoverData(t *testing.T) {
 		}
 	})
 
-	t.Run("date auto resolves to today", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Title", Date: "auto"}}
-		got, err := buildCoverData(flags, cfg, "", "doc.md")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+	t.Run("date from document config", func(t *testing.T) {
+		cfg := &Config{
+			Document: DocumentConfig{Title: "Title", Date: "2025-01-15"},
+			Cover:    CoverConfig{Enabled: true},
 		}
-		if got == nil {
-			t.Fatal("expected Cover, got nil")
-		}
-		// Check YYYY-MM-DD format
-		if len(got.Date) != 10 || got.Date[4] != '-' || got.Date[7] != '-' {
-			t.Errorf("Date = %q, want YYYY-MM-DD format", got.Date)
-		}
-	})
-
-	t.Run("date explicit value preserved", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Title", Date: "2025-01-15"}}
-		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		got, err := buildCoverData(cfg, "", "doc.md")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1932,47 +1876,12 @@ func TestBuildCoverData(t *testing.T) {
 		}
 	})
 
-	t.Run("date fallback to footer.date", func(t *testing.T) {
-		flags := &cliFlags{}
+	t.Run("version from document config", func(t *testing.T) {
 		cfg := &Config{
-			Cover:  CoverConfig{Enabled: true, Title: "Title"},
-			Footer: FooterConfig{Enabled: true, Date: "2025-06-01"},
+			Document: DocumentConfig{Title: "Title", Version: "v2.0.0"},
+			Cover:    CoverConfig{Enabled: true},
 		}
-		got, err := buildCoverData(flags, cfg, "", "doc.md")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if got == nil {
-			t.Fatal("expected Cover, got nil")
-		}
-		if got.Date != "2025-06-01" {
-			t.Errorf("Date = %q, want %q", got.Date, "2025-06-01")
-		}
-	})
-
-	t.Run("date fallback to footer.date with auto", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{
-			Cover:  CoverConfig{Enabled: true, Title: "Title"},
-			Footer: FooterConfig{Enabled: true, Date: "auto"},
-		}
-		got, err := buildCoverData(flags, cfg, "", "doc.md")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if got == nil {
-			t.Fatal("expected Cover, got nil")
-		}
-		// Check YYYY-MM-DD format
-		if len(got.Date) != 10 || got.Date[4] != '-' || got.Date[7] != '-' {
-			t.Errorf("Date = %q, want YYYY-MM-DD format", got.Date)
-		}
-	})
-
-	t.Run("version from config", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Title", Version: "v2.0.0"}}
-		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		got, err := buildCoverData(cfg, "", "doc.md")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1984,49 +1893,33 @@ func TestBuildCoverData(t *testing.T) {
 		}
 	})
 
-	t.Run("version fallback to footer.status", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{
-			Cover:  CoverConfig{Enabled: true, Title: "Title"},
-			Footer: FooterConfig{Enabled: true, Status: "DRAFT"},
-		}
-		got, err := buildCoverData(flags, cfg, "", "doc.md")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if got == nil {
-			t.Fatal("expected Cover, got nil")
-		}
-		if got.Version != "DRAFT" {
-			t.Errorf("Version = %q, want %q", got.Version, "DRAFT")
-		}
-	})
-
 	t.Run("all fields populated correctly", func(t *testing.T) {
-		flags := &cliFlags{coverTitle: "CLI Title"}
 		cfg := &Config{
-			Cover: CoverConfig{
-				Enabled:      true,
-				Title:        "Config Title",
-				Subtitle:     "A Subtitle",
-				Logo:         existingLogo,
-				Author:       "Author Name",
-				AuthorTitle:  "Author Role",
+			Author: AuthorConfig{
+				Name:         "Author Name",
+				Title:        "Author Role",
 				Organization: "Org Name",
-				Date:         "2025-03-15",
-				Version:      "v1.0.0",
+			},
+			Document: DocumentConfig{
+				Title:    "Doc Title",
+				Subtitle: "A Subtitle",
+				Date:     "2025-03-15",
+				Version:  "v1.0.0",
+			},
+			Cover: CoverConfig{
+				Enabled: true,
+				Logo:    existingLogo,
 			},
 		}
-		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		got, err := buildCoverData(cfg, "", "doc.md")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if got == nil {
 			t.Fatal("expected Cover, got nil")
 		}
-		// CLI overrides config for title
-		if got.Title != "CLI Title" {
-			t.Errorf("Title = %q, want %q", got.Title, "CLI Title")
+		if got.Title != "Doc Title" {
+			t.Errorf("Title = %q, want %q", got.Title, "Doc Title")
 		}
 		if got.Subtitle != "A Subtitle" {
 			t.Errorf("Subtitle = %q, want %q", got.Subtitle, "A Subtitle")
@@ -2052,9 +1945,11 @@ func TestBuildCoverData(t *testing.T) {
 	})
 
 	t.Run("empty optional fields preserved", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{Cover: CoverConfig{Enabled: true, Title: "Just Title"}}
-		got, err := buildCoverData(flags, cfg, "", "doc.md")
+		cfg := &Config{
+			Document: DocumentConfig{Title: "Just Title"},
+			Cover:    CoverConfig{Enabled: true},
+		}
+		got, err := buildCoverData(cfg, "", "doc.md")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -2074,47 +1969,6 @@ func TestBuildCoverData(t *testing.T) {
 			t.Errorf("Organization = %q, want empty", got.Organization)
 		}
 	})
-
-	t.Run("signature fallback requires signature enabled", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{
-			Cover:     CoverConfig{Enabled: true, Title: "Title"},
-			Signature: SignatureConfig{Enabled: false, Name: "Disabled Name"},
-		}
-		got, err := buildCoverData(flags, cfg, "", "doc.md")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if got == nil {
-			t.Fatal("expected Cover, got nil")
-		}
-		// Should NOT fallback when signature is disabled
-		if got.Author != "" {
-			t.Errorf("Author = %q, want empty (signature disabled)", got.Author)
-		}
-	})
-
-	t.Run("footer fallback requires footer enabled", func(t *testing.T) {
-		flags := &cliFlags{}
-		cfg := &Config{
-			Cover:  CoverConfig{Enabled: true, Title: "Title"},
-			Footer: FooterConfig{Enabled: false, Date: "2025-01-01", Status: "FINAL"},
-		}
-		got, err := buildCoverData(flags, cfg, "", "doc.md")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if got == nil {
-			t.Fatal("expected Cover, got nil")
-		}
-		// Should NOT fallback when footer is disabled
-		if got.Date != "" {
-			t.Errorf("Date = %q, want empty (footer disabled)", got.Date)
-		}
-		if got.Version != "" {
-			t.Errorf("Version = %q, want empty (footer disabled)", got.Version)
-		}
-	})
 }
 
 // TOCConfig alias for test file
@@ -2124,7 +1978,7 @@ func TestBuildTOCData(t *testing.T) {
 	tests := []struct {
 		name         string
 		cfg          *Config
-		noTOC        bool
+		flags        tocFlags
 		wantNil      bool
 		wantTitle    string
 		wantMaxDepth int
@@ -2132,59 +1986,59 @@ func TestBuildTOCData(t *testing.T) {
 		{
 			name:    "noTOC flag returns nil",
 			cfg:     &Config{TOC: TOCConfig{Enabled: true, Title: "Contents", MaxDepth: 3}},
-			noTOC:   true,
+			flags:   tocFlags{disabled: true},
 			wantNil: true,
 		},
 		{
 			name:    "config disabled returns nil",
 			cfg:     &Config{TOC: TOCConfig{Enabled: false, Title: "Contents", MaxDepth: 3}},
-			noTOC:   false,
+			flags:   tocFlags{},
 			wantNil: true,
 		},
 		{
 			name:    "neither flag nor config enabled returns nil",
 			cfg:     &Config{},
-			noTOC:   false,
+			flags:   tocFlags{},
 			wantNil: true,
 		},
 		{
 			name:         "config enabled with title and depth",
 			cfg:          &Config{TOC: TOCConfig{Enabled: true, Title: "Table of Contents", MaxDepth: 4}},
-			noTOC:        false,
+			flags:        tocFlags{},
 			wantTitle:    "Table of Contents",
 			wantMaxDepth: 4,
 		},
 		{
 			name:         "config enabled empty title preserved",
 			cfg:          &Config{TOC: TOCConfig{Enabled: true, Title: "", MaxDepth: 3}},
-			noTOC:        false,
+			flags:        tocFlags{},
 			wantTitle:    "",
 			wantMaxDepth: 3,
 		},
 		{
 			name:         "config depth 0 gets default",
 			cfg:          &Config{TOC: TOCConfig{Enabled: true, Title: "TOC", MaxDepth: 0}},
-			noTOC:        false,
+			flags:        tocFlags{},
 			wantTitle:    "TOC",
 			wantMaxDepth: md2pdf.DefaultTOCDepth,
 		},
 		{
 			name:         "config depth 1 boundary",
 			cfg:          &Config{TOC: TOCConfig{Enabled: true, MaxDepth: 1}},
-			noTOC:        false,
+			flags:        tocFlags{},
 			wantMaxDepth: 1,
 		},
 		{
 			name:         "config depth 6 boundary",
 			cfg:          &Config{TOC: TOCConfig{Enabled: true, MaxDepth: 6}},
-			noTOC:        false,
+			flags:        tocFlags{},
 			wantMaxDepth: 6,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := buildTOCData(tt.cfg, tt.noTOC)
+			got := buildTOCData(tt.cfg, tt.flags)
 
 			if tt.wantNil {
 				if got != nil {
@@ -2212,7 +2066,7 @@ func TestParseFlags_NoTOC(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if !flags.noTOC {
+		if !flags.toc.disabled {
 			t.Error("expected noTOC=true when --no-toc flag provided")
 		}
 	})
@@ -2222,7 +2076,7 @@ func TestParseFlags_NoTOC(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if flags.noTOC {
+		if flags.toc.disabled {
 			t.Error("expected noTOC=false when --no-toc flag not provided")
 		}
 	})
@@ -2232,13 +2086,13 @@ func TestParseFlags_NoTOC(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if !flags.noTOC {
+		if !flags.toc.disabled {
 			t.Error("expected noTOC=true")
 		}
-		if !flags.noCover {
+		if !flags.cover.disabled {
 			t.Error("expected noCover=true")
 		}
-		if !flags.quiet {
+		if !flags.common.quiet {
 			t.Error("expected quiet=true")
 		}
 	})
@@ -2372,7 +2226,7 @@ func TestBuildPageBreaksData(t *testing.T) {
 	}{
 		{
 			name:    "noPageBreaks flag returns nil",
-			flags:   &cliFlags{noPageBreaks: true},
+			flags:   &cliFlags{pageBreaks: pageBreakFlags{disabled: true}},
 			cfg:     &Config{PageBreaks: PageBreaksConfig{Enabled: true, BeforeH1: true}},
 			wantNil: true,
 		},
@@ -2395,7 +2249,7 @@ func TestBuildPageBreaksData(t *testing.T) {
 		},
 		{
 			name:         "breakBefore flag overrides config",
-			flags:        &cliFlags{breakBefore: "h2,h3"},
+			flags:        &cliFlags{pageBreaks: pageBreakFlags{breakBefore: "h2,h3"}},
 			cfg:          &Config{PageBreaks: PageBreaksConfig{Enabled: true, BeforeH1: true, BeforeH2: false}},
 			wantBeforeH1: false,
 			wantBeforeH2: true,
@@ -2405,21 +2259,21 @@ func TestBuildPageBreaksData(t *testing.T) {
 		},
 		{
 			name:        "orphans flag overrides config",
-			flags:       &cliFlags{orphans: 5},
+			flags:       &cliFlags{pageBreaks: pageBreakFlags{orphans: 5}},
 			cfg:         &Config{PageBreaks: PageBreaksConfig{Enabled: true, Orphans: 3}},
 			wantOrphans: 5,
 			wantWidows:  md2pdf.DefaultWidows,
 		},
 		{
 			name:        "widows flag overrides config",
-			flags:       &cliFlags{widows: 5},
+			flags:       &cliFlags{pageBreaks: pageBreakFlags{widows: 5}},
 			cfg:         &Config{PageBreaks: PageBreaksConfig{Enabled: true, Widows: 3}},
 			wantOrphans: md2pdf.DefaultOrphans,
 			wantWidows:  5,
 		},
 		{
 			name:         "all flags override config",
-			flags:        &cliFlags{breakBefore: "h1", orphans: 4, widows: 5},
+			flags:        &cliFlags{pageBreaks: pageBreakFlags{breakBefore: "h1", orphans: 4, widows: 5}},
 			cfg:          &Config{PageBreaks: PageBreaksConfig{Enabled: true, BeforeH2: true, BeforeH3: true, Orphans: 2, Widows: 2}},
 			wantBeforeH1: true,
 			wantBeforeH2: false,
@@ -2451,7 +2305,7 @@ func TestBuildPageBreaksData(t *testing.T) {
 		},
 		{
 			name:         "breakBefore flag with empty config",
-			flags:        &cliFlags{breakBefore: "h1,h2,h3"},
+			flags:        &cliFlags{pageBreaks: pageBreakFlags{breakBefore: "h1,h2,h3"}},
 			cfg:          &Config{},
 			wantBeforeH1: true,
 			wantBeforeH2: true,
@@ -2500,7 +2354,7 @@ func TestParseFlags_PageBreaks(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if !flags.noPageBreaks {
+		if !flags.pageBreaks.disabled {
 			t.Error("expected noPageBreaks=true when --no-page-breaks flag provided")
 		}
 	})
@@ -2510,8 +2364,8 @@ func TestParseFlags_PageBreaks(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if flags.breakBefore != "h1,h2" {
-			t.Errorf("breakBefore = %q, want %q", flags.breakBefore, "h1,h2")
+		if flags.pageBreaks.breakBefore != "h1,h2" {
+			t.Errorf("breakBefore = %q, want %q", flags.pageBreaks.breakBefore, "h1,h2")
 		}
 	})
 
@@ -2520,8 +2374,8 @@ func TestParseFlags_PageBreaks(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if flags.orphans != 3 {
-			t.Errorf("orphans = %d, want 3", flags.orphans)
+		if flags.pageBreaks.orphans != 3 {
+			t.Errorf("orphans = %d, want 3", flags.pageBreaks.orphans)
 		}
 	})
 
@@ -2530,8 +2384,8 @@ func TestParseFlags_PageBreaks(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if flags.widows != 4 {
-			t.Errorf("widows = %d, want 4", flags.widows)
+		if flags.pageBreaks.widows != 4 {
+			t.Errorf("widows = %d, want 4", flags.pageBreaks.widows)
 		}
 	})
 
@@ -2546,14 +2400,14 @@ func TestParseFlags_PageBreaks(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if flags.breakBefore != "h1,h2,h3" {
-			t.Errorf("breakBefore = %q, want %q", flags.breakBefore, "h1,h2,h3")
+		if flags.pageBreaks.breakBefore != "h1,h2,h3" {
+			t.Errorf("breakBefore = %q, want %q", flags.pageBreaks.breakBefore, "h1,h2,h3")
 		}
-		if flags.orphans != 5 {
-			t.Errorf("orphans = %d, want 5", flags.orphans)
+		if flags.pageBreaks.orphans != 5 {
+			t.Errorf("orphans = %d, want 5", flags.pageBreaks.orphans)
 		}
-		if flags.widows != 5 {
-			t.Errorf("widows = %d, want 5", flags.widows)
+		if flags.pageBreaks.widows != 5 {
+			t.Errorf("widows = %d, want 5", flags.pageBreaks.widows)
 		}
 	})
 
@@ -2568,15 +2422,552 @@ func TestParseFlags_PageBreaks(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if !flags.noPageBreaks {
+		if !flags.pageBreaks.disabled {
 			t.Error("expected noPageBreaks=true")
 		}
 		// Other flags are still parsed, but noPageBreaks takes precedence
-		if flags.breakBefore != "h1" {
-			t.Errorf("breakBefore = %q, want %q", flags.breakBefore, "h1")
+		if flags.pageBreaks.breakBefore != "h1" {
+			t.Errorf("breakBefore = %q, want %q", flags.pageBreaks.breakBefore, "h1")
 		}
-		if flags.orphans != 3 {
-			t.Errorf("orphans = %d, want 3", flags.orphans)
+		if flags.pageBreaks.orphans != 3 {
+			t.Errorf("orphans = %d, want 3", flags.pageBreaks.orphans)
 		}
 	})
+}
+
+func TestMergeFlags(t *testing.T) {
+	tests := []struct {
+		name  string
+		flags *convertFlags
+		cfg   *Config
+		check func(t *testing.T, cfg *Config)
+	}{
+		{
+			name:  "empty flags preserve config author",
+			flags: &convertFlags{},
+			cfg:   &Config{Author: AuthorConfig{Name: "Config Author"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Author.Name != "Config Author" {
+					t.Errorf("Author.Name = %q, want %q", cfg.Author.Name, "Config Author")
+				}
+			},
+		},
+		{
+			name:  "author.name overrides config",
+			flags: &convertFlags{author: authorFlags{name: "CLI Author"}},
+			cfg:   &Config{Author: AuthorConfig{Name: "Config Author"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Author.Name != "CLI Author" {
+					t.Errorf("Author.Name = %q, want %q", cfg.Author.Name, "CLI Author")
+				}
+			},
+		},
+		{
+			name:  "author.title overrides config",
+			flags: &convertFlags{author: authorFlags{title: "CLI Title"}},
+			cfg:   &Config{Author: AuthorConfig{Title: "Config Title"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Author.Title != "CLI Title" {
+					t.Errorf("Author.Title = %q, want %q", cfg.Author.Title, "CLI Title")
+				}
+			},
+		},
+		{
+			name:  "author.email overrides config",
+			flags: &convertFlags{author: authorFlags{email: "cli@test.com"}},
+			cfg:   &Config{Author: AuthorConfig{Email: "config@test.com"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Author.Email != "cli@test.com" {
+					t.Errorf("Author.Email = %q, want %q", cfg.Author.Email, "cli@test.com")
+				}
+			},
+		},
+		{
+			name:  "author.org overrides config",
+			flags: &convertFlags{author: authorFlags{org: "CLI Org"}},
+			cfg:   &Config{Author: AuthorConfig{Organization: "Config Org"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Author.Organization != "CLI Org" {
+					t.Errorf("Author.Organization = %q, want %q", cfg.Author.Organization, "CLI Org")
+				}
+			},
+		},
+		{
+			name:  "document.title overrides config",
+			flags: &convertFlags{document: documentFlags{title: "CLI Title"}},
+			cfg:   &Config{Document: DocumentConfig{Title: "Config Title"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Document.Title != "CLI Title" {
+					t.Errorf("Document.Title = %q, want %q", cfg.Document.Title, "CLI Title")
+				}
+			},
+		},
+		{
+			name:  "document.subtitle overrides config",
+			flags: &convertFlags{document: documentFlags{subtitle: "CLI Subtitle"}},
+			cfg:   &Config{Document: DocumentConfig{Subtitle: "Config Subtitle"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Document.Subtitle != "CLI Subtitle" {
+					t.Errorf("Document.Subtitle = %q, want %q", cfg.Document.Subtitle, "CLI Subtitle")
+				}
+			},
+		},
+		{
+			name:  "document.version overrides config",
+			flags: &convertFlags{document: documentFlags{version: "v2.0"}},
+			cfg:   &Config{Document: DocumentConfig{Version: "v1.0"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Document.Version != "v2.0" {
+					t.Errorf("Document.Version = %q, want %q", cfg.Document.Version, "v2.0")
+				}
+			},
+		},
+		{
+			name:  "document.date overrides config",
+			flags: &convertFlags{document: documentFlags{date: "2025-06-01"}},
+			cfg:   &Config{Document: DocumentConfig{Date: "auto"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Document.Date != "2025-06-01" {
+					t.Errorf("Document.Date = %q, want %q", cfg.Document.Date, "2025-06-01")
+				}
+			},
+		},
+		{
+			name:  "footer.position overrides config",
+			flags: &convertFlags{footer: footerFlags{position: "left"}},
+			cfg:   &Config{Footer: FooterConfig{Position: "right"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Footer.Position != "left" {
+					t.Errorf("Footer.Position = %q, want %q", cfg.Footer.Position, "left")
+				}
+			},
+		},
+		{
+			name:  "footer.text overrides config",
+			flags: &convertFlags{footer: footerFlags{text: "CLI Footer"}},
+			cfg:   &Config{Footer: FooterConfig{Text: "Config Footer"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Footer.Text != "CLI Footer" {
+					t.Errorf("Footer.Text = %q, want %q", cfg.Footer.Text, "CLI Footer")
+				}
+			},
+		},
+		{
+			name:  "footer.pageNumber enables footer",
+			flags: &convertFlags{footer: footerFlags{pageNumber: true}},
+			cfg:   &Config{Footer: FooterConfig{Enabled: false, ShowPageNumber: false}},
+			check: func(t *testing.T, cfg *Config) {
+				if !cfg.Footer.ShowPageNumber {
+					t.Error("Footer.ShowPageNumber should be true")
+				}
+				if !cfg.Footer.Enabled {
+					t.Error("Footer.Enabled should be true when pageNumber is set")
+				}
+			},
+		},
+		{
+			name:  "footer.disabled disables footer",
+			flags: &convertFlags{footer: footerFlags{disabled: true}},
+			cfg:   &Config{Footer: FooterConfig{Enabled: true}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Footer.Enabled {
+					t.Error("Footer.Enabled should be false when disabled flag is set")
+				}
+			},
+		},
+		{
+			name:  "cover.logo overrides config",
+			flags: &convertFlags{cover: coverFlags{logo: "/cli/logo.png"}},
+			cfg:   &Config{Cover: CoverConfig{Logo: "/config/logo.png"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Cover.Logo != "/cli/logo.png" {
+					t.Errorf("Cover.Logo = %q, want %q", cfg.Cover.Logo, "/cli/logo.png")
+				}
+			},
+		},
+		{
+			name:  "cover.disabled disables cover",
+			flags: &convertFlags{cover: coverFlags{disabled: true}},
+			cfg:   &Config{Cover: CoverConfig{Enabled: true}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Cover.Enabled {
+					t.Error("Cover.Enabled should be false when disabled flag is set")
+				}
+			},
+		},
+		{
+			name:  "signature.image overrides config",
+			flags: &convertFlags{signature: signatureFlags{image: "/cli/sig.png"}},
+			cfg:   &Config{Signature: SignatureConfig{ImagePath: "/config/sig.png"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Signature.ImagePath != "/cli/sig.png" {
+					t.Errorf("Signature.ImagePath = %q, want %q", cfg.Signature.ImagePath, "/cli/sig.png")
+				}
+			},
+		},
+		{
+			name:  "signature.disabled disables signature",
+			flags: &convertFlags{signature: signatureFlags{disabled: true}},
+			cfg:   &Config{Signature: SignatureConfig{Enabled: true}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Signature.Enabled {
+					t.Error("Signature.Enabled should be false when disabled flag is set")
+				}
+			},
+		},
+		{
+			name:  "toc.title overrides config",
+			flags: &convertFlags{toc: tocFlags{title: "CLI Contents"}},
+			cfg:   &Config{TOC: TOCConfig{Title: "Config Contents"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.TOC.Title != "CLI Contents" {
+					t.Errorf("TOC.Title = %q, want %q", cfg.TOC.Title, "CLI Contents")
+				}
+			},
+		},
+		{
+			name:  "toc.depth overrides config",
+			flags: &convertFlags{toc: tocFlags{depth: 4}},
+			cfg:   &Config{TOC: TOCConfig{MaxDepth: 2}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.TOC.MaxDepth != 4 {
+					t.Errorf("TOC.MaxDepth = %d, want %d", cfg.TOC.MaxDepth, 4)
+				}
+			},
+		},
+		{
+			name:  "toc.disabled disables toc",
+			flags: &convertFlags{toc: tocFlags{disabled: true}},
+			cfg:   &Config{TOC: TOCConfig{Enabled: true}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.TOC.Enabled {
+					t.Error("TOC.Enabled should be false when disabled flag is set")
+				}
+			},
+		},
+		{
+			name: "multiple author flags combined",
+			flags: &convertFlags{author: authorFlags{
+				name:  "CLI Name",
+				title: "CLI Title",
+				email: "cli@test.com",
+				org:   "CLI Org",
+			}},
+			cfg: &Config{Author: AuthorConfig{
+				Name:         "Config Name",
+				Title:        "Config Title",
+				Email:        "config@test.com",
+				Organization: "Config Org",
+			}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Author.Name != "CLI Name" {
+					t.Errorf("Author.Name = %q, want %q", cfg.Author.Name, "CLI Name")
+				}
+				if cfg.Author.Title != "CLI Title" {
+					t.Errorf("Author.Title = %q, want %q", cfg.Author.Title, "CLI Title")
+				}
+				if cfg.Author.Email != "cli@test.com" {
+					t.Errorf("Author.Email = %q, want %q", cfg.Author.Email, "cli@test.com")
+				}
+				if cfg.Author.Organization != "CLI Org" {
+					t.Errorf("Author.Organization = %q, want %q", cfg.Author.Organization, "CLI Org")
+				}
+			},
+		},
+		{
+			name:  "partial override preserves other fields",
+			flags: &convertFlags{author: authorFlags{name: "CLI Name"}},
+			cfg: &Config{Author: AuthorConfig{
+				Name:         "Config Name",
+				Title:        "Config Title",
+				Email:        "config@test.com",
+				Organization: "Config Org",
+			}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Author.Name != "CLI Name" {
+					t.Errorf("Author.Name = %q, want %q", cfg.Author.Name, "CLI Name")
+				}
+				if cfg.Author.Title != "Config Title" {
+					t.Errorf("Author.Title = %q, want %q (should be preserved)", cfg.Author.Title, "Config Title")
+				}
+				if cfg.Author.Email != "config@test.com" {
+					t.Errorf("Author.Email = %q, want %q (should be preserved)", cfg.Author.Email, "config@test.com")
+				}
+				if cfg.Author.Organization != "Config Org" {
+					t.Errorf("Author.Organization = %q, want %q (should be preserved)", cfg.Author.Organization, "Config Org")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mergeFlags(tt.flags, tt.cfg)
+			tt.check(t, tt.cfg)
+		})
+	}
+}
+
+func TestParseConvertFlags_NewFlags(t *testing.T) {
+	tests := []struct {
+		name  string
+		args  []string
+		check func(t *testing.T, flags *convertFlags)
+	}{
+		{
+			name: "author-name flag",
+			args: []string{"--author-name", "John Doe"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.author.name != "John Doe" {
+					t.Errorf("author.name = %q, want %q", f.author.name, "John Doe")
+				}
+			},
+		},
+		{
+			name: "author-title flag",
+			args: []string{"--author-title", "Senior Developer"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.author.title != "Senior Developer" {
+					t.Errorf("author.title = %q, want %q", f.author.title, "Senior Developer")
+				}
+			},
+		},
+		{
+			name: "author-email flag",
+			args: []string{"--author-email", "john@example.com"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.author.email != "john@example.com" {
+					t.Errorf("author.email = %q, want %q", f.author.email, "john@example.com")
+				}
+			},
+		},
+		{
+			name: "author-org flag",
+			args: []string{"--author-org", "Acme Corp"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.author.org != "Acme Corp" {
+					t.Errorf("author.org = %q, want %q", f.author.org, "Acme Corp")
+				}
+			},
+		},
+		{
+			name: "doc-title flag",
+			args: []string{"--doc-title", "My Document"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.document.title != "My Document" {
+					t.Errorf("document.title = %q, want %q", f.document.title, "My Document")
+				}
+			},
+		},
+		{
+			name: "doc-subtitle flag",
+			args: []string{"--doc-subtitle", "A Comprehensive Guide"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.document.subtitle != "A Comprehensive Guide" {
+					t.Errorf("document.subtitle = %q, want %q", f.document.subtitle, "A Comprehensive Guide")
+				}
+			},
+		},
+		{
+			name: "doc-version flag",
+			args: []string{"--doc-version", "v1.0.0"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.document.version != "v1.0.0" {
+					t.Errorf("document.version = %q, want %q", f.document.version, "v1.0.0")
+				}
+			},
+		},
+		{
+			name: "doc-date flag",
+			args: []string{"--doc-date", "auto"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.document.date != "auto" {
+					t.Errorf("document.date = %q, want %q", f.document.date, "auto")
+				}
+			},
+		},
+		{
+			name: "footer-position flag",
+			args: []string{"--footer-position", "left"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.footer.position != "left" {
+					t.Errorf("footer.position = %q, want %q", f.footer.position, "left")
+				}
+			},
+		},
+		{
+			name: "footer-text flag",
+			args: []string{"--footer-text", "Confidential"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.footer.text != "Confidential" {
+					t.Errorf("footer.text = %q, want %q", f.footer.text, "Confidential")
+				}
+			},
+		},
+		{
+			name: "footer-page-number flag",
+			args: []string{"--footer-page-number"},
+			check: func(t *testing.T, f *convertFlags) {
+				if !f.footer.pageNumber {
+					t.Error("footer.pageNumber should be true")
+				}
+			},
+		},
+		{
+			name: "cover-logo flag",
+			args: []string{"--cover-logo", "/path/to/logo.png"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.cover.logo != "/path/to/logo.png" {
+					t.Errorf("cover.logo = %q, want %q", f.cover.logo, "/path/to/logo.png")
+				}
+			},
+		},
+		{
+			name: "sig-image flag",
+			args: []string{"--sig-image", "/path/to/sig.png"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.signature.image != "/path/to/sig.png" {
+					t.Errorf("signature.image = %q, want %q", f.signature.image, "/path/to/sig.png")
+				}
+			},
+		},
+		{
+			name: "toc-title flag",
+			args: []string{"--toc-title", "Table of Contents"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.toc.title != "Table of Contents" {
+					t.Errorf("toc.title = %q, want %q", f.toc.title, "Table of Contents")
+				}
+			},
+		},
+		{
+			name: "toc-depth flag",
+			args: []string{"--toc-depth", "4"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.toc.depth != 4 {
+					t.Errorf("toc.depth = %d, want %d", f.toc.depth, 4)
+				}
+			},
+		},
+		{
+			name: "wm-text flag",
+			args: []string{"--wm-text", "DRAFT"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.watermark.text != "DRAFT" {
+					t.Errorf("watermark.text = %q, want %q", f.watermark.text, "DRAFT")
+				}
+			},
+		},
+		{
+			name: "wm-color flag",
+			args: []string{"--wm-color", "#ff0000"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.watermark.color != "#ff0000" {
+					t.Errorf("watermark.color = %q, want %q", f.watermark.color, "#ff0000")
+				}
+			},
+		},
+		{
+			name: "wm-opacity flag",
+			args: []string{"--wm-opacity", "0.5"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.watermark.opacity != 0.5 {
+					t.Errorf("watermark.opacity = %v, want %v", f.watermark.opacity, 0.5)
+				}
+			},
+		},
+		{
+			name: "wm-angle flag",
+			args: []string{"--wm-angle", "-30"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.watermark.angle != -30 {
+					t.Errorf("watermark.angle = %v, want %v", f.watermark.angle, -30)
+				}
+			},
+		},
+		{
+			name: "all author flags combined",
+			args: []string{
+				"--author-name", "John",
+				"--author-title", "Dev",
+				"--author-email", "j@x.com",
+				"--author-org", "Acme",
+			},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.author.name != "John" {
+					t.Errorf("author.name = %q, want %q", f.author.name, "John")
+				}
+				if f.author.title != "Dev" {
+					t.Errorf("author.title = %q, want %q", f.author.title, "Dev")
+				}
+				if f.author.email != "j@x.com" {
+					t.Errorf("author.email = %q, want %q", f.author.email, "j@x.com")
+				}
+				if f.author.org != "Acme" {
+					t.Errorf("author.org = %q, want %q", f.author.org, "Acme")
+				}
+			},
+		},
+		{
+			name: "all document flags combined",
+			args: []string{
+				"--doc-title", "Title",
+				"--doc-subtitle", "Subtitle",
+				"--doc-version", "v1.0",
+				"--doc-date", "2025-01-15",
+			},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.document.title != "Title" {
+					t.Errorf("document.title = %q, want %q", f.document.title, "Title")
+				}
+				if f.document.subtitle != "Subtitle" {
+					t.Errorf("document.subtitle = %q, want %q", f.document.subtitle, "Subtitle")
+				}
+				if f.document.version != "v1.0" {
+					t.Errorf("document.version = %q, want %q", f.document.version, "v1.0")
+				}
+				if f.document.date != "2025-01-15" {
+					t.Errorf("document.date = %q, want %q", f.document.date, "2025-01-15")
+				}
+			},
+		},
+		{
+			name: "positional args after flags",
+			args: []string{"--author-name", "John", "doc.md", "doc2.md"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.author.name != "John" {
+					t.Errorf("author.name = %q, want %q", f.author.name, "John")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			flags, _, err := parseConvertFlags(tt.args)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			tt.check(t, flags)
+		})
+	}
+}
+
+func TestParseConvertFlags_PositionalArgs(t *testing.T) {
+	flags, positional, err := parseConvertFlags([]string{"--author-name", "John", "doc.md", "doc2.md"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if flags.author.name != "John" {
+		t.Errorf("author.name = %q, want %q", flags.author.name, "John")
+	}
+	if len(positional) != 2 {
+		t.Fatalf("positional count = %d, want 2", len(positional))
+	}
+	if positional[0] != "doc.md" {
+		t.Errorf("positional[0] = %q, want %q", positional[0], "doc.md")
+	}
+	if positional[1] != "doc2.md" {
+		t.Errorf("positional[1] = %q, want %q", positional[1], "doc2.md")
+	}
 }

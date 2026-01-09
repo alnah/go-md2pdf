@@ -99,6 +99,20 @@ func (p *testPool) Size() int {
 	return p.size
 }
 
+// run is a compatibility wrapper for tests.
+func run(ctx context.Context, args []string, pool Pool) error {
+	deps := DefaultDeps()
+	// Skip "md2pdf" in args if present (legacy behavior)
+	if len(args) > 0 && args[0] == "md2pdf" {
+		args = args[1:]
+	}
+	flags, positional, err := parseConvertFlags(args)
+	if err != nil {
+		return err
+	}
+	return runConvert(ctx, positional, flags, pool, deps)
+}
+
 // runWithTestPool is a test helper that runs with a test pool.
 func runWithTestPool(args []string, mock *mockConverter) error {
 	pool := newTestPool(mock, 2)
@@ -579,4 +593,370 @@ func TestBatchConversion_PageBreaksFromConfig(t *testing.T) {
 	if calls[0].PageBreaks.Widows != 5 {
 		t.Errorf("Widows = %d, want 5 from config", calls[0].PageBreaks.Widows)
 	}
+}
+
+func TestIntegration_AuthorInfoDRY(t *testing.T) {
+	t.Run("author config flows to cover and signature", func(t *testing.T) {
+		tempDir := setupTestDir(t, map[string]string{
+			"doc.md": "# Test Document",
+		})
+
+		// Create config with author info
+		configContent := `author:
+  name: "John Doe"
+  title: "Senior Developer"
+  email: "john@example.com"
+  organization: "Acme Corp"
+cover:
+  enabled: true
+signature:
+  enabled: true
+`
+		configPath := filepath.Join(tempDir, "test.yaml")
+		if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+			t.Fatalf("failed to write config: %v", err)
+		}
+
+		mock := newMockConverter()
+		inputPath := filepath.Join(tempDir, "doc.md")
+
+		err := runWithTestPool([]string{"md2pdf", "--config", configPath, inputPath}, mock)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		calls := mock.getCalls()
+		if len(calls) != 1 {
+			t.Fatalf("expected 1 call, got %d", len(calls))
+		}
+
+		// Verify author info appears in Cover
+		if calls[0].Cover == nil {
+			t.Fatal("expected Cover to be set")
+		}
+		if calls[0].Cover.Author != "John Doe" {
+			t.Errorf("Cover.Author = %q, want %q", calls[0].Cover.Author, "John Doe")
+		}
+		if calls[0].Cover.AuthorTitle != "Senior Developer" {
+			t.Errorf("Cover.AuthorTitle = %q, want %q", calls[0].Cover.AuthorTitle, "Senior Developer")
+		}
+		if calls[0].Cover.Organization != "Acme Corp" {
+			t.Errorf("Cover.Organization = %q, want %q", calls[0].Cover.Organization, "Acme Corp")
+		}
+
+		// Verify author info appears in Signature
+		if calls[0].Signature == nil {
+			t.Fatal("expected Signature to be set")
+		}
+		if calls[0].Signature.Name != "John Doe" {
+			t.Errorf("Signature.Name = %q, want %q", calls[0].Signature.Name, "John Doe")
+		}
+		if calls[0].Signature.Title != "Senior Developer" {
+			t.Errorf("Signature.Title = %q, want %q", calls[0].Signature.Title, "Senior Developer")
+		}
+		if calls[0].Signature.Email != "john@example.com" {
+			t.Errorf("Signature.Email = %q, want %q", calls[0].Signature.Email, "john@example.com")
+		}
+	})
+
+	t.Run("CLI author flags override config in both cover and signature", func(t *testing.T) {
+		tempDir := setupTestDir(t, map[string]string{
+			"doc.md": "# Test Document",
+		})
+
+		// Create config with author info
+		configContent := `author:
+  name: "Config Author"
+  title: "Config Title"
+cover:
+  enabled: true
+signature:
+  enabled: true
+`
+		configPath := filepath.Join(tempDir, "test.yaml")
+		if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+			t.Fatalf("failed to write config: %v", err)
+		}
+
+		mock := newMockConverter()
+		inputPath := filepath.Join(tempDir, "doc.md")
+
+		err := runWithTestPool([]string{
+			"md2pdf",
+			"--config", configPath,
+			"--author-name", "CLI Author",
+			"--author-title", "CLI Title",
+			inputPath,
+		}, mock)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		calls := mock.getCalls()
+		if len(calls) != 1 {
+			t.Fatalf("expected 1 call, got %d", len(calls))
+		}
+
+		// Verify CLI overrides in Cover
+		if calls[0].Cover.Author != "CLI Author" {
+			t.Errorf("Cover.Author = %q, want %q", calls[0].Cover.Author, "CLI Author")
+		}
+		if calls[0].Cover.AuthorTitle != "CLI Title" {
+			t.Errorf("Cover.AuthorTitle = %q, want %q", calls[0].Cover.AuthorTitle, "CLI Title")
+		}
+
+		// Verify CLI overrides in Signature
+		if calls[0].Signature.Name != "CLI Author" {
+			t.Errorf("Signature.Name = %q, want %q", calls[0].Signature.Name, "CLI Author")
+		}
+		if calls[0].Signature.Title != "CLI Title" {
+			t.Errorf("Signature.Title = %q, want %q", calls[0].Signature.Title, "CLI Title")
+		}
+	})
+}
+
+func TestIntegration_DocumentInfoDRY(t *testing.T) {
+	t.Run("document config flows to cover and footer", func(t *testing.T) {
+		tempDir := setupTestDir(t, map[string]string{
+			"doc.md": "# Test Document",
+		})
+
+		// Create config with document info
+		configContent := `document:
+  title: "Document Title"
+  subtitle: "A Comprehensive Guide"
+  version: "v1.0.0"
+  date: "2025-06-15"
+cover:
+  enabled: true
+footer:
+  enabled: true
+`
+		configPath := filepath.Join(tempDir, "test.yaml")
+		if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+			t.Fatalf("failed to write config: %v", err)
+		}
+
+		mock := newMockConverter()
+		inputPath := filepath.Join(tempDir, "doc.md")
+
+		err := runWithTestPool([]string{"md2pdf", "--config", configPath, inputPath}, mock)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		calls := mock.getCalls()
+		if len(calls) != 1 {
+			t.Fatalf("expected 1 call, got %d", len(calls))
+		}
+
+		// Verify document info appears in Cover
+		if calls[0].Cover == nil {
+			t.Fatal("expected Cover to be set")
+		}
+		if calls[0].Cover.Title != "Document Title" {
+			t.Errorf("Cover.Title = %q, want %q", calls[0].Cover.Title, "Document Title")
+		}
+		if calls[0].Cover.Subtitle != "A Comprehensive Guide" {
+			t.Errorf("Cover.Subtitle = %q, want %q", calls[0].Cover.Subtitle, "A Comprehensive Guide")
+		}
+		if calls[0].Cover.Version != "v1.0.0" {
+			t.Errorf("Cover.Version = %q, want %q", calls[0].Cover.Version, "v1.0.0")
+		}
+		if calls[0].Cover.Date != "2025-06-15" {
+			t.Errorf("Cover.Date = %q, want %q", calls[0].Cover.Date, "2025-06-15")
+		}
+
+		// Verify document info appears in Footer
+		if calls[0].Footer == nil {
+			t.Fatal("expected Footer to be set")
+		}
+		if calls[0].Footer.Date != "2025-06-15" {
+			t.Errorf("Footer.Date = %q, want %q", calls[0].Footer.Date, "2025-06-15")
+		}
+		if calls[0].Footer.Status != "v1.0.0" {
+			t.Errorf("Footer.Status = %q, want %q", calls[0].Footer.Status, "v1.0.0")
+		}
+	})
+
+	t.Run("CLI document flags override config in cover and footer", func(t *testing.T) {
+		tempDir := setupTestDir(t, map[string]string{
+			"doc.md": "# Test Document",
+		})
+
+		// Create config with document info
+		configContent := `document:
+  version: "v1.0"
+  date: "2025-01-01"
+cover:
+  enabled: true
+footer:
+  enabled: true
+`
+		configPath := filepath.Join(tempDir, "test.yaml")
+		if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+			t.Fatalf("failed to write config: %v", err)
+		}
+
+		mock := newMockConverter()
+		inputPath := filepath.Join(tempDir, "doc.md")
+
+		err := runWithTestPool([]string{
+			"md2pdf",
+			"--config", configPath,
+			"--doc-version", "v2.0",
+			"--doc-date", "2025-12-31",
+			inputPath,
+		}, mock)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		calls := mock.getCalls()
+		if len(calls) != 1 {
+			t.Fatalf("expected 1 call, got %d", len(calls))
+		}
+
+		// Verify CLI overrides in Cover
+		if calls[0].Cover.Version != "v2.0" {
+			t.Errorf("Cover.Version = %q, want %q", calls[0].Cover.Version, "v2.0")
+		}
+		if calls[0].Cover.Date != "2025-12-31" {
+			t.Errorf("Cover.Date = %q, want %q", calls[0].Cover.Date, "2025-12-31")
+		}
+
+		// Verify CLI overrides in Footer
+		if calls[0].Footer.Status != "v2.0" {
+			t.Errorf("Footer.Status = %q, want %q", calls[0].Footer.Status, "v2.0")
+		}
+		if calls[0].Footer.Date != "2025-12-31" {
+			t.Errorf("Footer.Date = %q, want %q", calls[0].Footer.Date, "2025-12-31")
+		}
+	})
+}
+
+func TestIntegration_NewCLIFlags(t *testing.T) {
+	t.Run("watermark shorthand flags work", func(t *testing.T) {
+		tempDir := setupTestDir(t, map[string]string{
+			"doc.md": "# Test Document",
+		})
+
+		mock := newMockConverter()
+		inputPath := filepath.Join(tempDir, "doc.md")
+
+		err := runWithTestPool([]string{
+			"md2pdf",
+			"--wm-text", "DRAFT",
+			"--wm-color", "#ff0000",
+			"--wm-opacity", "0.3",
+			"--wm-angle", "-30",
+			inputPath,
+		}, mock)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		calls := mock.getCalls()
+		if len(calls) != 1 {
+			t.Fatalf("expected 1 call, got %d", len(calls))
+		}
+
+		if calls[0].Watermark == nil {
+			t.Fatal("expected Watermark to be set")
+		}
+		if calls[0].Watermark.Text != "DRAFT" {
+			t.Errorf("Watermark.Text = %q, want %q", calls[0].Watermark.Text, "DRAFT")
+		}
+		if calls[0].Watermark.Color != "#ff0000" {
+			t.Errorf("Watermark.Color = %q, want %q", calls[0].Watermark.Color, "#ff0000")
+		}
+		if calls[0].Watermark.Opacity != 0.3 {
+			t.Errorf("Watermark.Opacity = %v, want %v", calls[0].Watermark.Opacity, 0.3)
+		}
+		if calls[0].Watermark.Angle != -30 {
+			t.Errorf("Watermark.Angle = %v, want %v", calls[0].Watermark.Angle, -30)
+		}
+	})
+
+	t.Run("footer flags work", func(t *testing.T) {
+		tempDir := setupTestDir(t, map[string]string{
+			"doc.md": "# Test Document",
+		})
+
+		mock := newMockConverter()
+		inputPath := filepath.Join(tempDir, "doc.md")
+
+		err := runWithTestPool([]string{
+			"md2pdf",
+			"--footer-position", "left",
+			"--footer-text", "Confidential",
+			"--footer-page-number",
+			inputPath,
+		}, mock)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		calls := mock.getCalls()
+		if len(calls) != 1 {
+			t.Fatalf("expected 1 call, got %d", len(calls))
+		}
+
+		if calls[0].Footer == nil {
+			t.Fatal("expected Footer to be set")
+		}
+		if calls[0].Footer.Position != "left" {
+			t.Errorf("Footer.Position = %q, want %q", calls[0].Footer.Position, "left")
+		}
+		if calls[0].Footer.Text != "Confidential" {
+			t.Errorf("Footer.Text = %q, want %q", calls[0].Footer.Text, "Confidential")
+		}
+		if !calls[0].Footer.ShowPageNumber {
+			t.Error("Footer.ShowPageNumber should be true")
+		}
+	})
+
+	t.Run("toc flags work", func(t *testing.T) {
+		tempDir := setupTestDir(t, map[string]string{
+			"doc.md": "# Test Document",
+		})
+
+		// Create config with TOC enabled
+		configContent := `toc:
+  enabled: true
+`
+		configPath := filepath.Join(tempDir, "test.yaml")
+		if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+			t.Fatalf("failed to write config: %v", err)
+		}
+
+		mock := newMockConverter()
+		inputPath := filepath.Join(tempDir, "doc.md")
+
+		err := runWithTestPool([]string{
+			"md2pdf",
+			"--config", configPath,
+			"--toc-title", "Contents",
+			"--toc-depth", "4",
+			inputPath,
+		}, mock)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		calls := mock.getCalls()
+		if len(calls) != 1 {
+			t.Fatalf("expected 1 call, got %d", len(calls))
+		}
+
+		if calls[0].TOC == nil {
+			t.Fatal("expected TOC to be set")
+		}
+		if calls[0].TOC.Title != "Contents" {
+			t.Errorf("TOC.Title = %q, want %q", calls[0].TOC.Title, "Contents")
+		}
+		if calls[0].TOC.MaxDepth != 4 {
+			t.Errorf("TOC.MaxDepth = %d, want %d", calls[0].TOC.MaxDepth, 4)
+		}
+	})
 }
