@@ -79,12 +79,12 @@ func TestWriteTempFile(t *testing.T) {
 		},
 		{
 			name:      "unicode content",
-			content:   "# Bonjour le monde\n\nCeci est un test avec des caracteres speciaux: e, a, u",
+			content:   "# Hello World\n\nThis is a test with special characters: café, naïve, résumé",
 			extension: "md",
 		},
 		{
 			name:      "unicode html content",
-			content:   "<html><body>Bonjour le monde</body></html>",
+			content:   "<html><body>Hello World</body></html>",
 			extension: "html",
 		},
 	}
@@ -250,5 +250,27 @@ func TestFileExists(t *testing.T) {
 				t.Errorf("FileExists(%q) = %v, want %v", tt.path, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestWriteTempFile_LargeContent(t *testing.T) {
+	t.Parallel()
+
+	// Test with large content to verify WriteString handles it correctly
+	largeContent := strings.Repeat("x", 1024*1024) // 1MB
+
+	path, cleanup, err := writeTempFile(largeContent, "txt")
+	if err != nil {
+		t.Fatalf("writeTempFile() error = %v", err)
+	}
+	defer cleanup()
+
+	// Verify file contains all content
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile error = %v", err)
+	}
+	if len(data) != len(largeContent) {
+		t.Errorf("file size = %d, want %d", len(data), len(largeContent))
 	}
 }
