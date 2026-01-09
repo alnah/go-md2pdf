@@ -4,7 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/alnah/go-md2pdf)](https://goreportcard.com/report/github.com/alnah/go-md2pdf)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/alnah/go-md2pdf/ci.yml?branch=main)](https://github.com/alnah/go-md2pdf/actions)
 [![Coverage](https://codecov.io/gh/alnah/go-md2pdf/branch/main/graph/badge.svg)](https://codecov.io/gh/alnah/go-md2pdf)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)
+[![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](LICENSE.txt)
 
 > Convert Markdown to print-ready PDF in **3 lines of code** - with cover pages, table of contents, signatures, footers, watermarks, and custom styling.
 
@@ -437,4 +437,4 @@ See: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-See: [MIT](LICENSE.txt).
+See: [BSD-3-Clause](LICENSE.txt).
