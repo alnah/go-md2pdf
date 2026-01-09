@@ -7,7 +7,8 @@ import (
 )
 
 // watermarkAngleSentinel detects if --wm-angle was explicitly set.
-// 0 is a valid angle, so we need a sentinel value.
+// Since 0 is a valid angle (horizontal), we use an out-of-range sentinel.
+// Valid range is -90 to 90; -999 is safely outside this range.
 const watermarkAngleSentinel = -999.0
 
 // commonFlags holds flags shared across commands.
