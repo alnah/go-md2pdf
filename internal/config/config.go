@@ -207,6 +207,14 @@ type WatermarkConfig struct {
 	Angle   float64 `yaml:"angle"`   // Rotation in degrees (default: -45)
 }
 
+// Watermark bounds (must match md2pdf.MinWatermarkOpacity, etc.)
+const (
+	minWatermarkOpacity = 0.0
+	maxWatermarkOpacity = 1.0
+	minWatermarkAngle   = -90.0
+	maxWatermarkAngle   = 90.0
+)
+
 // Validate checks watermark field values.
 func (w *WatermarkConfig) Validate() error {
 	if !w.Enabled {
@@ -221,11 +229,11 @@ func (w *WatermarkConfig) Validate() error {
 	if err := validateFieldLength("watermark.color", w.Color, MaxWatermarkColorLength); err != nil {
 		return err
 	}
-	if w.Opacity < 0 || w.Opacity > 1 {
-		return fmt.Errorf("watermark.opacity: must be between 0 and 1, got %.2f", w.Opacity)
+	if w.Opacity < minWatermarkOpacity || w.Opacity > maxWatermarkOpacity {
+		return fmt.Errorf("watermark.opacity: must be between %.0f and %.0f, got %.2f", minWatermarkOpacity, maxWatermarkOpacity, w.Opacity)
 	}
-	if w.Angle < -90 || w.Angle > 90 {
-		return fmt.Errorf("watermark.angle: must be between -90 and 90, got %.2f", w.Angle)
+	if w.Angle < minWatermarkAngle || w.Angle > maxWatermarkAngle {
+		return fmt.Errorf("watermark.angle: must be between %.0f and %.0f, got %.2f", minWatermarkAngle, maxWatermarkAngle, w.Angle)
 	}
 	return nil
 }
