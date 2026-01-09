@@ -132,6 +132,17 @@ type Input struct {
 	PageBreaks *PageBreaks   // Page break config (optional)
 }
 
+// Watermark bounds.
+const (
+	MinWatermarkOpacity     = 0.0
+	MaxWatermarkOpacity     = 1.0
+	DefaultWatermarkOpacity = 0.1
+	MinWatermarkAngle       = -90.0
+	MaxWatermarkAngle       = 90.0
+	DefaultWatermarkAngle   = -45.0
+	DefaultWatermarkColor   = "#888888"
+)
+
 // Watermark configures a background text watermark.
 type Watermark struct {
 	Text    string  // Text to display (e.g., "DRAFT", "CONFIDENTIAL")
@@ -148,6 +159,12 @@ func (w *Watermark) Validate() error {
 	}
 	if w.Color != "" && !isValidHexColor(w.Color) {
 		return fmt.Errorf("%w: %q (must be hex format like #RGB or #RRGGBB)", ErrInvalidWatermarkColor, w.Color)
+	}
+	if w.Opacity < MinWatermarkOpacity || w.Opacity > MaxWatermarkOpacity {
+		return fmt.Errorf("watermark opacity must be between %.1f and %.1f, got %.2f", MinWatermarkOpacity, MaxWatermarkOpacity, w.Opacity)
+	}
+	if w.Angle < MinWatermarkAngle || w.Angle > MaxWatermarkAngle {
+		return fmt.Errorf("watermark angle must be between %.0f and %.0f, got %.2f", MinWatermarkAngle, MaxWatermarkAngle, w.Angle)
 	}
 	return nil
 }
