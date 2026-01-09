@@ -3,6 +3,7 @@
   <div>
     <strong>{{.Name}}</strong>
     {{if .Title}}<br><em>{{.Title}}</em>{{end}}
+    {{if .Organization}}<br>{{.Organization}}{{end}}
     {{if .Email}}<br><a href="mailto:{{.Email}}">{{.Email}}</a>{{end}}
     {{range .Links}}<br><a href="{{.URL}}">{{.Label}}</a>{{end}}
   </div>

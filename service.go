@@ -171,11 +171,12 @@ func toSignatureData(sig *Signature) *signatureData {
 		links[i] = signatureLink(l)
 	}
 	return &signatureData{
-		Name:      sig.Name,
-		Title:     sig.Title,
-		Email:     sig.Email,
-		ImagePath: sig.ImagePath,
-		Links:     links,
+		Name:         sig.Name,
+		Title:        sig.Title,
+		Email:        sig.Email,
+		Organization: sig.Organization,
+		ImagePath:    sig.ImagePath,
+		Links:        links,
 	}
 }
 

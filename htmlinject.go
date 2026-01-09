@@ -70,11 +70,12 @@ func sanitizeCSS(css string) string {
 // signatureData holds signature information for injection into HTML.
 // This is the internal type used by the injector.
 type signatureData struct {
-	Name      string
-	Title     string
-	Email     string
-	ImagePath string
-	Links     []signatureLink
+	Name         string
+	Title        string
+	Email        string
+	Organization string
+	ImagePath    string
+	Links        []signatureLink
 }
 
 // signatureLink represents a clickable link in the signature block.

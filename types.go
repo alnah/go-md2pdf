@@ -249,11 +249,12 @@ func (f *Footer) Validate() error {
 
 // Signature configures the signature block.
 type Signature struct {
-	Name      string
-	Title     string
-	Email     string
-	ImagePath string
-	Links     []Link
+	Name         string
+	Title        string
+	Email        string
+	Organization string
+	ImagePath    string
+	Links        []Link
 }
 
 // Link represents a clickable link.
