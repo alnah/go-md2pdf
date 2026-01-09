@@ -43,6 +43,8 @@ func (c *testableRodConverter) ToPDF(ctx context.Context, htmlContent string, op
 }
 
 func TestRodConverter_ToPDF(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name       string
 		html       string
@@ -83,6 +85,8 @@ func TestRodConverter_ToPDF(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			converter := &testableRodConverter{mock: tt.mock}
 			ctx := context.Background()
 
@@ -116,6 +120,8 @@ func TestRodConverter_ToPDF(t *testing.T) {
 }
 
 func TestRodConverter_ToPDF_ContextCancellation(t *testing.T) {
+	t.Parallel()
+
 	mock := &mockRenderer{
 		Result: []byte("%PDF-1.4"),
 	}
@@ -134,6 +140,8 @@ func TestRodConverter_ToPDF_ContextCancellation(t *testing.T) {
 }
 
 func TestNewRodConverter(t *testing.T) {
+	t.Parallel()
+
 	converter := newRodConverter(defaultTimeout)
 
 	if converter.renderer == nil {
@@ -146,6 +154,8 @@ func TestNewRodConverter(t *testing.T) {
 }
 
 func TestBuildFooterTemplate(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		data     *footerData
@@ -216,6 +226,8 @@ func TestBuildFooterTemplate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			result := buildFooterTemplate(tt.data)
 
 			if tt.wantPart != "" && !strings.Contains(result, tt.wantPart) {
@@ -229,6 +241,8 @@ func TestBuildFooterTemplate(t *testing.T) {
 }
 
 func TestResolvePageDimensions(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name             string
 		page             *PageSettings
@@ -386,6 +400,8 @@ func TestResolvePageDimensions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			w, h, margin, bottomMargin := resolvePageDimensions(tt.page, tt.hasFooter)
 
 			if w != tt.wantW {
@@ -405,9 +421,13 @@ func TestResolvePageDimensions(t *testing.T) {
 }
 
 func TestBuildPDFOptions(t *testing.T) {
+	t.Parallel()
+
 	renderer := &rodRenderer{timeout: defaultTimeout}
 
 	t.Run("nil opts uses default margins", func(t *testing.T) {
+		t.Parallel()
+
 		pdfOpts := renderer.buildPDFOptions(nil)
 
 		if *pdfOpts.MarginBottom != DefaultMargin {
@@ -419,6 +439,8 @@ func TestBuildPDFOptions(t *testing.T) {
 	})
 
 	t.Run("with footer increases bottom margin", func(t *testing.T) {
+		t.Parallel()
+
 		opts := &pdfOptions{Footer: &footerData{Text: "Footer"}}
 		pdfOpts := renderer.buildPDFOptions(opts)
 
@@ -432,6 +454,8 @@ func TestBuildPDFOptions(t *testing.T) {
 	})
 
 	t.Run("with page settings uses custom dimensions", func(t *testing.T) {
+		t.Parallel()
+
 		opts := &pdfOptions{
 			Page: &PageSettings{Size: "a4", Orientation: "landscape", Margin: 1.0},
 		}
@@ -452,6 +476,8 @@ func TestBuildPDFOptions(t *testing.T) {
 	})
 
 	t.Run("with page settings and footer", func(t *testing.T) {
+		t.Parallel()
+
 		opts := &pdfOptions{
 			Page:   &PageSettings{Size: "letter", Orientation: "portrait", Margin: 0.75},
 			Footer: &footerData{Text: "Footer"},

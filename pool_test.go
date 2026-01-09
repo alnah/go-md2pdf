@@ -16,6 +16,8 @@ var _ interface {
 } = (*ServicePool)(nil)
 
 func TestResolvePoolSize(t *testing.T) {
+	t.Parallel()
+
 	gomaxprocs := runtime.GOMAXPROCS(0)
 
 	tests := []struct {
@@ -42,6 +44,8 @@ func TestResolvePoolSize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := ResolvePoolSize(tt.workers)
 			if got != tt.want {
 				t.Errorf("ResolvePoolSize(%d) = %d, want %d", tt.workers, got, tt.want)
@@ -51,7 +55,11 @@ func TestResolvePoolSize(t *testing.T) {
 }
 
 func TestResolvePoolSize_Bounds(t *testing.T) {
+	t.Parallel()
+
 	t.Run("minimum is 1", func(t *testing.T) {
+		t.Parallel()
+
 		got := ResolvePoolSize(0)
 		if got < MinPoolSize {
 			t.Errorf("ResolvePoolSize(0) = %d, should be at least %d", got, MinPoolSize)
@@ -59,6 +67,8 @@ func TestResolvePoolSize_Bounds(t *testing.T) {
 	})
 
 	t.Run("maximum is 8", func(t *testing.T) {
+		t.Parallel()
+
 		got := ResolvePoolSize(0)
 		if got > MaxPoolSize {
 			t.Errorf("ResolvePoolSize(0) = %d, should be at most %d", got, MaxPoolSize)
@@ -66,6 +76,8 @@ func TestResolvePoolSize_Bounds(t *testing.T) {
 	})
 
 	t.Run("explicit can exceed max", func(t *testing.T) {
+		t.Parallel()
+
 		got := ResolvePoolSize(16)
 		if got != 16 {
 			t.Errorf("ResolvePoolSize(16) = %d, want 16", got)
@@ -74,6 +86,8 @@ func TestResolvePoolSize_Bounds(t *testing.T) {
 }
 
 func TestServicePool_AcquireRelease(t *testing.T) {
+	t.Parallel()
+
 	pool := NewServicePool(2)
 	defer pool.Close()
 
@@ -108,6 +122,8 @@ func TestServicePool_AcquireRelease(t *testing.T) {
 }
 
 func TestServicePool_Size(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name string
 		size int
@@ -121,6 +137,8 @@ func TestServicePool_Size(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			pool := NewServicePool(tt.size)
 			defer pool.Close()
 
@@ -132,6 +150,8 @@ func TestServicePool_Size(t *testing.T) {
 }
 
 func TestServicePool_ConcurrentAccess(t *testing.T) {
+	t.Parallel()
+
 	pool := NewServicePool(4)
 	defer pool.Close()
 
@@ -164,6 +184,8 @@ func TestServicePool_ConcurrentAccess(t *testing.T) {
 }
 
 func TestServicePool_ClosePreventsFurtherRelease(t *testing.T) {
+	t.Parallel()
+
 	pool := NewServicePool(2)
 
 	svc := pool.Acquire()
@@ -174,6 +196,8 @@ func TestServicePool_ClosePreventsFurtherRelease(t *testing.T) {
 }
 
 func TestServicePool_DoubleClose(t *testing.T) {
+	t.Parallel()
+
 	pool := NewServicePool(1)
 
 	// First close

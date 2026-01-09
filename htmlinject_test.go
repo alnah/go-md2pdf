@@ -8,6 +8,8 @@ import (
 )
 
 func TestSanitizeCSS(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		input    string
@@ -62,6 +64,8 @@ func TestSanitizeCSS(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := sanitizeCSS(tt.input)
 			if got != tt.expected {
 				t.Errorf("sanitizeCSS(%q) = %q, want %q", tt.input, got, tt.expected)
@@ -71,6 +75,8 @@ func TestSanitizeCSS(t *testing.T) {
 }
 
 func TestInjectCSS(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		html     string
@@ -140,10 +146,12 @@ func TestInjectCSS(t *testing.T) {
 	}
 
 	injector := &cssInjection{}
-	ctx := context.Background()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
 			got := injector.InjectCSS(ctx, tt.html, tt.css)
 			if got != tt.expected {
 				t.Errorf("InjectCSS() = %q, want %q", got, tt.expected)
@@ -153,6 +161,8 @@ func TestInjectCSS(t *testing.T) {
 }
 
 func TestInjectCSS_ContextCancellation(t *testing.T) {
+	t.Parallel()
+
 	injector := &cssInjection{}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -169,10 +179,14 @@ func TestInjectCSS_ContextCancellation(t *testing.T) {
 }
 
 func TestInjectSignature(t *testing.T) {
+	t.Parallel()
+
 	injector := newSignatureInjection()
-	ctx := context.Background()
 
 	t.Run("nil data returns HTML unchanged", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := "<html><body>Hello</body></html>"
 		got, err := injector.InjectSignature(ctx, html, nil)
 		if err != nil {
@@ -184,6 +198,9 @@ func TestInjectSignature(t *testing.T) {
 	})
 
 	t.Run("injects signature before </body>", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := "<html><body>Content</body></html>"
 		data := &signatureData{Name: "John Doe", Email: "john@example.com"}
 
@@ -209,6 +226,9 @@ func TestInjectSignature(t *testing.T) {
 	})
 
 	t.Run("injects before </BODY> mixed case", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := "<html><BODY>Content</BODY></html>"
 		data := &signatureData{Name: "Test"}
 
@@ -223,6 +243,9 @@ func TestInjectSignature(t *testing.T) {
 	})
 
 	t.Run("appends to end when no </body>", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := "<p>Content</p>"
 		data := &signatureData{Name: "Test"}
 
@@ -238,6 +261,9 @@ func TestInjectSignature(t *testing.T) {
 	})
 
 	t.Run("renders all signature fields", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := "<html><body></body></html>"
 		data := &signatureData{
 			Name:      "Jane Smith",
@@ -274,6 +300,9 @@ func TestInjectSignature(t *testing.T) {
 	})
 
 	t.Run("optional fields can be empty", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := "<html><body></body></html>"
 		data := &signatureData{
 			Name: "Minimal",
@@ -296,6 +325,8 @@ func TestInjectSignature(t *testing.T) {
 }
 
 func TestInjectSignature_ContextCancellation(t *testing.T) {
+	t.Parallel()
+
 	injector := newSignatureInjection()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -313,6 +344,8 @@ func TestInjectSignature_ContextCancellation(t *testing.T) {
 }
 
 func TestInjectSignature_TemplateError(t *testing.T) {
+	t.Parallel()
+
 	// Create injector with a broken template to test error path
 	// This is difficult to trigger with valid signatureData,
 	// but we can verify the error type is returned correctly
@@ -333,10 +366,14 @@ func TestInjectSignature_TemplateError(t *testing.T) {
 }
 
 func TestInjectCover(t *testing.T) {
+	t.Parallel()
+
 	injector := newCoverInjection()
-	ctx := context.Background()
 
 	t.Run("nil data returns HTML unchanged", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := "<html><body>Hello</body></html>"
 		got, err := injector.InjectCover(ctx, html, nil)
 		if err != nil {
@@ -348,6 +385,9 @@ func TestInjectCover(t *testing.T) {
 	})
 
 	t.Run("injects cover after <body>", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := "<html><body>Content</body></html>"
 		data := &coverData{Title: "My Document"}
 
@@ -370,6 +410,9 @@ func TestInjectCover(t *testing.T) {
 	})
 
 	t.Run("injects after <body> with attributes", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := `<html><body class="main">Content</body></html>`
 		data := &coverData{Title: "Test"}
 
@@ -384,6 +427,9 @@ func TestInjectCover(t *testing.T) {
 	})
 
 	t.Run("injects after <BODY> mixed case", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := "<html><BODY>Content</BODY></html>"
 		data := &coverData{Title: "Test"}
 
@@ -398,6 +444,9 @@ func TestInjectCover(t *testing.T) {
 	})
 
 	t.Run("prepends when no <body>", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := "<p>Content</p>"
 		data := &coverData{Title: "Test"}
 
@@ -413,6 +462,9 @@ func TestInjectCover(t *testing.T) {
 	})
 
 	t.Run("renders all cover fields", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := "<html><body></body></html>"
 		data := &coverData{
 			Title:        "My Document",
@@ -449,6 +501,9 @@ func TestInjectCover(t *testing.T) {
 	})
 
 	t.Run("optional fields can be empty", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := "<html><body></body></html>"
 		data := &coverData{
 			Title: "Minimal",
@@ -469,6 +524,9 @@ func TestInjectCover(t *testing.T) {
 	})
 
 	t.Run("HTML escapes special characters", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := "<html><body></body></html>"
 		data := &coverData{
 			Title:  "<script>alert('xss')</script>",
@@ -492,6 +550,8 @@ func TestInjectCover(t *testing.T) {
 }
 
 func TestInjectCover_ContextCancellation(t *testing.T) {
+	t.Parallel()
+
 	injector := newCoverInjection()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -509,6 +569,8 @@ func TestInjectCover_ContextCancellation(t *testing.T) {
 }
 
 func TestEscapeCSSString(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		input    string
@@ -573,6 +635,8 @@ func TestEscapeCSSString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := escapeCSSString(tt.input)
 			if got != tt.expected {
 				t.Errorf("escapeCSSString(%q) = %q, want %q", tt.input, got, tt.expected)
@@ -582,6 +646,8 @@ func TestEscapeCSSString(t *testing.T) {
 }
 
 func TestBuildWatermarkCSS(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name           string
 		watermark      *Watermark
@@ -655,6 +721,8 @@ func TestBuildWatermarkCSS(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := buildWatermarkCSS(tt.watermark)
 
 			if tt.wantEmpty {
@@ -684,6 +752,8 @@ func TestBuildWatermarkCSS(t *testing.T) {
 }
 
 func TestBuildPageBreaksCSS(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name           string
 		pageBreaks     *PageBreaks
@@ -827,6 +897,8 @@ func TestBuildPageBreaksCSS(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := buildPageBreaksCSS(tt.pageBreaks)
 
 			if got == "" {
@@ -849,6 +921,8 @@ func TestBuildPageBreaksCSS(t *testing.T) {
 }
 
 func TestExtractHeadings(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		html     string
@@ -977,6 +1051,8 @@ func TestExtractHeadings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := extractHeadings(tt.html, tt.maxDepth)
 
 			if len(got) != len(tt.want) {
@@ -999,6 +1075,8 @@ func TestExtractHeadings(t *testing.T) {
 }
 
 func TestStripHTMLTags(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		input string
 		want  string
@@ -1020,6 +1098,8 @@ func TestStripHTMLTags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
+			t.Parallel()
+
 			got := stripHTMLTags(tt.input)
 			if got != tt.want {
 				t.Errorf("stripHTMLTags(%q) = %q, want %q", tt.input, got, tt.want)
@@ -1029,6 +1109,8 @@ func TestStripHTMLTags(t *testing.T) {
 }
 
 func TestNumberingState_Next(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name   string
 		levels []int
@@ -1088,6 +1170,8 @@ func TestNumberingState_Next(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			state := newNumberingState()
 
 			for i, level := range tt.levels {
@@ -1101,6 +1185,8 @@ func TestNumberingState_Next(t *testing.T) {
 }
 
 func TestNumberingState_Next_EffectiveDepth(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name       string
 		levels     []int
@@ -1135,6 +1221,8 @@ func TestNumberingState_Next_EffectiveDepth(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			state := newNumberingState()
 
 			for i, level := range tt.levels {
@@ -1148,6 +1236,8 @@ func TestNumberingState_Next_EffectiveDepth(t *testing.T) {
 }
 
 func TestGenerateNumberedTOC(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name         string
 		headings     []headingInfo
@@ -1240,6 +1330,8 @@ func TestGenerateNumberedTOC(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := generateNumberedTOC(tt.headings, tt.title)
 
 			if tt.wantEmpty {
@@ -1263,10 +1355,14 @@ func TestGenerateNumberedTOC(t *testing.T) {
 }
 
 func TestInjectTOC(t *testing.T) {
+	t.Parallel()
+
 	injector := newTOCInjection()
-	ctx := context.Background()
 
 	t.Run("nil data returns HTML unchanged", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := "<html><body>Hello</body></html>"
 		got, err := injector.InjectTOC(ctx, html, nil)
 		if err != nil {
@@ -1278,6 +1374,9 @@ func TestInjectTOC(t *testing.T) {
 	})
 
 	t.Run("no headings returns HTML unchanged", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := "<html><body><p>No headings</p></body></html>"
 		data := &tocData{Title: "TOC", MaxDepth: 3}
 		got, err := injector.InjectTOC(ctx, html, data)
@@ -1290,6 +1389,9 @@ func TestInjectTOC(t *testing.T) {
 	})
 
 	t.Run("injects after cover-end marker", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := `<html><body></div></section><!-- cover-end --><h1 id="ch1">Chapter 1</h1></body></html>`
 		data := &tocData{Title: "Contents", MaxDepth: 3}
 
@@ -1310,6 +1412,9 @@ func TestInjectTOC(t *testing.T) {
 	})
 
 	t.Run("fallback injects after body tag", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := `<html><body><h1 id="ch1">Chapter 1</h1></body></html>`
 		data := &tocData{Title: "", MaxDepth: 3}
 
@@ -1330,6 +1435,9 @@ func TestInjectTOC(t *testing.T) {
 	})
 
 	t.Run("fallback with body attributes", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := `<html><body class="main"><h1 id="ch1">Chapter 1</h1></body></html>`
 		data := &tocData{MaxDepth: 3}
 
@@ -1344,6 +1452,9 @@ func TestInjectTOC(t *testing.T) {
 	})
 
 	t.Run("last fallback prepends to HTML", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := `<h1 id="ch1">Chapter 1</h1><p>Content</p>`
 		data := &tocData{MaxDepth: 3}
 
@@ -1358,6 +1469,9 @@ func TestInjectTOC(t *testing.T) {
 	})
 
 	t.Run("respects maxDepth", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := context.Background()
 		html := `<body><h1 id="h1">H1</h1><h2 id="h2">H2</h2><h3 id="h3">H3</h3></body>`
 		data := &tocData{MaxDepth: 2}
 
@@ -1377,6 +1491,8 @@ func TestInjectTOC(t *testing.T) {
 }
 
 func TestInjectTOC_ContextCancellation(t *testing.T) {
+	t.Parallel()
+
 	injector := newTOCInjection()
 
 	ctx, cancel := context.WithCancel(context.Background())
