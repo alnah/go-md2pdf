@@ -366,9 +366,13 @@ var headingPattern = regexp.MustCompile(`(?is)<h([1-6])[^>]*\bid="([^"]*)"[^>]*>
 // htmlTagPattern matches HTML tags for stripping from heading text.
 var htmlTagPattern = regexp.MustCompile(`<[^>]*>`)
 
-// stripHTMLTags removes HTML tags from a string and trims whitespace.
+// stripHTMLTags removes HTML tags from a string, decodes HTML entities,
+// and trims whitespace. Decoding entities is essential to avoid double-encoding
+// when the text is later escaped for HTML output (e.g., in TOC generation).
 func stripHTMLTags(s string) string {
-	return strings.TrimSpace(htmlTagPattern.ReplaceAllString(s, ""))
+	s = htmlTagPattern.ReplaceAllString(s, "")
+	s = html.UnescapeString(s)
+	return strings.TrimSpace(s)
 }
 
 // extractHeadings parses HTML and returns all headings up to maxDepth.

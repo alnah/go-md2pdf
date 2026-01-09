@@ -1047,6 +1047,43 @@ func TestExtractHeadings(t *testing.T) {
 			maxDepth: 3,
 			want:     []headingInfo{{Level: 1, ID: "link", Text: "Link Text"}},
 		},
+		// HTML entity decoding - fixes double-encoding bug in TOC
+		{
+			name:     "ampersand entity decoded",
+			html:     `<h1 id="ab">A &amp; B</h1>`,
+			maxDepth: 3,
+			want:     []headingInfo{{Level: 1, ID: "ab", Text: "A & B"}},
+		},
+		{
+			name:     "less than entity decoded",
+			html:     `<h1 id="lt">x &lt; y</h1>`,
+			maxDepth: 3,
+			want:     []headingInfo{{Level: 1, ID: "lt", Text: "x < y"}},
+		},
+		{
+			name:     "greater than entity decoded",
+			html:     `<h1 id="gt">x &gt; y</h1>`,
+			maxDepth: 3,
+			want:     []headingInfo{{Level: 1, ID: "gt", Text: "x > y"}},
+		},
+		{
+			name:     "quote entity decoded",
+			html:     `<h1 id="quote">&quot;quoted&quot;</h1>`,
+			maxDepth: 3,
+			want:     []headingInfo{{Level: 1, ID: "quote", Text: "\"quoted\""}},
+		},
+		{
+			name:     "numeric entity decoded",
+			html:     `<h1 id="dash">foo &#8212; bar</h1>`,
+			maxDepth: 3,
+			want:     []headingInfo{{Level: 1, ID: "dash", Text: "foo — bar"}},
+		},
+		{
+			name:     "multiple entities decoded",
+			html:     `<h1 id="multi">A &amp; B &lt; C &gt; D</h1>`,
+			maxDepth: 3,
+			want:     []headingInfo{{Level: 1, ID: "multi", Text: "A & B < C > D"}},
+		},
 	}
 
 	for _, tt := range tests {
@@ -1094,6 +1131,15 @@ func TestStripHTMLTags(t *testing.T) {
 		{"no tags", "no tags"},
 		{"<br/>self closing", "self closing"},
 		{"<div class=\"foo\">with attrs</div>", "with attrs"},
+		// HTML entity decoding - fixes double-encoding bug in TOC
+		{"A &amp; B", "A & B"},
+		{"&lt;script&gt;", "<script>"},
+		{"&quot;quoted&quot;", "\"quoted\""},
+		{"&#39;apostrophe&#39;", "'apostrophe'"},
+		{"&lt;em&gt;not a tag&lt;/em&gt;", "<em>not a tag</em>"},
+		{"mixed &amp; <em>tags</em> &amp; entities", "mixed & tags & entities"},
+		{"&#8212; em dash", "— em dash"},
+		{"&copy; 2025", "© 2025"},
 	}
 
 	for _, tt := range tests {
@@ -1326,6 +1372,37 @@ func TestGenerateNumberedTOC(t *testing.T) {
 				`1.1. Section 1`,
 			},
 		},
+		// Special characters - verify proper single encoding (not double)
+		{
+			name: "ampersand in text is properly encoded once",
+			headings: []headingInfo{
+				{Level: 1, ID: "ab", Text: "A & B"}, // Already decoded by stripHTMLTags
+			},
+			title: "",
+			wantContains: []string{
+				`A &amp; B`, // Should be encoded once
+			},
+		},
+		{
+			name: "less than in text is properly encoded",
+			headings: []headingInfo{
+				{Level: 1, ID: "lt", Text: "x < y"},
+			},
+			title: "",
+			wantContains: []string{
+				`x &lt; y`,
+			},
+		},
+		{
+			name: "multiple special chars encoded correctly",
+			headings: []headingInfo{
+				{Level: 1, ID: "special", Text: "A & B < C > D"},
+			},
+			title: "",
+			wantContains: []string{
+				`A &amp; B &lt; C &gt; D`,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -1507,5 +1584,106 @@ func TestInjectTOC_ContextCancellation(t *testing.T) {
 	}
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("expected context.Canceled, got %v", err)
+	}
+}
+
+func TestInjectTOC_HTMLEntities(t *testing.T) {
+	t.Parallel()
+
+	injector := newTOCInjection()
+	ctx := context.Background()
+
+	tests := []struct {
+		name           string
+		html           string
+		wantContains   []string
+		wantNotContain []string
+	}{
+		{
+			name: "ampersand not double-encoded",
+			html: `<body><h1 id="ab">A &amp; B</h1></body>`,
+			wantContains: []string{
+				`A &amp; B`, // Single encoding in TOC
+			},
+			wantNotContain: []string{
+				`&amp;amp;`, // Double encoding = bug
+			},
+		},
+		{
+			name: "less than not double-encoded",
+			html: `<body><h1 id="lt">x &lt; y</h1></body>`,
+			wantContains: []string{
+				`x &lt; y`,
+			},
+			wantNotContain: []string{
+				`&amp;lt;`,
+			},
+		},
+		{
+			name: "greater than not double-encoded",
+			html: `<body><h1 id="gt">x &gt; y</h1></body>`,
+			wantContains: []string{
+				`x &gt; y`,
+			},
+			wantNotContain: []string{
+				`&amp;gt;`,
+			},
+		},
+		{
+			name: "quote not double-encoded",
+			html: `<body><h1 id="q">&quot;quoted&quot;</h1></body>`,
+			wantContains: []string{
+				`&#34;quoted&#34;`, // html.EscapeString uses numeric for quotes
+			},
+			wantNotContain: []string{
+				`&amp;quot;`,
+			},
+		},
+		{
+			name: "numeric entity not double-encoded",
+			html: `<body><h1 id="dash">foo &#8212; bar</h1></body>`,
+			wantContains: []string{
+				`foo — bar`, // Em dash character (decoded then not re-encoded as entity)
+			},
+			wantNotContain: []string{
+				`&amp;#8212;`,
+			},
+		},
+		{
+			name: "complex heading with multiple entities",
+			html: `<body><h1 id="complex">Foo &amp; Bar &lt;Baz&gt;</h1></body>`,
+			wantContains: []string{
+				`Foo &amp; Bar &lt;Baz&gt;`,
+			},
+			wantNotContain: []string{
+				`&amp;amp;`,
+				`&amp;lt;`,
+				`&amp;gt;`,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			data := &tocData{MaxDepth: 3}
+			got, err := injector.InjectTOC(ctx, tt.html, data)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			for _, want := range tt.wantContains {
+				if !strings.Contains(got, want) {
+					t.Errorf("InjectTOC() missing %q\nGot:\n%s", want, got)
+				}
+			}
+
+			for _, notWant := range tt.wantNotContain {
+				if strings.Contains(got, notWant) {
+					t.Errorf("InjectTOC() should not contain %q (double-encoding bug)\nGot:\n%s", notWant, got)
+				}
+			}
+		})
 	}
 }
