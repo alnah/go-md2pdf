@@ -15,9 +15,12 @@ go-md2pdf/                      # package md2pdf (library)
 ├── fileutil.go                 # Temp files
 ├── process_{unix,windows}.go   # killProcessGroup per platform
 │
-├── cmd/md2pdf/                 # CLI
-│   ├── main.go                 # Bootstrap, pool, signals
-│   ├── convert.go              # Flags, batch conversion
+├── cmd/md2pdf/                 # CLI (md2pdf convert|version|help)
+│   ├── main.go                 # Entry point, command dispatch
+│   ├── convert.go              # Batch conversion, config merging
+│   ├── flags.go                # Flag definitions by category
+│   ├── help.go                 # Usage text
+│   ├── deps.go                 # Dependency injection (Now, Stdout, Stderr)
 │   └── signal_{unix,windows}.go
 │
 ├── internal/
