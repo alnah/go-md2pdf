@@ -11,8 +11,9 @@ import (
 )
 
 func TestNewConversionService(t *testing.T) {
-	service := New()
-	defer service.Close()
+	t.Parallel()
+
+	service := acquireService(t)
 
 	if service.preprocessor == nil {
 		t.Error("preprocessor is nil")
@@ -42,8 +43,9 @@ func TestNewConversionService(t *testing.T) {
 }
 
 func TestConversionService_Convert_Integration(t *testing.T) {
-	service := New()
-	defer service.Close()
+	t.Parallel()
+
+	service := acquireService(t)
 
 	ctx := context.Background()
 	input := Input{
@@ -66,8 +68,9 @@ func TestConversionService_Convert_Integration(t *testing.T) {
 }
 
 func TestConversionService_WriteToFile_Integration(t *testing.T) {
-	service := New()
-	defer service.Close()
+	t.Parallel()
+
+	service := acquireService(t)
 
 	ctx := context.Background()
 	input := Input{
@@ -95,6 +98,8 @@ func TestConversionService_WriteToFile_Integration(t *testing.T) {
 }
 
 func TestConversionService_PageSettings_Integration(t *testing.T) {
+	t.Parallel()
+
 	// Test various page settings combinations to ensure they don't crash
 	// and produce valid PDF output
 	tests := []struct {
@@ -139,11 +144,11 @@ func TestConversionService_PageSettings_Integration(t *testing.T) {
 		},
 	}
 
-	service := New()
-	defer service.Close()
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			service := acquireService(t)
 			ctx := context.Background()
 			input := Input{
 				Markdown: "# Page Settings Test\n\nThis is a test document.",
@@ -169,8 +174,9 @@ func TestConversionService_PageSettings_Integration(t *testing.T) {
 }
 
 func TestConversionService_PageSettingsWithFooter_Integration(t *testing.T) {
-	service := New()
-	defer service.Close()
+	t.Parallel()
+
+	service := acquireService(t)
 
 	ctx := context.Background()
 	input := Input{
@@ -194,6 +200,8 @@ func TestConversionService_PageSettingsWithFooter_Integration(t *testing.T) {
 }
 
 func TestConversionService_PageBreaks_Integration(t *testing.T) {
+	t.Parallel()
+
 	// Test various page break configurations to ensure they produce valid PDF output
 	tests := []struct {
 		name       string
@@ -241,9 +249,6 @@ func TestConversionService_PageBreaks_Integration(t *testing.T) {
 		},
 	}
 
-	service := New()
-	defer service.Close()
-
 	// Markdown with multiple headings to test page breaks
 	markdown := `# Chapter 1
 
@@ -268,6 +273,9 @@ More content here.
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			service := acquireService(t)
 			ctx := context.Background()
 			input := Input{
 				Markdown:   markdown,
@@ -293,8 +301,9 @@ More content here.
 }
 
 func TestConversionService_PageBreaksWithOtherFeatures_Integration(t *testing.T) {
-	service := New()
-	defer service.Close()
+	t.Parallel()
+
+	service := acquireService(t)
 
 	ctx := context.Background()
 	input := Input{
