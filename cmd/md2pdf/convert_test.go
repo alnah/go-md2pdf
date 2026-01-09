@@ -1242,20 +1242,20 @@ func TestValidateWorkers(t *testing.T) {
 		},
 		{
 			name:    "max workers is valid",
-			n:       maxWorkers,
+			n:       md2pdf.MaxPoolSize,
 			wantErr: false,
 		},
 		{
 			name:    "above max returns error",
-			n:       maxWorkers + 1,
+			n:       md2pdf.MaxPoolSize + 1,
 			wantErr: true,
-			errMsg:  "maximum is 32",
+			errMsg:  "maximum is 8",
 		},
 		{
 			name:    "large number returns error",
 			n:       100,
 			wantErr: true,
-			errMsg:  "maximum is 32",
+			errMsg:  "maximum is 8",
 		},
 	}
 
@@ -1419,7 +1419,7 @@ func TestBuildWatermarkData(t *testing.T) {
 			}},
 			cfg:         &Config{},
 			wantErr:     true,
-			errContains: "opacity must be between 0 and 1",
+			errContains: "watermark opacity must be between",
 		},
 		{
 			name: "invalid opacity below 0 returns error",
@@ -1430,7 +1430,7 @@ func TestBuildWatermarkData(t *testing.T) {
 			}},
 			cfg:         &Config{},
 			wantErr:     true,
-			errContains: "opacity must be between 0 and 1",
+			errContains: "watermark opacity must be between",
 		},
 		{
 			name: "invalid angle above 90 returns error",
