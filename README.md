@@ -6,7 +6,7 @@
 [![Coverage](https://codecov.io/gh/alnah/go-md2pdf/branch/main/graph/badge.svg)](https://codecov.io/gh/alnah/go-md2pdf)
 [![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](LICENSE.txt)
 
-> Convert Markdown to print-ready PDF in **3 lines of code** - with cover pages, table of contents, signatures, footers, watermarks, and custom styling.
+> Markdown to print-ready PDF via CLI or Go library - cover pages, TOC, signatures, footers, watermarks, custom CSS, and parallel batch processing.
 
 ## Installation
 
