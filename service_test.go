@@ -669,6 +669,7 @@ func TestToTOCData(t *testing.T) {
 
 		toc := &TOC{
 			Title:    "Table of Contents",
+			MinDepth: 2,
 			MaxDepth: 4,
 		}
 
@@ -677,8 +678,27 @@ func TestToTOCData(t *testing.T) {
 		if result.Title != toc.Title {
 			t.Errorf("Title = %q, want %q", result.Title, toc.Title)
 		}
+		if result.MinDepth != toc.MinDepth {
+			t.Errorf("MinDepth = %d, want %d", result.MinDepth, toc.MinDepth)
+		}
 		if result.MaxDepth != toc.MaxDepth {
 			t.Errorf("MaxDepth = %d, want %d", result.MaxDepth, toc.MaxDepth)
+		}
+	})
+
+	t.Run("zero MinDepth gets default", func(t *testing.T) {
+		t.Parallel()
+
+		toc := &TOC{
+			Title:    "Contents",
+			MinDepth: 0,
+			MaxDepth: 3,
+		}
+
+		result := toTOCData(toc)
+
+		if result.MinDepth != DefaultTOCMinDepth {
+			t.Errorf("MinDepth = %d, want %d (default)", result.MinDepth, DefaultTOCMinDepth)
 		}
 	})
 
@@ -692,8 +712,8 @@ func TestToTOCData(t *testing.T) {
 
 		result := toTOCData(toc)
 
-		if result.MaxDepth != DefaultTOCDepth {
-			t.Errorf("MaxDepth = %d, want %d (default)", result.MaxDepth, DefaultTOCDepth)
+		if result.MaxDepth != DefaultTOCMaxDepth {
+			t.Errorf("MaxDepth = %d, want %d (default)", result.MaxDepth, DefaultTOCMaxDepth)
 		}
 	})
 

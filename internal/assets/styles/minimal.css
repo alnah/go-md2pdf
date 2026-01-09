@@ -653,7 +653,12 @@ img {
   color: var(--color-fg-subtle);
 }
 
-/* 12. TABLE OF CONTENTS */
+/*
+ * 12. TABLE OF CONTENTS
+ *
+ * Uses <div> elements instead of <ul>/<li> to avoid CSS list-style conflicts.
+ * TOC links are styled to look like regular text (not blue hyperlinks).
+ */
 .toc {
   page-break-after: always;
   padding: 2rem 0;
@@ -668,30 +673,18 @@ img {
   margin-bottom: 1.5rem;
 }
 
-.toc-list {
-  list-style: none !important;
-  padding-left: 0 !important;
-  margin: 0 !important;
+.toc-item {
+  margin: 0.5em 0;
+  line-height: 1.4;
 }
 
-.toc-list ol {
-  list-style: none !important;
-  padding-left: 1.5em !important;
-  margin: 0.25em 0 !important;
-}
-
-.toc-list li {
-  margin: 0.5em 0 !important;
-  line-height: 1.4 !important;
-}
-
-.toc-list a {
+/* TOC links: clickable but styled as regular text */
+.toc-item a {
   color: var(--color-fg-default);
   text-decoration: none;
 }
 
-.toc-list a:hover {
-  color: var(--color-accent-fg);
+.toc-item a:hover {
   text-decoration: underline;
 }
 

@@ -760,28 +760,53 @@ func TestTOC_Validate(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name:    "depth 0 invalid",
+			name:    "depth 0 valid (means use default)",
 			toc:     &TOC{MaxDepth: 0},
-			wantErr: ErrInvalidTOCDepth,
+			wantErr: nil,
 		},
 		{
-			name:    "depth 7 invalid",
+			name:    "maxDepth 7 invalid",
 			toc:     &TOC{MaxDepth: 7},
 			wantErr: ErrInvalidTOCDepth,
 		},
 		{
-			name:    "negative depth invalid",
+			name:    "maxDepth negative invalid",
 			toc:     &TOC{MaxDepth: -1},
 			wantErr: ErrInvalidTOCDepth,
 		},
 		{
-			name:    "large negative depth invalid",
+			name:    "maxDepth large negative invalid",
 			toc:     &TOC{MaxDepth: -100},
 			wantErr: ErrInvalidTOCDepth,
 		},
 		{
-			name:    "large positive depth invalid",
+			name:    "maxDepth large positive invalid",
 			toc:     &TOC{MaxDepth: 100},
+			wantErr: ErrInvalidTOCDepth,
+		},
+		{
+			name:    "minDepth valid",
+			toc:     &TOC{MinDepth: 2, MaxDepth: 3},
+			wantErr: nil,
+		},
+		{
+			name:    "minDepth 0 valid (means use default)",
+			toc:     &TOC{MinDepth: 0, MaxDepth: 3},
+			wantErr: nil,
+		},
+		{
+			name:    "minDepth 7 invalid",
+			toc:     &TOC{MinDepth: 7},
+			wantErr: ErrInvalidTOCDepth,
+		},
+		{
+			name:    "minDepth negative invalid",
+			toc:     &TOC{MinDepth: -1},
+			wantErr: ErrInvalidTOCDepth,
+		},
+		{
+			name:    "minDepth greater than maxDepth invalid",
+			toc:     &TOC{MinDepth: 4, MaxDepth: 2},
 			wantErr: ErrInvalidTOCDepth,
 		},
 	}

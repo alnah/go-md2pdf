@@ -344,7 +344,8 @@ h3 {
 // tocData holds TOC configuration for injection.
 type tocData struct {
 	Title    string
-	MaxDepth int
+	MinDepth int // Minimum heading level (default: 2, skips H1)
+	MaxDepth int // Maximum heading level (default: 3)
 }
 
 // tocInjector defines the contract for TOC injection into HTML.
@@ -375,9 +376,9 @@ func stripHTMLTags(s string) string {
 	return strings.TrimSpace(s)
 }
 
-// extractHeadings parses HTML and returns all headings up to maxDepth.
+// extractHeadings parses HTML and returns headings between minDepth and maxDepth.
 // Headings without IDs are skipped.
-func extractHeadings(htmlContent string, maxDepth int) []headingInfo {
+func extractHeadings(htmlContent string, minDepth, maxDepth int) []headingInfo {
 	matches := headingPattern.FindAllStringSubmatch(htmlContent, -1)
 	if len(matches) == 0 {
 		return nil
@@ -386,7 +387,7 @@ func extractHeadings(htmlContent string, maxDepth int) []headingInfo {
 	var headings []headingInfo
 	for _, m := range matches {
 		level, _ := strconv.Atoi(m[1])
-		if level > maxDepth {
+		if level < minDepth || level > maxDepth {
 			continue
 		}
 		headings = append(headings, headingInfo{
@@ -450,6 +451,7 @@ func (n *numberingState) next(level int) (numStr string, effectiveDepth int) {
 }
 
 // generateNumberedTOC creates HTML for a numbered table of contents.
+// Uses <div> elements instead of <ul>/<li> to avoid CSS list-style conflicts.
 func generateNumberedTOC(headings []headingInfo, title string) string {
 	if len(headings) == 0 {
 		return ""
@@ -464,54 +466,32 @@ func generateNumberedTOC(headings []headingInfo, title string) string {
 		buf.WriteString(`</h2>`)
 	}
 
-	buf.WriteString(`<ol class="toc-list">`)
+	buf.WriteString(`<div class="toc-list">`)
 
 	numbering := newNumberingState()
-	var stack []int // track open <ol> levels for nesting
 
 	for _, h := range headings {
 		// Get number and effective depth (handles normalization and gap skipping)
 		num, effectiveDepth := numbering.next(h.Level)
 
-		// Close nested lists if going to shallower level
-		for len(stack) > 0 && stack[len(stack)-1] >= effectiveDepth {
-			buf.WriteString(`</li></ol>`)
-			stack = stack[:len(stack)-1]
-		}
+		// Calculate indentation: (depth - 1) * 1.5em
+		indent := float64(effectiveDepth-1) * 1.5
 
-		// Open nested lists if going deeper
-		if len(stack) > 0 && effectiveDepth > stack[len(stack)-1] {
-			buf.WriteString(`<ol>`)
-			stack = append(stack, effectiveDepth)
-		} else if len(stack) == 0 && effectiveDepth > 1 {
-			// First item is nested (shouldn't happen with normalization, but safety)
-			for i := 1; i < effectiveDepth; i++ {
-				buf.WriteString(`<ol>`)
-				stack = append(stack, i+1)
-			}
+		// Write the TOC item
+		buf.WriteString(`<div class="toc-item"`)
+		if indent > 0 {
+			buf.WriteString(fmt.Sprintf(` style="padding-left:%.1fem"`, indent))
 		}
-
-		// Write the list item
-		buf.WriteString(`<li><a href="#`)
+		buf.WriteString(`><a href="#`)
 		buf.WriteString(html.EscapeString(h.ID))
 		buf.WriteString(`">`)
 		buf.WriteString(num)
 		buf.WriteString(` `)
 		buf.WriteString(html.EscapeString(h.Text))
-		buf.WriteString(`</a>`)
-
-		// Track that we might have children
-		if len(stack) == 0 {
-			stack = append(stack, effectiveDepth)
-		}
+		buf.WriteString(`</a></div>`)
 	}
 
-	// Close all remaining open tags
-	for range stack {
-		buf.WriteString(`</li></ol>`)
-	}
-
-	buf.WriteString(`</nav>`)
+	buf.WriteString(`</div></nav>`)
 	return buf.String()
 }
 
@@ -536,7 +516,7 @@ func (t *tocInjection) InjectTOC(ctx context.Context, htmlContent string, data *
 	}
 
 	// Extract headings
-	headings := extractHeadings(htmlContent, data.MaxDepth)
+	headings := extractHeadings(htmlContent, data.MinDepth, data.MaxDepth)
 	if len(headings) == 0 {
 		return htmlContent, nil
 	}
