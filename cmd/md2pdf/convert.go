@@ -28,9 +28,6 @@ var (
 	ErrInvalidWorkerCount = errors.New("invalid worker count")
 )
 
-// maxWorkers limits parallel browser instances to prevent resource exhaustion.
-const maxWorkers = 32
-
 // Converter is the interface for the conversion service.
 type Converter interface {
 	Convert(ctx context.Context, input md2pdf.Input) ([]byte, error)
@@ -364,8 +361,8 @@ func validateWorkers(n int) error {
 	if n < 0 {
 		return fmt.Errorf("%w: %d (must be >= 0, 0 means auto)", ErrInvalidWorkerCount, n)
 	}
-	if n > maxWorkers {
-		return fmt.Errorf("%w: %d (maximum is %d)", ErrInvalidWorkerCount, n, maxWorkers)
+	if n > md2pdf.MaxPoolSize {
+		return fmt.Errorf("%w: %d (maximum is %d)", ErrInvalidWorkerCount, n, md2pdf.MaxPoolSize)
 	}
 	return nil
 }
@@ -453,13 +450,13 @@ func buildWatermarkData(flags *convertFlags, cfg *config.Config) (*md2pdf.Waterm
 
 	// Apply defaults
 	if w.Color == "" {
-		w.Color = "#888888"
+		w.Color = md2pdf.DefaultWatermarkColor
 	}
 	if w.Opacity == 0 {
-		w.Opacity = 0.1
+		w.Opacity = md2pdf.DefaultWatermarkOpacity
 	}
 	if shouldApplyDefaultAngle(flags.watermark.angle, cfg) {
-		w.Angle = -45
+		w.Angle = md2pdf.DefaultWatermarkAngle
 	}
 
 	// Validate
@@ -468,12 +465,6 @@ func buildWatermarkData(flags *convertFlags, cfg *config.Config) (*md2pdf.Waterm
 	}
 	if err := w.Validate(); err != nil {
 		return nil, err
-	}
-	if w.Opacity < 0 || w.Opacity > 1 {
-		return nil, fmt.Errorf("watermark opacity must be between 0 and 1, got %.2f", w.Opacity)
-	}
-	if w.Angle < -90 || w.Angle > 90 {
-		return nil, fmt.Errorf("watermark angle must be between -90 and 90, got %.2f", w.Angle)
 	}
 
 	return w, nil
