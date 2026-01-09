@@ -36,7 +36,7 @@ func TestResolvePoolSize(t *testing.T) {
 		{
 			name:    "zero uses auto calculation",
 			workers: 0,
-			want:    min(max(gomaxprocs/cpuDivisor, minPoolSize), maxPoolSize),
+			want:    min(max(gomaxprocs/cpuDivisor, MinPoolSize), MaxPoolSize),
 		},
 	}
 
@@ -53,15 +53,15 @@ func TestResolvePoolSize(t *testing.T) {
 func TestResolvePoolSize_Bounds(t *testing.T) {
 	t.Run("minimum is 1", func(t *testing.T) {
 		got := ResolvePoolSize(0)
-		if got < minPoolSize {
-			t.Errorf("ResolvePoolSize(0) = %d, should be at least %d", got, minPoolSize)
+		if got < MinPoolSize {
+			t.Errorf("ResolvePoolSize(0) = %d, should be at least %d", got, MinPoolSize)
 		}
 	})
 
 	t.Run("maximum is 8", func(t *testing.T) {
 		got := ResolvePoolSize(0)
-		if got > maxPoolSize {
-			t.Errorf("ResolvePoolSize(0) = %d, should be at most %d", got, maxPoolSize)
+		if got > MaxPoolSize {
+			t.Errorf("ResolvePoolSize(0) = %d, should be at most %d", got, MaxPoolSize)
 		}
 	})
 

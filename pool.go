@@ -8,11 +8,11 @@ import (
 
 // Pool sizing constants.
 const (
-	// minPoolSize ensures at least one worker is available.
-	minPoolSize = 1
+	// MinPoolSize ensures at least one worker is available.
+	MinPoolSize = 1
 
-	// maxPoolSize caps browser instances to limit memory (~200MB each).
-	maxPoolSize = 8
+	// MaxPoolSize caps browser instances to limit memory (~200MB each).
+	MaxPoolSize = 8
 
 	// cpuDivisor leaves headroom for Chrome child processes.
 	cpuDivisor = 2
@@ -128,11 +128,11 @@ func ResolvePoolSize(workers int) int {
 	available := runtime.GOMAXPROCS(0)
 	n := available / cpuDivisor
 
-	if n < minPoolSize {
-		return minPoolSize
+	if n < MinPoolSize {
+		return MinPoolSize
 	}
-	if n > maxPoolSize {
-		return maxPoolSize
+	if n > MaxPoolSize {
+		return MaxPoolSize
 	}
 	return n
 }
