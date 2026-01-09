@@ -28,6 +28,12 @@ var (
 	ErrInvalidWorkerCount = errors.New("invalid worker count")
 )
 
+// File permission constants.
+const (
+	dirPermissions  = 0o750 // rwxr-x---: owner full, group read+execute
+	filePermissions = 0o644 // rw-r--r--: owner read+write, others read
+)
+
 // Converter is the interface for the conversion service.
 type Converter interface {
 	Convert(ctx context.Context, input md2pdf.Input) ([]byte, error)
@@ -713,7 +719,7 @@ func convertFile(ctx context.Context, service Converter, f FileToConvert, params
 	}
 
 	outDir := filepath.Dir(f.OutputPath)
-	if err := os.MkdirAll(outDir, 0o750); err != nil {
+	if err := os.MkdirAll(outDir, dirPermissions); err != nil {
 		result.Err = fmt.Errorf("creating output directory: %w", err)
 		result.Duration = time.Since(start)
 		return result
@@ -737,7 +743,7 @@ func convertFile(ctx context.Context, service Converter, f FileToConvert, params
 	}
 
 	// #nosec G306 -- PDFs are meant to be readable
-	if err := os.WriteFile(f.OutputPath, pdfBytes, 0o644); err != nil {
+	if err := os.WriteFile(f.OutputPath, pdfBytes, filePermissions); err != nil {
 		result.Err = fmt.Errorf("%w: %v", ErrWritePDF, err)
 		result.Duration = time.Since(start)
 		return result
