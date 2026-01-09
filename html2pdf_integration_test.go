@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 )
 
 func assertValidPDF(t *testing.T, data []byte) {
@@ -37,9 +36,12 @@ func assertValidPDFFile(t *testing.T, path string) {
 // TestRodConverter_ToPDF_Integration tests PDF generation using go-rod.
 // Rod automatically downloads Chromium on first run if not found.
 func TestRodConverter_ToPDF_Integration(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	t.Run("valid HTML produces PDF", func(t *testing.T) {
+		t.Parallel()
 		html := `<!DOCTYPE html>
 <html>
 <head><title>Test</title></head>
@@ -56,6 +58,8 @@ func TestRodConverter_ToPDF_Integration(t *testing.T) {
 	})
 
 	t.Run("HTML with CSS produces PDF", func(t *testing.T) {
+		t.Parallel()
+
 		// CSS is now injected before calling ToPDF
 		injector := &cssInjection{}
 		html := `<!DOCTYPE html>
@@ -76,6 +80,8 @@ func TestRodConverter_ToPDF_Integration(t *testing.T) {
 	})
 
 	t.Run("HTML with footer produces PDF", func(t *testing.T) {
+		t.Parallel()
+
 		html := `<!DOCTYPE html>
 <html>
 <head><title>Test</title></head>
@@ -101,11 +107,14 @@ func TestRodConverter_ToPDF_Integration(t *testing.T) {
 
 // TestService_Integration tests the full conversion pipeline through the public API.
 func TestService_Integration(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
-	service := New()
-	defer service.Close()
 
 	t.Run("basic markdown to PDF", func(t *testing.T) {
+		t.Parallel()
+
+		service := acquireService(t)
 		input := Input{
 			Markdown: "# Hello\n\nWorld",
 		}
@@ -119,6 +128,9 @@ func TestService_Integration(t *testing.T) {
 	})
 
 	t.Run("markdown with CSS", func(t *testing.T) {
+		t.Parallel()
+
+		service := acquireService(t)
 		input := Input{
 			Markdown: "# Styled\n\nContent",
 			CSS:      "h1 { color: blue; }",
@@ -133,6 +145,9 @@ func TestService_Integration(t *testing.T) {
 	})
 
 	t.Run("markdown with footer", func(t *testing.T) {
+		t.Parallel()
+
+		service := acquireService(t)
 		input := Input{
 			Markdown: "# Document\n\nWith footer",
 			Footer: &Footer{
@@ -152,6 +167,9 @@ func TestService_Integration(t *testing.T) {
 	})
 
 	t.Run("markdown with signature", func(t *testing.T) {
+		t.Parallel()
+
+		service := acquireService(t)
 		input := Input{
 			Markdown: "# Document\n\nWith signature",
 			Signature: &Signature{
@@ -173,6 +191,9 @@ func TestService_Integration(t *testing.T) {
 	})
 
 	t.Run("write to file", func(t *testing.T) {
+		t.Parallel()
+
+		service := acquireService(t)
 		tmpDir := t.TempDir()
 		outputPath := filepath.Join(tmpDir, "output.pdf")
 
@@ -198,7 +219,7 @@ func TestService_Integration(t *testing.T) {
 func TestRodRenderer_EnsureBrowser_CI(t *testing.T) {
 	t.Setenv("CI", "true")
 
-	renderer := newRodRenderer(30 * time.Second)
+	renderer := newRodRenderer(testTimeout)
 	defer renderer.Close()
 
 	err := renderer.ensureBrowser()
