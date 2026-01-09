@@ -76,7 +76,7 @@ func TestRodConverter_ToPDF(t *testing.T) {
 		},
 		{
 			name: "unicode content succeeds",
-			html: "<html><body>Bonjour le monde</body></html>",
+			html: "<html><body>Hello World</body></html>",
 			mock: &mockRenderer{
 				Result: []byte("%PDF-1.4 unicode"),
 			},
@@ -420,6 +420,38 @@ func TestResolvePageDimensions(t *testing.T) {
 	}
 }
 
+func TestRodRenderer_Close_Idempotent(t *testing.T) {
+	t.Parallel()
+
+	renderer := newRodRenderer(defaultTimeout)
+
+	// Multiple calls should not panic and all should succeed
+	err1 := renderer.Close()
+	err2 := renderer.Close()
+	err3 := renderer.Close()
+
+	if err1 != nil {
+		t.Errorf("first Close() error = %v", err1)
+	}
+	if err2 != nil {
+		t.Errorf("second Close() error = %v", err2)
+	}
+	if err3 != nil {
+		t.Errorf("third Close() error = %v", err3)
+	}
+}
+
+func TestRodConverter_Close_NilRenderer(t *testing.T) {
+	t.Parallel()
+
+	converter := &rodConverter{renderer: nil}
+
+	err := converter.Close()
+	if err != nil {
+		t.Errorf("Close() with nil renderer should not error, got %v", err)
+	}
+}
+
 func TestBuildPDFOptions(t *testing.T) {
 	t.Parallel()
 
@@ -495,4 +527,37 @@ func TestBuildPDFOptions(t *testing.T) {
 			t.Error("expected header/footer enabled")
 		}
 	})
+}
+
+func TestPageDimensions_AllSizesPresent(t *testing.T) {
+	t.Parallel()
+
+	requiredSizes := []string{PageSizeLetter, PageSizeA4, PageSizeLegal}
+
+	for _, size := range requiredSizes {
+		if _, ok := pageDimensions[size]; !ok {
+			t.Errorf("missing page dimensions for size %q", size)
+		}
+	}
+}
+
+func TestPageDimensions_ValidValues(t *testing.T) {
+	t.Parallel()
+
+	for size, dims := range pageDimensions {
+		t.Run(size, func(t *testing.T) {
+			t.Parallel()
+
+			if dims.width <= 0 {
+				t.Errorf("width must be positive, got %v", dims.width)
+			}
+			if dims.height <= 0 {
+				t.Errorf("height must be positive, got %v", dims.height)
+			}
+			// Portrait dimensions: height > width
+			if dims.height <= dims.width {
+				t.Errorf("expected portrait dimensions (height > width), got %v x %v", dims.width, dims.height)
+			}
+		})
+	}
 }
