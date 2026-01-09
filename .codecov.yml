@@ -15,9 +15,7 @@ flags:
     carryforward: true
 
 ignore:
-  - "cmd/**/*" # CLI wiring, tested manually
   - "**/*_test.go"
-  - "testdata/**/*"
   - "docs/**/*"
 
 comment:
