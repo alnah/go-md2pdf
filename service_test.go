@@ -106,6 +106,54 @@ func (m *mockSignatureInjector) InjectSignature(ctx context.Context, htmlContent
 	return htmlContent, nil
 }
 
+type mockCoverInjector struct {
+	called    bool
+	inputHTML string
+	inputData *coverData
+	output    string
+	err       error
+}
+
+func (m *mockCoverInjector) InjectCover(ctx context.Context, htmlContent string, data *coverData) (string, error) {
+	m.called = true
+	m.inputHTML = htmlContent
+	m.inputData = data
+	if m.err != nil {
+		return "", m.err
+	}
+	if m.output != "" {
+		return m.output, nil
+	}
+	return htmlContent, nil
+}
+
+type mockTOCInjector struct {
+	called    bool
+	inputHTML string
+	inputData *tocData
+	output    string
+	err       error
+}
+
+func (m *mockTOCInjector) InjectTOC(ctx context.Context, htmlContent string, data *tocData) (string, error) {
+	m.called = true
+	m.inputHTML = htmlContent
+	m.inputData = data
+	if m.err != nil {
+		return "", m.err
+	}
+	if m.output != "" {
+		return m.output, nil
+	}
+	return htmlContent, nil
+}
+
+type panicPreprocessor struct{}
+
+func (p *panicPreprocessor) PreprocessMarkdown(ctx context.Context, content string) string {
+	panic("simulated panic in preprocessor")
+}
+
 // Test options for dependency injection (not exported).
 
 func withPreprocessor(p markdownPreprocessor) Option {
@@ -135,6 +183,18 @@ func withSignatureInjector(i signatureInjector) Option {
 func withPDFConverter(c pdfConverter) Option {
 	return func(s *Service) {
 		s.pdfConverter = c
+	}
+}
+
+func withCoverInjector(c coverInjector) Option {
+	return func(s *Service) {
+		s.coverInjector = c
+	}
+}
+
+func withTOCInjector(t tocInjector) Option {
+	return func(s *Service) {
+		s.tocInjector = t
 	}
 }
 
@@ -696,4 +756,564 @@ func TestValidateInput_TOC(t *testing.T) {
 			t.Errorf("error = %v, want ErrInvalidTOCDepth", err)
 		}
 	})
+}
+
+func TestConvert_RecoversPanic(t *testing.T) {
+	t.Parallel()
+
+	service := New(
+		withPreprocessor(&panicPreprocessor{}),
+		withHTMLConverter(&mockHTMLConverter{}),
+		withCSSInjector(&mockCSSInjector{}),
+		withSignatureInjector(&mockSignatureInjector{}),
+		withPDFConverter(&mockPDFConverter{}),
+	)
+	defer service.Close()
+
+	ctx := context.Background()
+	_, err := service.Convert(ctx, Input{Markdown: "# Test"})
+
+	if err == nil {
+		t.Fatal("expected error from panic recovery, got nil")
+	}
+	if !strings.Contains(err.Error(), "internal error") {
+		t.Errorf("expected 'internal error' in message, got %q", err.Error())
+	}
+}
+
+func TestConvert_ContextCancellation(t *testing.T) {
+	t.Parallel()
+
+	service := New(
+		withPreprocessor(&mockPreprocessor{}),
+		withHTMLConverter(&mockHTMLConverter{output: "<html></html>"}),
+		withCSSInjector(&mockCSSInjector{}),
+		withSignatureInjector(&mockSignatureInjector{}),
+		withPDFConverter(&mockPDFConverter{}),
+	)
+	defer service.Close()
+
+	// Cancel context before calling Convert
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := service.Convert(ctx, Input{Markdown: "# Test"})
+
+	if err == nil {
+		t.Fatal("expected context error, got nil")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("expected context.Canceled, got %v", err)
+	}
+}
+
+func TestValidateInput_InvalidWatermark(t *testing.T) {
+	t.Parallel()
+
+	service := New()
+	defer service.Close()
+
+	tests := []struct {
+		name      string
+		watermark *Watermark
+		wantErr   bool
+	}{
+		{
+			name:      "opacity too high",
+			watermark: &Watermark{Text: "DRAFT", Opacity: 1.5},
+			wantErr:   true,
+		},
+		{
+			name:      "opacity negative",
+			watermark: &Watermark{Text: "DRAFT", Opacity: -0.1},
+			wantErr:   true,
+		},
+		{
+			name:      "angle too high",
+			watermark: &Watermark{Text: "DRAFT", Opacity: 0.5, Angle: 100},
+			wantErr:   true,
+		},
+		{
+			name:      "angle too low",
+			watermark: &Watermark{Text: "DRAFT", Opacity: 0.5, Angle: -100},
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			input := Input{Markdown: "# Test", Watermark: tt.watermark}
+			err := service.validateInput(input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateInput() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateInput_InvalidPageBreaks(t *testing.T) {
+	t.Parallel()
+
+	service := New()
+	defer service.Close()
+
+	tests := []struct {
+		name       string
+		pageBreaks *PageBreaks
+		wantErr    error
+	}{
+		{
+			name:       "orphans too high",
+			pageBreaks: &PageBreaks{Orphans: MaxOrphans + 1},
+			wantErr:    ErrInvalidOrphans,
+		},
+		{
+			name:       "widows too high",
+			pageBreaks: &PageBreaks{Widows: MaxWidows + 1},
+			wantErr:    ErrInvalidWidows,
+		},
+		{
+			name:       "orphans negative",
+			pageBreaks: &PageBreaks{Orphans: -1},
+			wantErr:    ErrInvalidOrphans,
+		},
+		{
+			name:       "widows negative",
+			pageBreaks: &PageBreaks{Widows: -1},
+			wantErr:    ErrInvalidWidows,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			input := Input{Markdown: "# Test", PageBreaks: tt.pageBreaks}
+			err := service.validateInput(input)
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("validateInput() error = %v, want %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestService_CloseNilConverter(t *testing.T) {
+	t.Parallel()
+
+	service := &Service{
+		pdfConverter: nil,
+	}
+
+	err := service.Close()
+	if err != nil {
+		t.Errorf("Close() with nil pdfConverter should not error, got %v", err)
+	}
+}
+
+func TestConvert_WatermarkCSSOrder(t *testing.T) {
+	t.Parallel()
+
+	cssInj := &mockCSSInjector{}
+
+	service := New(
+		withPreprocessor(&mockPreprocessor{}),
+		withHTMLConverter(&mockHTMLConverter{}),
+		withCSSInjector(cssInj),
+		withCoverInjector(&mockCoverInjector{}),
+		withTOCInjector(&mockTOCInjector{}),
+		withSignatureInjector(&mockSignatureInjector{}),
+		withPDFConverter(&mockPDFConverter{}),
+	)
+	defer service.Close()
+
+	ctx := context.Background()
+	input := Input{
+		Markdown: "# Test",
+		CSS:      "body { color: blue; }",
+		Watermark: &Watermark{
+			Text:    "DRAFT",
+			Color:   "#888888",
+			Opacity: 0.1,
+			Angle:   -45,
+		},
+	}
+
+	_, err := service.Convert(ctx, input)
+	if err != nil {
+		t.Fatalf("Convert() unexpected error: %v", err)
+	}
+
+	css := cssInj.inputCSS
+
+	// User CSS should be at the end
+	if !strings.HasSuffix(css, "body { color: blue; }") {
+		t.Errorf("user CSS should be at end, got %q", css)
+	}
+
+	// Watermark CSS should contain the watermark text
+	if !strings.Contains(css, "DRAFT") {
+		t.Errorf("CSS should contain watermark text 'DRAFT', got %q", css)
+	}
+
+	// Page breaks CSS should be present
+	if !strings.Contains(css, "break-after: avoid") {
+		t.Errorf("CSS should contain page breaks rules, got %q", css)
+	}
+
+	// Verify order: page breaks before watermark before user CSS
+	pageBreaksIdx := strings.Index(css, "break-after")
+	watermarkIdx := strings.Index(css, "DRAFT")
+	userCSSIdx := strings.Index(css, "body { color: blue; }")
+
+	if pageBreaksIdx > watermarkIdx {
+		t.Errorf("page breaks CSS should come before watermark CSS")
+	}
+	if watermarkIdx > userCSSIdx {
+		t.Errorf("watermark CSS should come before user CSS")
+	}
+}
+
+func TestConvert_CoverInjectorError(t *testing.T) {
+	t.Parallel()
+
+	coverErr := errors.New("cover template failed")
+
+	service := New(
+		withPreprocessor(&mockPreprocessor{}),
+		withHTMLConverter(&mockHTMLConverter{}),
+		withCSSInjector(&mockCSSInjector{}),
+		withCoverInjector(&mockCoverInjector{err: coverErr}),
+		withTOCInjector(&mockTOCInjector{}),
+		withSignatureInjector(&mockSignatureInjector{}),
+		withPDFConverter(&mockPDFConverter{}),
+	)
+	defer service.Close()
+
+	ctx := context.Background()
+	_, err := service.Convert(ctx, Input{Markdown: "# Hello"})
+
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, coverErr) {
+		t.Errorf("error should wrap %v, got %v", coverErr, err)
+	}
+	if !strings.Contains(err.Error(), "injecting cover") {
+		t.Errorf("error should mention 'injecting cover', got %q", err.Error())
+	}
+}
+
+func TestConvert_TOCInjectorError(t *testing.T) {
+	t.Parallel()
+
+	tocErr := errors.New("TOC generation failed")
+
+	service := New(
+		withPreprocessor(&mockPreprocessor{}),
+		withHTMLConverter(&mockHTMLConverter{}),
+		withCSSInjector(&mockCSSInjector{}),
+		withCoverInjector(&mockCoverInjector{}),
+		withTOCInjector(&mockTOCInjector{err: tocErr}),
+		withSignatureInjector(&mockSignatureInjector{}),
+		withPDFConverter(&mockPDFConverter{}),
+	)
+	defer service.Close()
+
+	ctx := context.Background()
+	_, err := service.Convert(ctx, Input{Markdown: "# Hello"})
+
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !errors.Is(err, tocErr) {
+		t.Errorf("error should wrap %v, got %v", tocErr, err)
+	}
+	if !strings.Contains(err.Error(), "injecting TOC") {
+		t.Errorf("error should mention 'injecting TOC', got %q", err.Error())
+	}
+}
+
+func TestConvert_PDFOptionsTransmission(t *testing.T) {
+	t.Parallel()
+
+	pdfConv := &mockPDFConverter{}
+
+	service := New(
+		withPreprocessor(&mockPreprocessor{}),
+		withHTMLConverter(&mockHTMLConverter{}),
+		withCSSInjector(&mockCSSInjector{}),
+		withCoverInjector(&mockCoverInjector{}),
+		withTOCInjector(&mockTOCInjector{}),
+		withSignatureInjector(&mockSignatureInjector{}),
+		withPDFConverter(pdfConv),
+	)
+	defer service.Close()
+
+	ctx := context.Background()
+	input := Input{
+		Markdown: "# Test",
+		Page: &PageSettings{
+			Size:        PageSizeA4,
+			Orientation: OrientationLandscape,
+			Margin:      1.5,
+		},
+		Footer: &Footer{
+			Position:       "center",
+			ShowPageNumber: true,
+			Date:           "2025-01-15",
+			Status:         "FINAL",
+			Text:           "Confidential",
+		},
+	}
+
+	_, err := service.Convert(ctx, input)
+	if err != nil {
+		t.Fatalf("Convert() unexpected error: %v", err)
+	}
+
+	if pdfConv.inputOpts == nil {
+		t.Fatal("PDF options not passed to converter")
+	}
+
+	// Verify page settings
+	if pdfConv.inputOpts.Page == nil {
+		t.Fatal("Page settings not passed to PDF converter")
+	}
+	if pdfConv.inputOpts.Page.Size != PageSizeA4 {
+		t.Errorf("Page.Size = %q, want %q", pdfConv.inputOpts.Page.Size, PageSizeA4)
+	}
+	if pdfConv.inputOpts.Page.Orientation != OrientationLandscape {
+		t.Errorf("Page.Orientation = %q, want %q", pdfConv.inputOpts.Page.Orientation, OrientationLandscape)
+	}
+
+	// Verify footer data
+	if pdfConv.inputOpts.Footer == nil {
+		t.Fatal("Footer not passed to PDF converter")
+	}
+	if pdfConv.inputOpts.Footer.Position != "center" {
+		t.Errorf("Footer.Position = %q, want %q", pdfConv.inputOpts.Footer.Position, "center")
+	}
+	if !pdfConv.inputOpts.Footer.ShowPageNumber {
+		t.Error("Footer.ShowPageNumber = false, want true")
+	}
+}
+
+func TestConvert_CoverDataTransmission(t *testing.T) {
+	t.Parallel()
+
+	coverInj := &mockCoverInjector{}
+
+	service := New(
+		withPreprocessor(&mockPreprocessor{}),
+		withHTMLConverter(&mockHTMLConverter{}),
+		withCSSInjector(&mockCSSInjector{}),
+		withCoverInjector(coverInj),
+		withTOCInjector(&mockTOCInjector{}),
+		withSignatureInjector(&mockSignatureInjector{}),
+		withPDFConverter(&mockPDFConverter{}),
+	)
+	defer service.Close()
+
+	ctx := context.Background()
+	input := Input{
+		Markdown: "# Test",
+		Cover: &Cover{
+			Title:        "My Document",
+			Subtitle:     "A Guide",
+			Author:       "John Doe",
+			AuthorTitle:  "Engineer",
+			Organization: "Corp",
+			Date:         "2025-01-15",
+			Version:      "v1.0",
+		},
+	}
+
+	_, err := service.Convert(ctx, input)
+	if err != nil {
+		t.Fatalf("Convert() unexpected error: %v", err)
+	}
+
+	if !coverInj.called {
+		t.Fatal("cover injector was not called")
+	}
+	if coverInj.inputData == nil {
+		t.Fatal("cover data not passed to injector")
+	}
+	if coverInj.inputData.Title != "My Document" {
+		t.Errorf("Cover.Title = %q, want %q", coverInj.inputData.Title, "My Document")
+	}
+	if coverInj.inputData.Author != "John Doe" {
+		t.Errorf("Cover.Author = %q, want %q", coverInj.inputData.Author, "John Doe")
+	}
+}
+
+func TestConvert_TOCDataTransmission(t *testing.T) {
+	t.Parallel()
+
+	tocInj := &mockTOCInjector{}
+
+	service := New(
+		withPreprocessor(&mockPreprocessor{}),
+		withHTMLConverter(&mockHTMLConverter{}),
+		withCSSInjector(&mockCSSInjector{}),
+		withCoverInjector(&mockCoverInjector{}),
+		withTOCInjector(tocInj),
+		withSignatureInjector(&mockSignatureInjector{}),
+		withPDFConverter(&mockPDFConverter{}),
+	)
+	defer service.Close()
+
+	ctx := context.Background()
+	input := Input{
+		Markdown: "# Test",
+		TOC: &TOC{
+			Title:    "Table of Contents",
+			MaxDepth: 4,
+		},
+	}
+
+	_, err := service.Convert(ctx, input)
+	if err != nil {
+		t.Fatalf("Convert() unexpected error: %v", err)
+	}
+
+	if !tocInj.called {
+		t.Fatal("TOC injector was not called")
+	}
+	if tocInj.inputData == nil {
+		t.Fatal("TOC data not passed to injector")
+	}
+	if tocInj.inputData.Title != "Table of Contents" {
+		t.Errorf("TOC.Title = %q, want %q", tocInj.inputData.Title, "Table of Contents")
+	}
+	if tocInj.inputData.MaxDepth != 4 {
+		t.Errorf("TOC.MaxDepth = %d, want %d", tocInj.inputData.MaxDepth, 4)
+	}
+}
+
+func TestConvert_NilOptionalFieldsNotPassed(t *testing.T) {
+	t.Parallel()
+
+	coverInj := &mockCoverInjector{}
+	tocInj := &mockTOCInjector{}
+
+	service := New(
+		withPreprocessor(&mockPreprocessor{}),
+		withHTMLConverter(&mockHTMLConverter{}),
+		withCSSInjector(&mockCSSInjector{}),
+		withCoverInjector(coverInj),
+		withTOCInjector(tocInj),
+		withSignatureInjector(&mockSignatureInjector{}),
+		withPDFConverter(&mockPDFConverter{}),
+	)
+	defer service.Close()
+
+	ctx := context.Background()
+	input := Input{
+		Markdown: "# Test",
+		Cover:    nil,
+		TOC:      nil,
+	}
+
+	_, err := service.Convert(ctx, input)
+	if err != nil {
+		t.Fatalf("Convert() unexpected error: %v", err)
+	}
+
+	// Injectors should be called but with nil data
+	if !coverInj.called {
+		t.Fatal("cover injector should be called")
+	}
+	if coverInj.inputData != nil {
+		t.Error("cover data should be nil when no cover provided")
+	}
+
+	if !tocInj.called {
+		t.Fatal("TOC injector should be called")
+	}
+	if tocInj.inputData != nil {
+		t.Error("TOC data should be nil when no TOC provided")
+	}
+}
+
+func TestValidateInput_InvalidPage(t *testing.T) {
+	t.Parallel()
+
+	service := New()
+	defer service.Close()
+
+	tests := []struct {
+		name    string
+		page    *PageSettings
+		wantErr error
+	}{
+		{
+			name:    "invalid size",
+			page:    &PageSettings{Size: "invalid", Orientation: "portrait", Margin: 0.5},
+			wantErr: ErrInvalidPageSize,
+		},
+		{
+			name:    "invalid orientation",
+			page:    &PageSettings{Size: "letter", Orientation: "diagonal", Margin: 0.5},
+			wantErr: ErrInvalidOrientation,
+		},
+		{
+			name:    "margin too small",
+			page:    &PageSettings{Size: "letter", Orientation: "portrait", Margin: 0.1},
+			wantErr: ErrInvalidMargin,
+		},
+		{
+			name:    "margin too large",
+			page:    &PageSettings{Size: "letter", Orientation: "portrait", Margin: 5.0},
+			wantErr: ErrInvalidMargin,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			input := Input{Markdown: "# Test", Page: tt.page}
+			err := service.validateInput(input)
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("validateInput() error = %v, want %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateInput_InvalidFooter(t *testing.T) {
+	t.Parallel()
+
+	service := New()
+	defer service.Close()
+
+	input := Input{
+		Markdown: "# Test",
+		Footer:   &Footer{Position: "top"},
+	}
+
+	err := service.validateInput(input)
+	if !errors.Is(err, ErrInvalidFooterPosition) {
+		t.Errorf("validateInput() error = %v, want ErrInvalidFooterPosition", err)
+	}
+}
+
+func TestValidateInput_InvalidWatermarkColor(t *testing.T) {
+	t.Parallel()
+
+	service := New()
+	defer service.Close()
+
+	input := Input{
+		Markdown:  "# Test",
+		Watermark: &Watermark{Text: "DRAFT", Color: "red", Opacity: 0.1, Angle: -45},
+	}
+
+	err := service.validateInput(input)
+	if !errors.Is(err, ErrInvalidWatermarkColor) {
+		t.Errorf("validateInput() error = %v, want ErrInvalidWatermarkColor", err)
+	}
 }
