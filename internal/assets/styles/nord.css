@@ -564,13 +564,10 @@ img {
 /* 11. COVER PAGE */
 .cover-page {
   page-break-after: always;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  page-break-inside: avoid;
+  display: block;
   text-align: center;
-  padding: 2rem;
+  padding: 20vh 2rem 2rem 2rem; /* Top padding for visual centering instead of flexbox */
   box-sizing: border-box;
 }
 
