@@ -122,10 +122,15 @@ func (r *rodRenderer) Close() error {
 				done <- r.browser.Close()
 			}()
 
+			// Use NewTimer instead of time.After to avoid timer leak.
+			// time.After creates a timer that runs until expiration even if
+			// the select chooses another case, leaking memory temporarily.
+			timer := time.NewTimer(browserCloseTimeout)
 			select {
 			case closeErr = <-done:
-				// Browser closed normally
-			case <-time.After(browserCloseTimeout):
+				// Browser closed normally - stop timer to prevent leak
+				timer.Stop()
+			case <-timer.C:
 				// Timeout - will be force-killed below
 			}
 			r.browser = nil
