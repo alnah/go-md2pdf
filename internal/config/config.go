@@ -250,6 +250,7 @@ func (c *CoverConfig) Validate() error {
 type TOCConfig struct {
 	Enabled  bool   `yaml:"enabled"`
 	Title    string `yaml:"title"`    // Empty = no title above TOC
+	MinDepth int    `yaml:"minDepth"` // 1-6, default 2 (skips H1)
 	MaxDepth int    `yaml:"maxDepth"` // 1-6, default 3
 }
 
@@ -258,9 +259,15 @@ func (t *TOCConfig) Validate() error {
 	if err := validateFieldLength("toc.title", t.Title, MaxTOCTitleLength); err != nil {
 		return err
 	}
-	if t.Enabled && t.MaxDepth != 0 {
-		if t.MaxDepth < 1 || t.MaxDepth > 6 {
+	if t.Enabled {
+		if t.MinDepth != 0 && (t.MinDepth < 1 || t.MinDepth > 6) {
+			return fmt.Errorf("toc.minDepth: must be between 1 and 6, got %d", t.MinDepth)
+		}
+		if t.MaxDepth != 0 && (t.MaxDepth < 1 || t.MaxDepth > 6) {
 			return fmt.Errorf("toc.maxDepth: must be between 1 and 6, got %d", t.MaxDepth)
+		}
+		if t.MinDepth != 0 && t.MaxDepth != 0 && t.MinDepth > t.MaxDepth {
+			return fmt.Errorf("toc.minDepth (%d) cannot be greater than toc.maxDepth (%d)", t.MinDepth, t.MaxDepth)
 		}
 	}
 	return nil

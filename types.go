@@ -196,15 +196,17 @@ func (c *Cover) Validate() error {
 
 // TOC depth bounds.
 const (
-	MinTOCDepth     = 1
-	MaxTOCDepth     = 6
-	DefaultTOCDepth = 3
+	MinTOCDepth        = 1
+	MaxTOCDepth        = 6
+	DefaultTOCMinDepth = 2 // Skip H1 by default (document title)
+	DefaultTOCMaxDepth = 3
 )
 
 // TOC configures the table of contents.
 type TOC struct {
 	Title    string // Title above TOC (empty = no title)
-	MaxDepth int    // 1-6, which heading levels to include (default: 3)
+	MinDepth int    // 1-6, minimum heading level to include (default: 2, skips H1)
+	MaxDepth int    // 1-6, maximum heading level to include (default: 3)
 }
 
 // Validate checks that TOC settings are valid.
@@ -213,8 +215,17 @@ func (t *TOC) Validate() error {
 	if t == nil {
 		return nil
 	}
-	if t.MaxDepth < MinTOCDepth || t.MaxDepth > MaxTOCDepth {
-		return fmt.Errorf("%w: %d (must be %d-%d)", ErrInvalidTOCDepth, t.MaxDepth, MinTOCDepth, MaxTOCDepth)
+	// MinDepth: 0 means use default, otherwise must be in range
+	if t.MinDepth != 0 && (t.MinDepth < MinTOCDepth || t.MinDepth > MaxTOCDepth) {
+		return fmt.Errorf("%w: MinDepth %d (must be %d-%d)", ErrInvalidTOCDepth, t.MinDepth, MinTOCDepth, MaxTOCDepth)
+	}
+	// MaxDepth: 0 means use default, otherwise must be in range
+	if t.MaxDepth != 0 && (t.MaxDepth < MinTOCDepth || t.MaxDepth > MaxTOCDepth) {
+		return fmt.Errorf("%w: MaxDepth %d (must be %d-%d)", ErrInvalidTOCDepth, t.MaxDepth, MinTOCDepth, MaxTOCDepth)
+	}
+	// MinDepth must be <= MaxDepth (when both are set)
+	if t.MinDepth != 0 && t.MaxDepth != 0 && t.MinDepth > t.MaxDepth {
+		return fmt.Errorf("%w: MinDepth %d > MaxDepth %d", ErrInvalidTOCDepth, t.MinDepth, t.MaxDepth)
 	}
 	return nil
 }

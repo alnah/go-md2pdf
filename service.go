@@ -237,12 +237,17 @@ func toTOCData(t *TOC) *tocData {
 	if t == nil {
 		return nil
 	}
+	minDepth := t.MinDepth
+	if minDepth == 0 {
+		minDepth = DefaultTOCMinDepth
+	}
 	maxDepth := t.MaxDepth
 	if maxDepth == 0 {
-		maxDepth = DefaultTOCDepth
+		maxDepth = DefaultTOCMaxDepth
 	}
 	return &tocData{
 		Title:    t.Title,
+		MinDepth: minDepth,
 		MaxDepth: maxDepth,
 	}
 }

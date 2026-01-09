@@ -585,7 +585,7 @@ func buildTOCData(cfg *config.Config, tocFlags tocFlags) *md2pdf.TOC {
 
 	maxDepth := cfg.TOC.MaxDepth
 	if maxDepth == 0 {
-		maxDepth = md2pdf.DefaultTOCDepth
+		maxDepth = md2pdf.DefaultTOCMaxDepth
 	}
 
 	return &md2pdf.TOC{

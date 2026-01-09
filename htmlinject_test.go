@@ -926,36 +926,42 @@ func TestExtractHeadings(t *testing.T) {
 	tests := []struct {
 		name     string
 		html     string
+		minDepth int
 		maxDepth int
 		want     []headingInfo
 	}{
 		{
 			name:     "empty HTML returns nil",
 			html:     "",
+			minDepth: 1,
 			maxDepth: 3,
 			want:     nil,
 		},
 		{
 			name:     "no headings returns nil",
 			html:     "<p>Just a paragraph</p>",
+			minDepth: 1,
 			maxDepth: 3,
 			want:     nil,
 		},
 		{
 			name:     "heading without id is skipped",
 			html:     "<h1>No ID</h1>",
+			minDepth: 1,
 			maxDepth: 3,
 			want:     nil,
 		},
 		{
 			name:     "single h1 with id",
 			html:     `<h1 id="intro">Introduction</h1>`,
+			minDepth: 1,
 			maxDepth: 3,
 			want:     []headingInfo{{Level: 1, ID: "intro", Text: "Introduction"}},
 		},
 		{
 			name:     "multiple headings",
 			html:     `<h1 id="a">A</h1><h2 id="b">B</h2><h3 id="c">C</h3>`,
+			minDepth: 1,
 			maxDepth: 3,
 			want: []headingInfo{
 				{Level: 1, ID: "a", Text: "A"},
@@ -966,6 +972,7 @@ func TestExtractHeadings(t *testing.T) {
 		{
 			name:     "respects maxDepth limit",
 			html:     `<h1 id="a">A</h1><h2 id="b">B</h2><h3 id="c">C</h3><h4 id="d">D</h4>`,
+			minDepth: 1,
 			maxDepth: 2,
 			want: []headingInfo{
 				{Level: 1, ID: "a", Text: "A"},
@@ -975,30 +982,35 @@ func TestExtractHeadings(t *testing.T) {
 		{
 			name:     "case insensitive H1",
 			html:     `<H1 id="test">Test</H1>`,
+			minDepth: 1,
 			maxDepth: 3,
 			want:     []headingInfo{{Level: 1, ID: "test", Text: "Test"}},
 		},
 		{
 			name:     "mixed case h2",
 			html:     `<H2 ID="mixed">Mixed</H2>`,
+			minDepth: 1,
 			maxDepth: 3,
 			want:     []headingInfo{{Level: 2, ID: "mixed", Text: "Mixed"}}, // case-insensitive matching
 		},
 		{
 			name:     "heading with extra attributes",
 			html:     `<h1 class="title" id="main" data-foo="bar">Main</h1>`,
+			minDepth: 1,
 			maxDepth: 3,
 			want:     []headingInfo{{Level: 1, ID: "main", Text: "Main"}},
 		},
 		{
 			name:     "trims whitespace from text",
 			html:     `<h1 id="space">  Spaced Text  </h1>`,
+			minDepth: 1,
 			maxDepth: 3,
 			want:     []headingInfo{{Level: 1, ID: "space", Text: "Spaced Text"}},
 		},
 		{
 			name:     "maxDepth 6 includes all levels",
 			html:     `<h1 id="h1">H1</h1><h6 id="h6">H6</h6>`,
+			minDepth: 1,
 			maxDepth: 6,
 			want: []headingInfo{
 				{Level: 1, ID: "h1", Text: "H1"},
@@ -1008,42 +1020,59 @@ func TestExtractHeadings(t *testing.T) {
 		{
 			name:     "maxDepth 1 only h1",
 			html:     `<h1 id="h1">H1</h1><h2 id="h2">H2</h2>`,
+			minDepth: 1,
 			maxDepth: 1,
 			want:     []headingInfo{{Level: 1, ID: "h1", Text: "H1"}},
 		},
 		{
+			name:     "minDepth 2 skips h1",
+			html:     `<h1 id="h1">H1</h1><h2 id="h2">H2</h2><h3 id="h3">H3</h3>`,
+			minDepth: 2,
+			maxDepth: 3,
+			want: []headingInfo{
+				{Level: 2, ID: "h2", Text: "H2"},
+				{Level: 3, ID: "h3", Text: "H3"},
+			},
+		},
+		{
 			name:     "inline em tag stripped",
 			html:     `<h1 id="intro"><em>Hello</em> World</h1>`,
+			minDepth: 1,
 			maxDepth: 3,
 			want:     []headingInfo{{Level: 1, ID: "intro", Text: "Hello World"}},
 		},
 		{
 			name:     "inline code tag stripped",
 			html:     `<h1 id="func"><code>func</code> Main</h1>`,
+			minDepth: 1,
 			maxDepth: 3,
 			want:     []headingInfo{{Level: 1, ID: "func", Text: "func Main"}},
 		},
 		{
 			name:     "inline strong tag stripped",
 			html:     `<h1 id="bold">Plain <strong>bold</strong> plain</h1>`,
+			minDepth: 1,
 			maxDepth: 3,
 			want:     []headingInfo{{Level: 1, ID: "bold", Text: "Plain bold plain"}},
 		},
 		{
 			name:     "nested inline tags stripped",
 			html:     `<h1 id="nested"><em><strong>Nested</strong></em></h1>`,
+			minDepth: 1,
 			maxDepth: 3,
 			want:     []headingInfo{{Level: 1, ID: "nested", Text: "Nested"}},
 		},
 		{
 			name:     "multiple inline tags stripped",
 			html:     `<h1 id="multi"><code>code</code> and <em>emphasis</em></h1>`,
+			minDepth: 1,
 			maxDepth: 3,
 			want:     []headingInfo{{Level: 1, ID: "multi", Text: "code and emphasis"}},
 		},
 		{
 			name:     "anchor tag inside heading stripped",
 			html:     `<h1 id="link"><a href="#">Link Text</a></h1>`,
+			minDepth: 1,
 			maxDepth: 3,
 			want:     []headingInfo{{Level: 1, ID: "link", Text: "Link Text"}},
 		},
@@ -1051,36 +1080,42 @@ func TestExtractHeadings(t *testing.T) {
 		{
 			name:     "ampersand entity decoded",
 			html:     `<h1 id="ab">A &amp; B</h1>`,
+			minDepth: 1,
 			maxDepth: 3,
 			want:     []headingInfo{{Level: 1, ID: "ab", Text: "A & B"}},
 		},
 		{
 			name:     "less than entity decoded",
 			html:     `<h1 id="lt">x &lt; y</h1>`,
+			minDepth: 1,
 			maxDepth: 3,
 			want:     []headingInfo{{Level: 1, ID: "lt", Text: "x < y"}},
 		},
 		{
 			name:     "greater than entity decoded",
 			html:     `<h1 id="gt">x &gt; y</h1>`,
+			minDepth: 1,
 			maxDepth: 3,
 			want:     []headingInfo{{Level: 1, ID: "gt", Text: "x > y"}},
 		},
 		{
 			name:     "quote entity decoded",
 			html:     `<h1 id="quote">&quot;quoted&quot;</h1>`,
+			minDepth: 1,
 			maxDepth: 3,
 			want:     []headingInfo{{Level: 1, ID: "quote", Text: "\"quoted\""}},
 		},
 		{
 			name:     "numeric entity decoded",
 			html:     `<h1 id="dash">foo &#8212; bar</h1>`,
+			minDepth: 1,
 			maxDepth: 3,
 			want:     []headingInfo{{Level: 1, ID: "dash", Text: "foo — bar"}},
 		},
 		{
 			name:     "multiple entities decoded",
 			html:     `<h1 id="multi">A &amp; B &lt; C &gt; D</h1>`,
+			minDepth: 1,
 			maxDepth: 3,
 			want:     []headingInfo{{Level: 1, ID: "multi", Text: "A & B < C > D"}},
 		},
@@ -1090,7 +1125,7 @@ func TestExtractHeadings(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := extractHeadings(tt.html, tt.maxDepth)
+			got := extractHeadings(tt.html, tt.minDepth, tt.maxDepth)
 
 			if len(got) != len(tt.want) {
 				t.Fatalf("extractHeadings() returned %d headings, want %d", len(got), len(tt.want))
@@ -1312,7 +1347,8 @@ func TestGenerateNumberedTOC(t *testing.T) {
 			wantContains: []string{
 				`<nav class="toc">`,
 				`<h2 class="toc-title">Table of Contents</h2>`,
-				`<ol class="toc-list">`,
+				`<div class="toc-list">`,
+				`<div class="toc-item">`,
 				`href="#intro"`,
 				`1. Introduction`,
 				`</nav>`,
@@ -1326,7 +1362,8 @@ func TestGenerateNumberedTOC(t *testing.T) {
 			title: "",
 			wantContains: []string{
 				`<nav class="toc">`,
-				`<ol class="toc-list">`,
+				`<div class="toc-list">`,
+				`<div class="toc-item">`,
 				`href="#intro"`,
 			},
 		},
@@ -1361,14 +1398,16 @@ func TestGenerateNumberedTOC(t *testing.T) {
 			},
 		},
 		{
-			name: "nested headings create nested lists",
+			name: "nested headings use indentation via padding",
 			headings: []headingInfo{
 				{Level: 1, ID: "ch1", Text: "Chapter 1"},
 				{Level: 2, ID: "sec1", Text: "Section 1"},
 			},
 			title: "",
 			wantContains: []string{
+				`<div class="toc-item">`, // Level 1: no padding
 				`1. Chapter 1`,
+				`padding-left:1.5em`, // Level 2: indented
 				`1.1. Section 1`,
 			},
 		},

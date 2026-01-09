@@ -2157,7 +2157,7 @@ func TestBuildTOCData(t *testing.T) {
 			cfg:          &Config{TOC: TOCConfig{Enabled: true, Title: "TOC", MaxDepth: 0}},
 			flags:        tocFlags{},
 			wantTitle:    "TOC",
-			wantMaxDepth: md2pdf.DefaultTOCDepth,
+			wantMaxDepth: md2pdf.DefaultTOCMaxDepth,
 		},
 		{
 			name:         "config depth 1 boundary",
