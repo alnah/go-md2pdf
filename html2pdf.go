@@ -38,11 +38,28 @@ type pdfOptions struct {
 // footerMarginExtra is added to bottom margin when footer is active.
 const footerMarginExtra = 0.25
 
+// Page dimensions in inches (ISO/ANSI standards).
+const (
+	letterWidthInches  = 8.5
+	letterHeightInches = 11.0
+	a4WidthInches      = 8.27  // 210mm
+	a4HeightInches     = 11.69 // 297mm
+	legalWidthInches   = 8.5
+	legalHeightInches  = 14.0
+)
+
+// Footer styling constants.
+const (
+	footerFontSize   = "10px"
+	footerColor      = "#aaa"
+	footerPaddingH   = "0.5in"
+)
+
 // pageDimensions maps page size to (width, height) in inches.
 var pageDimensions = map[string]struct{ width, height float64 }{
-	PageSizeLetter: {8.5, 11.0},
-	PageSizeA4:     {8.27, 11.69},
-	PageSizeLegal:  {8.5, 14.0},
+	PageSizeLetter: {letterWidthInches, letterHeightInches},
+	PageSizeA4:     {a4WidthInches, a4HeightInches},
+	PageSizeLegal:  {legalWidthInches, legalHeightInches},
 }
 
 // rodRenderer implements pdfRenderer using go-rod.
@@ -313,7 +330,8 @@ func buildFooterTemplate(data *footerData) string {
 		textAlign = "center"
 	}
 
-	return fmt.Sprintf(`<div style="font-size: 10px; font-family: %s; color: #aaa; width: 100%%; text-align: %s; padding: 0 0.5in;">%s</div>`, defaultFontFamily, textAlign, content)
+	return fmt.Sprintf(`<div style="font-size: %s; font-family: %s; color: %s; width: 100%%; text-align: %s; padding: 0 %s;">%s</div>`,
+		footerFontSize, defaultFontFamily, footerColor, textAlign, footerPaddingH, content)
 }
 
 // floatPtr returns a pointer to a float64 value.
