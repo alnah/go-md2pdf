@@ -90,18 +90,22 @@ func TestValidateFieldLength(t *testing.T) {
 func TestConfig_Validate(t *testing.T) {
 	t.Run("valid config passes validation", func(t *testing.T) {
 		cfg := &Config{
-			Signature: SignatureConfig{
+			Author: AuthorConfig{
 				Name:  "John Doe",
 				Title: "Developer",
 				Email: "john@example.com",
+			},
+			Document: DocumentConfig{
+				Date:    "2025-01-15",
+				Version: "FINAL",
+			},
+			Signature: SignatureConfig{
 				Links: []Link{
 					{Label: "GitHub", URL: "https://github.com/johndoe"},
 				},
 			},
 			Footer: FooterConfig{
-				Date:   "2025-01-15",
-				Status: "FINAL",
-				Text:   "Confidential",
+				Text: "Confidential",
 			},
 		}
 		err := cfg.Validate()
@@ -110,9 +114,9 @@ func TestConfig_Validate(t *testing.T) {
 		}
 	})
 
-	t.Run("signature.name too long returns error", func(t *testing.T) {
+	t.Run("author.name too long returns error", func(t *testing.T) {
 		cfg := &Config{
-			Signature: SignatureConfig{
+			Author: AuthorConfig{
 				Name: string(make([]byte, MaxNameLength+1)),
 			},
 		}
@@ -122,9 +126,9 @@ func TestConfig_Validate(t *testing.T) {
 		}
 	})
 
-	t.Run("signature.email too long returns error", func(t *testing.T) {
+	t.Run("author.email too long returns error", func(t *testing.T) {
 		cfg := &Config{
-			Signature: SignatureConfig{
+			Author: AuthorConfig{
 				Email: string(make([]byte, MaxEmailLength+1)),
 			},
 		}
@@ -160,10 +164,10 @@ func TestConfig_Validate(t *testing.T) {
 		}
 	})
 
-	t.Run("footer.status too long returns error", func(t *testing.T) {
+	t.Run("document.version too long returns error", func(t *testing.T) {
 		cfg := &Config{
-			Footer: FooterConfig{
-				Status: string(make([]byte, MaxStatusLength+1)),
+			Document: DocumentConfig{
+				Version: string(make([]byte, MaxVersionLength+1)),
 			},
 		}
 		err := cfg.Validate()
@@ -274,7 +278,7 @@ unknownField: "should fail"
 		dir := t.TempDir()
 		configPath := filepath.Join(dir, "toolong.yaml")
 		longName := string(make([]byte, MaxNameLength+1))
-		content := "signature:\n  name: \"" + longName + "\"\n"
+		content := "author:\n  name: \"" + longName + "\"\n"
 		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
 			t.Fatalf("setup: %v", err)
 		}
@@ -554,6 +558,42 @@ unknownField: "should fail"
 		}
 		if cfg.TOC.MaxDepth != 0 {
 			t.Errorf("TOC.MaxDepth = %d, want 0 (will use default)", cfg.TOC.MaxDepth)
+		}
+	})
+
+	t.Run("loads author and document settings", func(t *testing.T) {
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "test.yaml")
+		content := `author:
+  name: "John Doe"
+  title: "Developer"
+  email: "john@example.com"
+  organization: "Acme Corp"
+document:
+  title: "My Document"
+  subtitle: "A Subtitle"
+  version: "1.0"
+  date: "auto"
+`
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		cfg, err := LoadConfig(configPath)
+		if err != nil {
+			t.Fatalf("LoadConfig() error = %v", err)
+		}
+		if cfg.Author.Name != "John Doe" {
+			t.Errorf("Author.Name = %q, want %q", cfg.Author.Name, "John Doe")
+		}
+		if cfg.Author.Organization != "Acme Corp" {
+			t.Errorf("Author.Organization = %q, want %q", cfg.Author.Organization, "Acme Corp")
+		}
+		if cfg.Document.Title != "My Document" {
+			t.Errorf("Document.Title = %q, want %q", cfg.Document.Title, "My Document")
+		}
+		if cfg.Document.Date != "auto" {
+			t.Errorf("Document.Date = %q, want %q", cfg.Document.Date, "auto")
 		}
 	})
 }
