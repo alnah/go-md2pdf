@@ -58,7 +58,14 @@ func New(opts ...Option) *Service {
 
 // Convert runs the full pipeline and returns the PDF as bytes.
 // The context is used for cancellation and timeout.
-func (s *Service) Convert(ctx context.Context, input Input) ([]byte, error) {
+// Recovers from internal panics to prevent crashes from propagating to callers.
+func (s *Service) Convert(ctx context.Context, input Input) (result []byte, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("internal error: %v", r)
+		}
+	}()
+
 	if err := s.validateInput(input); err != nil {
 		return nil, err
 	}
