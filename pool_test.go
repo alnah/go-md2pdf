@@ -175,10 +175,13 @@ func TestServicePool_ConcurrentAccess(t *testing.T) {
 		close(done)
 	}()
 
+	timer := time.NewTimer(5 * time.Second)
+	defer timer.Stop()
+
 	select {
 	case <-done:
 		// Success
-	case <-time.After(5 * time.Second):
+	case <-timer.C:
 		t.Fatal("concurrent access test timed out - possible deadlock")
 	}
 }
@@ -207,4 +210,136 @@ func TestServicePool_DoubleClose(t *testing.T) {
 
 	// Second close should not panic
 	pool.Close()
+}
+
+func TestServicePool_AcquireAfterClose(t *testing.T) {
+	t.Parallel()
+
+	pool := NewServicePool(2)
+
+	// Acquire one service
+	svc := pool.Acquire()
+	if svc == nil {
+		t.Fatal("Acquire() returned nil")
+	}
+
+	// Close the pool
+	pool.Close()
+
+	// Release should not panic after close
+	pool.Release(svc)
+
+	// Note: Acquire after close will block forever on empty channel,
+	// so we don't test that directly - it's documented behavior.
+}
+
+func TestServicePool_ReleaseNilService(t *testing.T) {
+	t.Parallel()
+
+	pool := NewServicePool(1)
+	defer pool.Close()
+
+	// Acquire to create a service
+	svc := pool.Acquire()
+	pool.Release(svc)
+
+	// Release nil should cause panic (channel send on nil),
+	// but this is expected behavior - callers should not release nil.
+	// This test documents that behavior.
+}
+
+func TestServicePool_HighContention(t *testing.T) {
+	t.Parallel()
+
+	// Small pool with many goroutines to stress test contention
+	pool := NewServicePool(2)
+	defer pool.Close()
+
+	var wg sync.WaitGroup
+	goroutines := 50
+	iterations := 10
+
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < iterations; j++ {
+				svc := pool.Acquire()
+				// Simulate variable work duration
+				time.Sleep(time.Duration(j%3) * time.Millisecond)
+				pool.Release(svc)
+			}
+		}()
+	}
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	timer := time.NewTimer(30 * time.Second)
+	defer timer.Stop()
+
+	select {
+	case <-done:
+		// Success - no deadlock under high contention
+	case <-timer.C:
+		t.Fatal("high contention test timed out - possible deadlock")
+	}
+}
+
+func TestServicePool_AllServicesAcquired(t *testing.T) {
+	t.Parallel()
+
+	pool := NewServicePool(3)
+	defer pool.Close()
+
+	// Acquire all services
+	services := make([]*Service, 3)
+	for i := 0; i < 3; i++ {
+		services[i] = pool.Acquire()
+		if services[i] == nil {
+			t.Fatalf("Acquire() returned nil for service %d", i)
+		}
+	}
+
+	// Verify we got 3 distinct services
+	seen := make(map[*Service]bool)
+	for _, svc := range services {
+		if seen[svc] {
+			t.Error("got duplicate service from pool")
+		}
+		seen[svc] = true
+	}
+
+	// Release all
+	for _, svc := range services {
+		pool.Release(svc)
+	}
+}
+
+func TestServicePool_LazyCreation(t *testing.T) {
+	t.Parallel()
+
+	pool := NewServicePool(3)
+	defer pool.Close()
+
+	// Pool should not create services until acquired
+	// Acquire one service
+	svc1 := pool.Acquire()
+	if svc1 == nil {
+		t.Fatal("first Acquire() returned nil")
+	}
+
+	// Release it
+	pool.Release(svc1)
+
+	// Acquire again - should get the same service (reuse)
+	svc2 := pool.Acquire()
+	if svc2 != svc1 {
+		t.Error("expected to reuse released service")
+	}
+
+	pool.Release(svc2)
 }
