@@ -24,23 +24,24 @@ const (
 	MaxTitleLength          = 100  // Professional title
 	MaxEmailLength          = 254  // RFC 5321
 	MaxURLLength            = 2048 // Browser limit
-	MaxStatusLength         = 50   // "DRAFT", "FINAL", "v1.2.3"
-	MaxDateLength           = 30   // "2025-12-31" or "December 31, 2025"
 	MaxTextLength           = 500  // Footer/free-form text
 	MaxLabelLength          = 100  // Link label
 	MaxPageSizeLength       = 10   // "letter", "a4", "legal"
 	MaxOrientationLength    = 10   // "portrait", "landscape"
 	MaxWatermarkTextLength  = 50   // "DRAFT", "CONFIDENTIAL"
 	MaxWatermarkColorLength = 20   // "#888888" or color name
-	MaxCoverTitleLength     = 200  // Cover page title
-	MaxSubtitleLength       = 200  // Cover page subtitle
+	MaxDocTitleLength       = 200  // Document title
+	MaxSubtitleLength       = 200  // Document subtitle
 	MaxOrganizationLength   = 100  // Organization name
 	MaxVersionLength        = 50   // Version string
+	MaxDateLength           = 30   // "2025-12-31" or "December 31, 2025"
 	MaxTOCTitleLength       = 100  // TOC title
 )
 
 // Config holds all configuration for document generation.
 type Config struct {
+	Author     AuthorConfig     `yaml:"author"`
+	Document   DocumentConfig   `yaml:"document"`
 	Input      InputConfig      `yaml:"input"`
 	Output     OutputConfig     `yaml:"output"`
 	CSS        CSSConfig        `yaml:"css"`
@@ -52,6 +53,56 @@ type Config struct {
 	Cover      CoverConfig      `yaml:"cover"`
 	TOC        TOCConfig        `yaml:"toc"`
 	PageBreaks PageBreaksConfig `yaml:"pageBreaks"`
+}
+
+// AuthorConfig holds shared author metadata used by cover and signature.
+type AuthorConfig struct {
+	Name         string `yaml:"name"`
+	Title        string `yaml:"title"`
+	Email        string `yaml:"email"`
+	Organization string `yaml:"organization"`
+}
+
+// Validate checks author field lengths.
+func (a *AuthorConfig) Validate() error {
+	if err := validateFieldLength("author.name", a.Name, MaxNameLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("author.title", a.Title, MaxTitleLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("author.email", a.Email, MaxEmailLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("author.organization", a.Organization, MaxOrganizationLength); err != nil {
+		return err
+	}
+	return nil
+}
+
+// DocumentConfig holds shared document metadata used by cover and footer.
+type DocumentConfig struct {
+	Title    string `yaml:"title"`    // "" = auto per-file (H1 → filename)
+	Subtitle string `yaml:"subtitle"` // Optional subtitle
+	Version  string `yaml:"version"`  // Version string (used in cover and footer)
+	Date     string `yaml:"date"`     // "auto" = YYYY-MM-DD at startup
+}
+
+// Validate checks document field lengths.
+func (d *DocumentConfig) Validate() error {
+	if err := validateFieldLength("document.title", d.Title, MaxDocTitleLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("document.subtitle", d.Subtitle, MaxSubtitleLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("document.version", d.Version, MaxVersionLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("document.date", d.Date, MaxDateLength); err != nil {
+		return err
+	}
+	return nil
 }
 
 // InputConfig defines input source options.
@@ -70,23 +121,52 @@ type CSSConfig struct {
 }
 
 // FooterConfig defines page footer options.
+// Uses document.date and document.version for date/status display.
 type FooterConfig struct {
 	Enabled        bool   `yaml:"enabled"`
-	Position       string `yaml:"position"` // "left", "center", "right" (default: "right")
-	ShowPageNumber bool   `yaml:"showPageNumber"`
-	Date           string `yaml:"date"`   // Optional, format YYYY-MM-DD
-	Status         string `yaml:"status"` // Optional: "DRAFT", "FINAL", "v1.2"
-	Text           string `yaml:"text"`   // Optional free-form text
+	Position       string `yaml:"position"`       // "left", "center", "right" (default: "right")
+	ShowPageNumber bool   `yaml:"showPageNumber"` // Show page numbers
+	Text           string `yaml:"text"`           // Optional free-form text
+}
+
+// Validate checks footer field values.
+func (f *FooterConfig) Validate() error {
+	if err := validateFieldLength("footer.text", f.Text, MaxTextLength); err != nil {
+		return err
+	}
+	if f.Position != "" {
+		switch strings.ToLower(f.Position) {
+		case "left", "center", "right":
+			// valid
+		default:
+			return fmt.Errorf("footer.position: invalid value %q (must be left, center, or right)", f.Position)
+		}
+	}
+	return nil
 }
 
 // SignatureConfig defines signature block options.
+// Uses author.name, author.title, author.email, author.organization for display.
 type SignatureConfig struct {
 	Enabled   bool   `yaml:"enabled"`
-	Name      string `yaml:"name"`
-	Title     string `yaml:"title"`
-	Email     string `yaml:"email"`
-	ImagePath string `yaml:"imagePath"`
-	Links     []Link `yaml:"links"`
+	ImagePath string `yaml:"imagePath"` // Signature image path or URL
+	Links     []Link `yaml:"links"`     // Additional links
+}
+
+// Validate checks signature field values.
+func (s *SignatureConfig) Validate() error {
+	if err := validateFieldLength("signature.imagePath", s.ImagePath, MaxURLLength); err != nil {
+		return err
+	}
+	for i, link := range s.Links {
+		if err := validateFieldLength(fmt.Sprintf("signature.links[%d].label", i), link.Label, MaxLabelLength); err != nil {
+			return err
+		}
+		if err := validateFieldLength(fmt.Sprintf("signature.links[%d].url", i), link.URL, MaxURLLength); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Link represents a clickable link in the signature.
@@ -107,6 +187,17 @@ type PageConfig struct {
 	Margin      float64 `yaml:"margin"`      // inches (default: 0.5)
 }
 
+// Validate checks page field values.
+func (p *PageConfig) Validate() error {
+	if err := validateFieldLength("page.size", p.Size, MaxPageSizeLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("page.orientation", p.Orientation, MaxOrientationLength); err != nil {
+		return err
+	}
+	return nil
+}
+
 // WatermarkConfig defines background watermark options.
 type WatermarkConfig struct {
 	Enabled bool    `yaml:"enabled"`
@@ -116,17 +207,42 @@ type WatermarkConfig struct {
 	Angle   float64 `yaml:"angle"`   // Rotation in degrees (default: -45)
 }
 
+// Validate checks watermark field values.
+func (w *WatermarkConfig) Validate() error {
+	if !w.Enabled {
+		return nil
+	}
+	if w.Text == "" {
+		return fmt.Errorf("watermark.text: required when watermark is enabled")
+	}
+	if err := validateFieldLength("watermark.text", w.Text, MaxWatermarkTextLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("watermark.color", w.Color, MaxWatermarkColorLength); err != nil {
+		return err
+	}
+	if w.Opacity < 0 || w.Opacity > 1 {
+		return fmt.Errorf("watermark.opacity: must be between 0 and 1, got %.2f", w.Opacity)
+	}
+	if w.Angle < -90 || w.Angle > 90 {
+		return fmt.Errorf("watermark.angle: must be between -90 and 90, got %.2f", w.Angle)
+	}
+	return nil
+}
+
 // CoverConfig defines cover page options.
+// Uses author.* and document.* for author info and metadata.
 type CoverConfig struct {
-	Enabled      bool   `yaml:"enabled"`
-	Title        string `yaml:"title"`        // Optional - auto: H1 → filename
-	Subtitle     string `yaml:"subtitle"`     // Optional
-	Logo         string `yaml:"logo"`         // Optional - path or URL
-	Author       string `yaml:"author"`       // Fallback → signature.name
-	AuthorTitle  string `yaml:"authorTitle"`  // Fallback → signature.title
-	Organization string `yaml:"organization"` // Optional, no fallback
-	Date         string `yaml:"date"`         // "auto" = YYYY-MM-DD, fallback → footer.date
-	Version      string `yaml:"version"`      // Fallback → footer.status
+	Enabled bool   `yaml:"enabled"`
+	Logo    string `yaml:"logo"` // Logo path or URL (cover-specific)
+}
+
+// Validate checks cover field values.
+func (c *CoverConfig) Validate() error {
+	if err := validateFieldLength("cover.logo", c.Logo, MaxURLLength); err != nil {
+		return err
+	}
+	return nil
 }
 
 // TOCConfig defines table of contents options.
@@ -134,6 +250,19 @@ type TOCConfig struct {
 	Enabled  bool   `yaml:"enabled"`
 	Title    string `yaml:"title"`    // Empty = no title above TOC
 	MaxDepth int    `yaml:"maxDepth"` // 1-6, default 3
+}
+
+// Validate checks TOC field values.
+func (t *TOCConfig) Validate() error {
+	if err := validateFieldLength("toc.title", t.Title, MaxTOCTitleLength); err != nil {
+		return err
+	}
+	if t.Enabled && t.MaxDepth != 0 {
+		if t.MaxDepth < 1 || t.MaxDepth > 6 {
+			return fmt.Errorf("toc.maxDepth: must be between 1 and 6, got %d", t.MaxDepth)
+		}
+	}
+	return nil
 }
 
 // PageBreaksConfig defines page break options.
@@ -146,128 +275,52 @@ type PageBreaksConfig struct {
 	Widows   int  `yaml:"widows"`   // Min lines at page top (1-5, default 2)
 }
 
+// Validate checks page breaks field values.
+func (pb *PageBreaksConfig) Validate() error {
+	if pb.Orphans != 0 {
+		if pb.Orphans < 1 || pb.Orphans > 5 {
+			return fmt.Errorf("pageBreaks.orphans: must be between 1 and 5, got %d", pb.Orphans)
+		}
+	}
+	if pb.Widows != 0 {
+		if pb.Widows < 1 || pb.Widows > 5 {
+			return fmt.Errorf("pageBreaks.widows: must be between 1 and 5, got %d", pb.Widows)
+		}
+	}
+	return nil
+}
+
 // Validate checks field lengths to prevent abuse in multi-tenant scenarios.
 // Called automatically by LoadConfig, but available for consumers
 // who construct Config manually (e.g., API adapters, library users).
 func (c *Config) Validate() error {
-	// Validate signature fields
-	if err := validateFieldLength("signature.name", c.Signature.Name, MaxNameLength); err != nil {
+	if err := c.Author.Validate(); err != nil {
 		return err
 	}
-	if err := validateFieldLength("signature.title", c.Signature.Title, MaxTitleLength); err != nil {
+	if err := c.Document.Validate(); err != nil {
 		return err
 	}
-	if err := validateFieldLength("signature.email", c.Signature.Email, MaxEmailLength); err != nil {
+	if err := c.Footer.Validate(); err != nil {
 		return err
 	}
-	if err := validateFieldLength("signature.imagePath", c.Signature.ImagePath, MaxURLLength); err != nil {
+	if err := c.Signature.Validate(); err != nil {
 		return err
 	}
-
-	// Validate signature links
-	for i, link := range c.Signature.Links {
-		if err := validateFieldLength(fmt.Sprintf("signature.links[%d].label", i), link.Label, MaxLabelLength); err != nil {
-			return err
-		}
-		if err := validateFieldLength(fmt.Sprintf("signature.links[%d].url", i), link.URL, MaxURLLength); err != nil {
-			return err
-		}
-	}
-
-	// Validate footer fields
-	if err := validateFieldLength("footer.date", c.Footer.Date, MaxDateLength); err != nil {
+	if err := c.Page.Validate(); err != nil {
 		return err
 	}
-	if err := validateFieldLength("footer.status", c.Footer.Status, MaxStatusLength); err != nil {
+	if err := c.Watermark.Validate(); err != nil {
 		return err
 	}
-	if err := validateFieldLength("footer.text", c.Footer.Text, MaxTextLength); err != nil {
+	if err := c.Cover.Validate(); err != nil {
 		return err
 	}
-	if c.Footer.Position != "" {
-		switch strings.ToLower(c.Footer.Position) {
-		case "left", "center", "right":
-			// valid
-		default:
-			return fmt.Errorf("footer.position: invalid value %q (must be left, center, or right)", c.Footer.Position)
-		}
-	}
-
-	// Validate page fields
-	if err := validateFieldLength("page.size", c.Page.Size, MaxPageSizeLength); err != nil {
+	if err := c.TOC.Validate(); err != nil {
 		return err
 	}
-	if err := validateFieldLength("page.orientation", c.Page.Orientation, MaxOrientationLength); err != nil {
+	if err := c.PageBreaks.Validate(); err != nil {
 		return err
 	}
-
-	// Validate watermark fields
-	if c.Watermark.Enabled {
-		if c.Watermark.Text == "" {
-			return fmt.Errorf("watermark.text: required when watermark is enabled")
-		}
-		if err := validateFieldLength("watermark.text", c.Watermark.Text, MaxWatermarkTextLength); err != nil {
-			return err
-		}
-		if err := validateFieldLength("watermark.color", c.Watermark.Color, MaxWatermarkColorLength); err != nil {
-			return err
-		}
-		if c.Watermark.Opacity < 0 || c.Watermark.Opacity > 1 {
-			return fmt.Errorf("watermark.opacity: must be between 0 and 1, got %.2f", c.Watermark.Opacity)
-		}
-		if c.Watermark.Angle < -90 || c.Watermark.Angle > 90 {
-			return fmt.Errorf("watermark.angle: must be between -90 and 90, got %.2f", c.Watermark.Angle)
-		}
-	}
-
-	// Validate cover fields
-	if err := validateFieldLength("cover.title", c.Cover.Title, MaxCoverTitleLength); err != nil {
-		return err
-	}
-	if err := validateFieldLength("cover.subtitle", c.Cover.Subtitle, MaxSubtitleLength); err != nil {
-		return err
-	}
-	if err := validateFieldLength("cover.logo", c.Cover.Logo, MaxURLLength); err != nil {
-		return err
-	}
-	if err := validateFieldLength("cover.author", c.Cover.Author, MaxNameLength); err != nil {
-		return err
-	}
-	if err := validateFieldLength("cover.authorTitle", c.Cover.AuthorTitle, MaxTitleLength); err != nil {
-		return err
-	}
-	if err := validateFieldLength("cover.organization", c.Cover.Organization, MaxOrganizationLength); err != nil {
-		return err
-	}
-	if err := validateFieldLength("cover.date", c.Cover.Date, MaxDateLength); err != nil {
-		return err
-	}
-	if err := validateFieldLength("cover.version", c.Cover.Version, MaxVersionLength); err != nil {
-		return err
-	}
-
-	// Validate TOC fields
-	if err := validateFieldLength("toc.title", c.TOC.Title, MaxTOCTitleLength); err != nil {
-		return err
-	}
-	if c.TOC.Enabled && c.TOC.MaxDepth != 0 {
-		if c.TOC.MaxDepth < 1 || c.TOC.MaxDepth > 6 {
-			return fmt.Errorf("toc.maxDepth: must be between 1 and 6, got %d", c.TOC.MaxDepth)
-		}
-	}
-
-	// Validate page breaks fields
-	if c.PageBreaks.Orphans != 0 {
-		if c.PageBreaks.Orphans < 1 || c.PageBreaks.Orphans > 5 {
-			return fmt.Errorf("pageBreaks.orphans: must be between 1 and 5, got %d", c.PageBreaks.Orphans)
-		}
-	}
-	if c.PageBreaks.Widows != 0 {
-		if c.PageBreaks.Widows < 1 || c.PageBreaks.Widows > 5 {
-			return fmt.Errorf("pageBreaks.widows: must be between 1 and 5, got %d", c.PageBreaks.Widows)
-		}
-	}
-
 	return nil
 }
 
@@ -282,12 +335,15 @@ func validateFieldLength(fieldName, value string, maxLength int) error {
 // DefaultConfig returns a neutral configuration with all features disabled.
 func DefaultConfig() *Config {
 	return &Config{
+		Author:     AuthorConfig{},
+		Document:   DocumentConfig{},
 		Input:      InputConfig{DefaultDir: ""},
 		Output:     OutputConfig{DefaultDir: ""},
 		CSS:        CSSConfig{Style: ""},
 		Footer:     FooterConfig{Enabled: false},
 		Signature:  SignatureConfig{Enabled: false},
 		Assets:     AssetsConfig{BasePath: ""},
+		Page:       PageConfig{},
 		Watermark:  WatermarkConfig{Enabled: false},
 		Cover:      CoverConfig{Enabled: false},
 		TOC:        TOCConfig{Enabled: false},
