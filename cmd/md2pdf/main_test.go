@@ -19,6 +19,8 @@ func (w *wrongTypeConverter) Convert(_ context.Context, _ md2pdf.Input) ([]byte,
 }
 
 func TestPoolAdapter_Release_WrongType(t *testing.T) {
+	// Note: Do not use t.Parallel() - this test modifies global os.Stderr
+
 	// Create a real pool with size 1
 	pool := md2pdf.NewServicePool(1)
 	defer pool.Close()
@@ -26,17 +28,21 @@ func TestPoolAdapter_Release_WrongType(t *testing.T) {
 	adapter := &poolAdapter{pool: pool}
 
 	// Capture stderr to verify error message
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe failed: %v", err)
+	}
+
 	oldStderr := os.Stderr
-	r, w, _ := os.Pipe()
 	os.Stderr = w
+	defer func() { os.Stderr = oldStderr }()
 
 	// Release with wrong type - should log error, not panic
 	wrongType := &wrongTypeConverter{}
 	adapter.Release(wrongType) // Should not panic
 
-	// Restore stderr and read captured output
+	// Close write end and read captured output
 	w.Close()
-	os.Stderr = oldStderr
 
 	var buf bytes.Buffer
 	buf.ReadFrom(r)
@@ -50,6 +56,8 @@ func TestPoolAdapter_Release_WrongType(t *testing.T) {
 }
 
 func TestPoolAdapter_Size(t *testing.T) {
+	t.Parallel()
+
 	pool := md2pdf.NewServicePool(3)
 	defer pool.Close()
 
@@ -61,6 +69,8 @@ func TestPoolAdapter_Size(t *testing.T) {
 }
 
 func TestPoolAdapter_AcquireRelease(t *testing.T) {
+	t.Parallel()
+
 	pool := md2pdf.NewServicePool(1)
 	defer pool.Close()
 
@@ -77,6 +87,8 @@ func TestPoolAdapter_AcquireRelease(t *testing.T) {
 }
 
 func TestVersion(t *testing.T) {
+	t.Parallel()
+
 	// Version variable should be set (default is "dev")
 	if Version == "" {
 		t.Error("Version should not be empty")
@@ -88,6 +100,8 @@ func TestVersion(t *testing.T) {
 }
 
 func TestIsCommand(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		input string
 		want  bool
@@ -104,6 +118,8 @@ func TestIsCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
+			t.Parallel()
+
 			got := isCommand(tt.input)
 			if got != tt.want {
 				t.Errorf("isCommand(%q) = %v, want %v", tt.input, got, tt.want)
@@ -113,6 +129,8 @@ func TestIsCommand(t *testing.T) {
 }
 
 func TestLooksLikeMarkdown(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		input string
 		want  bool
@@ -132,6 +150,8 @@ func TestLooksLikeMarkdown(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
+			t.Parallel()
+
 			got := looksLikeMarkdown(tt.input)
 			if got != tt.want {
 				t.Errorf("looksLikeMarkdown(%q) = %v, want %v", tt.input, got, tt.want)
@@ -141,6 +161,8 @@ func TestLooksLikeMarkdown(t *testing.T) {
 }
 
 func TestRunMain(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name         string
 		args         []string
@@ -188,6 +210,8 @@ func TestRunMain(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			var stdout, stderr bytes.Buffer
 			deps := &Dependencies{
 				Now:    func() time.Time { return time.Now() },

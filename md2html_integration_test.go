@@ -9,9 +9,12 @@ import (
 )
 
 func TestGoldmarkConverter_ToHTML_Integration(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 
 	t.Run("basic markdown", func(t *testing.T) {
+		t.Parallel()
 		content := `# Hello
 
 World`
@@ -33,6 +36,8 @@ World`
 	})
 
 	t.Run("unicode content", func(t *testing.T) {
+		t.Parallel()
+
 		content := `# Bonjour le monde
 
 Ceci est un test avec des caracteres speciaux.`
@@ -49,6 +54,8 @@ Ceci est un test avec des caracteres speciaux.`
 	})
 
 	t.Run("code block with special chars", func(t *testing.T) {
+		t.Parallel()
+
 		content := "# Code Example\n\n```go\nfunc main() {\n\tfmt.Println(\"<hello>\")\n}\n```"
 
 		converter := newGoldmarkConverter()
@@ -63,6 +70,8 @@ Ceci est un test avec des caracteres speciaux.`
 	})
 
 	t.Run("code block has syntax highlighting classes", func(t *testing.T) {
+		t.Parallel()
+
 		content := "```go\nfunc main() {}\n```"
 
 		converter := newGoldmarkConverter()
@@ -82,6 +91,8 @@ Ceci est un test avec des caracteres speciaux.`
 	})
 
 	t.Run("table markdown", func(t *testing.T) {
+		t.Parallel()
+
 		content := `# Table Test
 
 | Name | Age |
@@ -104,6 +115,8 @@ Ceci est un test avec des caracteres speciaux.`
 	})
 
 	t.Run("nested list", func(t *testing.T) {
+		t.Parallel()
+
 		content := `# List Test
 
 - Item 1
@@ -126,6 +139,8 @@ Ceci est un test avec des caracteres speciaux.`
 	})
 
 	t.Run("whitespace-only content is valid", func(t *testing.T) {
+		t.Parallel()
+
 		content := "   \n\t\n   "
 
 		converter := newGoldmarkConverter()

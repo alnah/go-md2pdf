@@ -46,6 +46,8 @@ func printResults(results []ConversionResult, quiet, verbose bool) int {
 var _ Converter = (*md2pdf.Service)(nil)
 
 func TestParseFlags(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name            string
 		args            []string
@@ -215,6 +217,8 @@ func TestParseFlags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			flags, positional, err := parseFlags(tt.args)
 
 			if tt.wantErr {
@@ -277,6 +281,8 @@ func TestParseFlags(t *testing.T) {
 }
 
 func TestResolveInputPath(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		args    []string
@@ -306,6 +312,8 @@ func TestResolveInputPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got, err := resolveInputPath(tt.args, tt.cfg)
 
 			if tt.wantErr != nil {
@@ -327,6 +335,8 @@ func TestResolveInputPath(t *testing.T) {
 }
 
 func TestResolveOutputDir(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name       string
 		flagOutput string
@@ -355,6 +365,8 @@ func TestResolveOutputDir(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := resolveOutputDir(tt.flagOutput, tt.cfg)
 			if got != tt.want {
 				t.Errorf("resolveOutputDir() = %q, want %q", got, tt.want)
@@ -364,6 +376,8 @@ func TestResolveOutputDir(t *testing.T) {
 }
 
 func TestResolveOutputPath(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name         string
 		inputPath    string
@@ -422,6 +436,8 @@ func TestResolveOutputPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := resolveOutputPath(tt.inputPath, tt.outputDir, tt.baseInputDir)
 			if got != tt.want {
 				t.Errorf("resolveOutputPath() = %q, want %q", got, tt.want)
@@ -431,6 +447,8 @@ func TestResolveOutputPath(t *testing.T) {
 }
 
 func TestValidateMarkdownExtension(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		path    string
@@ -465,6 +483,8 @@ func TestValidateMarkdownExtension(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := validateMarkdownExtension(tt.path)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("validateMarkdownExtension() error = %v, wantErr %v", err, tt.wantErr)
@@ -474,6 +494,8 @@ func TestValidateMarkdownExtension(t *testing.T) {
 }
 
 func TestDiscoverFiles(t *testing.T) {
+	t.Parallel()
+
 	// Create temp directory structure
 	tempDir := t.TempDir()
 
@@ -498,6 +520,8 @@ func TestDiscoverFiles(t *testing.T) {
 	}
 
 	t.Run("single file", func(t *testing.T) {
+		t.Parallel()
+
 		inputPath := filepath.Join(tempDir, "doc1.md")
 		got, err := discoverFiles(inputPath, "")
 		if err != nil {
@@ -512,6 +536,8 @@ func TestDiscoverFiles(t *testing.T) {
 	})
 
 	t.Run("directory recursive", func(t *testing.T) {
+		t.Parallel()
+
 		got, err := discoverFiles(tempDir, "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -522,6 +548,8 @@ func TestDiscoverFiles(t *testing.T) {
 	})
 
 	t.Run("directory with output dir mirrors structure", func(t *testing.T) {
+		t.Parallel()
+
 		outputDir := filepath.Join(tempDir, "output")
 		got, err := discoverFiles(tempDir, outputDir)
 		if err != nil {
@@ -545,6 +573,8 @@ func TestDiscoverFiles(t *testing.T) {
 	})
 
 	t.Run("invalid extension returns error", func(t *testing.T) {
+		t.Parallel()
+
 		inputPath := filepath.Join(tempDir, "ignored.txt")
 		_, err := discoverFiles(inputPath, "")
 		if err == nil {
@@ -553,6 +583,8 @@ func TestDiscoverFiles(t *testing.T) {
 	})
 
 	t.Run("nonexistent path returns error", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := discoverFiles("/nonexistent/path", "")
 		if err == nil {
 			t.Error("expected error for nonexistent path")
@@ -561,7 +593,10 @@ func TestDiscoverFiles(t *testing.T) {
 }
 
 func TestResolveCSSContent(t *testing.T) {
+	t.Parallel()
+
 	t.Run("empty file and no config returns empty string", func(t *testing.T) {
+		t.Parallel()
 		got, err := resolveCSSContent("", nil, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -572,6 +607,8 @@ func TestResolveCSSContent(t *testing.T) {
 	})
 
 	t.Run("reads CSS file content", func(t *testing.T) {
+		t.Parallel()
+
 		tempDir := t.TempDir()
 		cssPath := filepath.Join(tempDir, "style.css")
 		cssContent := "body { color: red; }"
@@ -589,6 +626,8 @@ func TestResolveCSSContent(t *testing.T) {
 	})
 
 	t.Run("nonexistent file returns error", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := resolveCSSContent("/nonexistent/style.css", nil, false)
 		if err == nil {
 			t.Error("expected error for nonexistent file")
@@ -596,6 +635,8 @@ func TestResolveCSSContent(t *testing.T) {
 	})
 
 	t.Run("config style loads from embedded assets", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{CSS: CSSConfig{Style: "nord"}}
 		got, err := resolveCSSContent("", cfg, false)
 		if err != nil {
@@ -607,6 +648,8 @@ func TestResolveCSSContent(t *testing.T) {
 	})
 
 	t.Run("css flag overrides config style", func(t *testing.T) {
+		t.Parallel()
+
 		tempDir := t.TempDir()
 		cssPath := filepath.Join(tempDir, "override.css")
 		cssContent := "body { color: blue; }"
@@ -625,6 +668,8 @@ func TestResolveCSSContent(t *testing.T) {
 	})
 
 	t.Run("unknown config style returns error", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{CSS: CSSConfig{Style: "nonexistent"}}
 		_, err := resolveCSSContent("", cfg, false)
 		if err == nil {
@@ -633,6 +678,8 @@ func TestResolveCSSContent(t *testing.T) {
 	})
 
 	t.Run("noStyle flag returns empty even with config style", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{CSS: CSSConfig{Style: "nord"}}
 		got, err := resolveCSSContent("", cfg, true)
 		if err != nil {
@@ -644,6 +691,8 @@ func TestResolveCSSContent(t *testing.T) {
 	})
 
 	t.Run("noStyle flag returns empty even with css file", func(t *testing.T) {
+		t.Parallel()
+
 		tempDir := t.TempDir()
 		cssPath := filepath.Join(tempDir, "style.css")
 		if err := os.WriteFile(cssPath, []byte("body { color: red; }"), 0644); err != nil {
@@ -661,7 +710,10 @@ func TestResolveCSSContent(t *testing.T) {
 }
 
 func TestPrintResults(t *testing.T) {
+	t.Parallel()
+
 	t.Run("returns zero for all success", func(t *testing.T) {
+		t.Parallel()
 		results := []ConversionResult{
 			{InputPath: "a.md", OutputPath: "a.pdf", Err: nil},
 			{InputPath: "b.md", OutputPath: "b.pdf", Err: nil},
@@ -673,6 +725,8 @@ func TestPrintResults(t *testing.T) {
 	})
 
 	t.Run("returns count for failures", func(t *testing.T) {
+		t.Parallel()
+
 		results := []ConversionResult{
 			{InputPath: "a.md", OutputPath: "a.pdf", Err: nil},
 			{InputPath: "b.md", OutputPath: "b.pdf", Err: ErrReadMarkdown},
@@ -685,6 +739,8 @@ func TestPrintResults(t *testing.T) {
 	})
 
 	t.Run("returns zero for empty results", func(t *testing.T) {
+		t.Parallel()
+
 		failed := printResults(nil, true, false)
 		if failed != 0 {
 			t.Errorf("failed = %d, want 0", failed)
@@ -693,7 +749,10 @@ func TestPrintResults(t *testing.T) {
 }
 
 func TestBuildSignatureData(t *testing.T) {
+	t.Parallel()
+
 	t.Run("noSignature flag returns nil", func(t *testing.T) {
+		t.Parallel()
 		cfg := &Config{
 			Author:    AuthorConfig{Name: "Test"},
 			Signature: SignatureConfig{Enabled: true},
@@ -708,6 +767,8 @@ func TestBuildSignatureData(t *testing.T) {
 	})
 
 	t.Run("signature disabled in config returns nil", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{
 			Author:    AuthorConfig{Name: "Test"},
 			Signature: SignatureConfig{Enabled: false},
@@ -722,6 +783,8 @@ func TestBuildSignatureData(t *testing.T) {
 	})
 
 	t.Run("valid signature config returns SignatureData", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{
 			Author: AuthorConfig{
 				Name:  "John Doe",
@@ -760,6 +823,8 @@ func TestBuildSignatureData(t *testing.T) {
 	})
 
 	t.Run("URL image path is accepted without file validation", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{
 			Author: AuthorConfig{Name: "Test"},
 			Signature: SignatureConfig{
@@ -780,6 +845,8 @@ func TestBuildSignatureData(t *testing.T) {
 	})
 
 	t.Run("nonexistent local image path returns error", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{
 			Author: AuthorConfig{Name: "Test"},
 			Signature: SignatureConfig{
@@ -797,6 +864,8 @@ func TestBuildSignatureData(t *testing.T) {
 	})
 
 	t.Run("existing local image path is accepted", func(t *testing.T) {
+		t.Parallel()
+
 		tempDir := t.TempDir()
 		imagePath := filepath.Join(tempDir, "logo.png")
 		if err := os.WriteFile(imagePath, []byte("fake png"), 0644); err != nil {
@@ -823,6 +892,8 @@ func TestBuildSignatureData(t *testing.T) {
 	})
 
 	t.Run("empty image path is accepted", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{
 			Author:    AuthorConfig{Name: "Test"},
 			Signature: SignatureConfig{Enabled: true},
@@ -838,6 +909,8 @@ func TestBuildSignatureData(t *testing.T) {
 }
 
 func TestIsURL(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		input string
 		want  bool
@@ -853,6 +926,8 @@ func TestIsURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
+			t.Parallel()
+
 			got := md2pdf.IsURL(tt.input)
 			if got != tt.want {
 				t.Errorf("IsURL(%q) = %v, want %v", tt.input, got, tt.want)
@@ -862,7 +937,10 @@ func TestIsURL(t *testing.T) {
 }
 
 func TestBuildFooterData(t *testing.T) {
+	t.Parallel()
+
 	t.Run("footer disabled returns nil", func(t *testing.T) {
+		t.Parallel()
 		cfg := &Config{Footer: FooterConfig{
 			Enabled:        false,
 			Position:       "right",
@@ -876,6 +954,8 @@ func TestBuildFooterData(t *testing.T) {
 	})
 
 	t.Run("footer enabled returns FooterData", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{
 			Document: DocumentConfig{
 				Date:    "2025-01-15",
@@ -910,6 +990,8 @@ func TestBuildFooterData(t *testing.T) {
 	})
 
 	t.Run("footer enabled with minimal config", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{Footer: FooterConfig{
 			Enabled: true,
 			// All other fields empty/false
@@ -937,6 +1019,8 @@ func TestBuildFooterData(t *testing.T) {
 	})
 
 	t.Run("noFooter flag returns nil even when enabled in config", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{Footer: FooterConfig{
 			Enabled:        true,
 			Position:       "center",
@@ -951,10 +1035,14 @@ func TestBuildFooterData(t *testing.T) {
 }
 
 func TestConvertFile_ErrorPaths(t *testing.T) {
+	t.Parallel()
+
 	// Mock converter that returns success
 	mockConv := &staticMockConverter{result: []byte("%PDF-1.4 mock")}
 
 	t.Run("mkdir failure returns error", func(t *testing.T) {
+		t.Parallel()
+
 		tempDir := t.TempDir()
 
 		// Create a file where directory should be (blocks mkdir)
@@ -980,13 +1068,11 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 		if result.Err == nil {
 			t.Error("expected error when mkdir fails")
 		}
-		if !errors.Is(result.Err, os.ErrNotExist) && result.Err.Error() == "" {
-			// Different OS may return different errors, just check we got one
-			t.Logf("got expected error: %v", result.Err)
-		}
 	})
 
 	t.Run("write failure returns ErrWritePDF", func(t *testing.T) {
+		t.Parallel()
+
 		tempDir := t.TempDir()
 
 		// Create input file
@@ -1023,6 +1109,8 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 	})
 
 	t.Run("read failure returns ErrReadMarkdown", func(t *testing.T) {
+		t.Parallel()
+
 		f := FileToConvert{
 			InputPath:  "/nonexistent/doc.md",
 			OutputPath: "/tmp/out.pdf",
@@ -1050,6 +1138,8 @@ func (m *staticMockConverter) Convert(_ context.Context, _ md2pdf.Input) ([]byte
 }
 
 func TestBuildPageSettings(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name            string
 		flags           *cliFlags
@@ -1178,6 +1268,8 @@ func TestBuildPageSettings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got, err := buildPageSettings(tt.flags, tt.cfg)
 
 			if tt.wantErr {
@@ -1218,6 +1310,8 @@ func TestBuildPageSettings(t *testing.T) {
 type PageConfig = config.PageConfig
 
 func TestValidateWorkers(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		n       int
@@ -1261,6 +1355,8 @@ func TestValidateWorkers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := validateWorkers(tt.n)
 
 			if tt.wantErr {
@@ -1290,6 +1386,8 @@ type WatermarkConfig = config.WatermarkConfig
 type CoverConfig = config.CoverConfig
 
 func TestBuildWatermarkData(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name        string
 		flags       *cliFlags
@@ -1534,6 +1632,8 @@ func TestBuildWatermarkData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got, err := buildWatermarkData(tt.flags, tt.cfg)
 
 			if tt.wantErr {
@@ -1577,6 +1677,8 @@ func TestBuildWatermarkData(t *testing.T) {
 }
 
 func TestExtractFirstHeading(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		markdown string
@@ -1631,6 +1733,8 @@ func TestExtractFirstHeading(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := extractFirstHeading(tt.markdown)
 			if got != tt.want {
 				t.Errorf("extractFirstHeading() = %q, want %q", got, tt.want)
@@ -1640,6 +1744,8 @@ func TestExtractFirstHeading(t *testing.T) {
 }
 
 func TestResolveDateWithTime(t *testing.T) {
+	t.Parallel()
+
 	fixedTime := time.Date(2025, 6, 15, 12, 0, 0, 0, time.UTC)
 	mockNow := func() time.Time { return fixedTime }
 
@@ -1682,6 +1788,8 @@ func TestResolveDateWithTime(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := resolveDateWithTime(tt.input, mockNow)
 			if got != tt.want {
 				t.Errorf("resolveDateWithTime(%q) = %q, want %q", tt.input, got, tt.want)
@@ -1691,6 +1799,8 @@ func TestResolveDateWithTime(t *testing.T) {
 }
 
 func TestBuildCoverData(t *testing.T) {
+	t.Parallel()
+
 	// Create a temp file for logo path tests
 	tempDir := t.TempDir()
 	existingLogo := filepath.Join(tempDir, "logo.png")
@@ -1699,6 +1809,8 @@ func TestBuildCoverData(t *testing.T) {
 	}
 
 	t.Run("cover disabled in config returns nil", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{Cover: CoverConfig{Enabled: false}}
 		got, err := buildCoverData(cfg, "# Markdown", "doc.md")
 		if err != nil {
@@ -1710,6 +1822,8 @@ func TestBuildCoverData(t *testing.T) {
 	})
 
 	t.Run("title from document config", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{
 			Document: DocumentConfig{Title: "Config Title"},
 			Cover:    CoverConfig{Enabled: true},
@@ -1727,6 +1841,8 @@ func TestBuildCoverData(t *testing.T) {
 	})
 
 	t.Run("title extracted from H1 when no document title", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{Cover: CoverConfig{Enabled: true}}
 		got, err := buildCoverData(cfg, "# My Document Title\n\nContent here", "doc.md")
 		if err != nil {
@@ -1741,6 +1857,8 @@ func TestBuildCoverData(t *testing.T) {
 	})
 
 	t.Run("title fallback to filename when no H1", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{Cover: CoverConfig{Enabled: true}}
 		got, err := buildCoverData(cfg, "No headings here, just content.", "my-document.md")
 		if err != nil {
@@ -1755,6 +1873,8 @@ func TestBuildCoverData(t *testing.T) {
 	})
 
 	t.Run("subtitle from document config", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{
 			Document: DocumentConfig{Title: "Title", Subtitle: "A Comprehensive Guide"},
 			Cover:    CoverConfig{Enabled: true},
@@ -1772,6 +1892,8 @@ func TestBuildCoverData(t *testing.T) {
 	})
 
 	t.Run("logo from cover config", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{
 			Document: DocumentConfig{Title: "Title"},
 			Cover:    CoverConfig{Enabled: true, Logo: existingLogo},
@@ -1789,6 +1911,8 @@ func TestBuildCoverData(t *testing.T) {
 	})
 
 	t.Run("logo URL accepted without validation", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{
 			Document: DocumentConfig{Title: "Title"},
 			Cover:    CoverConfig{Enabled: true, Logo: "https://example.com/logo.png"},
@@ -1806,6 +1930,8 @@ func TestBuildCoverData(t *testing.T) {
 	})
 
 	t.Run("author from author config", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{
 			Author:   AuthorConfig{Name: "John Doe"},
 			Document: DocumentConfig{Title: "Title"},
@@ -1824,6 +1950,8 @@ func TestBuildCoverData(t *testing.T) {
 	})
 
 	t.Run("authorTitle from author config", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{
 			Author:   AuthorConfig{Name: "John", Title: "Senior Developer"},
 			Document: DocumentConfig{Title: "Title"},
@@ -1842,6 +1970,8 @@ func TestBuildCoverData(t *testing.T) {
 	})
 
 	t.Run("organization from author config", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{
 			Author:   AuthorConfig{Organization: "Acme Corp"},
 			Document: DocumentConfig{Title: "Title"},
@@ -1860,6 +1990,8 @@ func TestBuildCoverData(t *testing.T) {
 	})
 
 	t.Run("date from document config", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{
 			Document: DocumentConfig{Title: "Title", Date: "2025-01-15"},
 			Cover:    CoverConfig{Enabled: true},
@@ -1877,6 +2009,8 @@ func TestBuildCoverData(t *testing.T) {
 	})
 
 	t.Run("version from document config", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{
 			Document: DocumentConfig{Title: "Title", Version: "v2.0.0"},
 			Cover:    CoverConfig{Enabled: true},
@@ -1894,6 +2028,8 @@ func TestBuildCoverData(t *testing.T) {
 	})
 
 	t.Run("all fields populated correctly", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{
 			Author: AuthorConfig{
 				Name:         "Author Name",
@@ -1945,6 +2081,8 @@ func TestBuildCoverData(t *testing.T) {
 	})
 
 	t.Run("empty optional fields preserved", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &Config{
 			Document: DocumentConfig{Title: "Just Title"},
 			Cover:    CoverConfig{Enabled: true},
@@ -1975,6 +2113,8 @@ func TestBuildCoverData(t *testing.T) {
 type TOCConfig = config.TOCConfig
 
 func TestBuildTOCData(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name         string
 		cfg          *Config
@@ -2038,6 +2178,8 @@ func TestBuildTOCData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := buildTOCData(tt.cfg, tt.flags)
 
 			if tt.wantNil {
@@ -2061,7 +2203,10 @@ func TestBuildTOCData(t *testing.T) {
 }
 
 func TestParseFlags_NoTOC(t *testing.T) {
+	t.Parallel()
+
 	t.Run("--no-toc flag sets noTOC true", func(t *testing.T) {
+		t.Parallel()
 		flags, _, err := parseFlags([]string{"md2pdf", "--no-toc", "test.md"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -2072,6 +2217,8 @@ func TestParseFlags_NoTOC(t *testing.T) {
 	})
 
 	t.Run("no --no-toc flag leaves noTOC false", func(t *testing.T) {
+		t.Parallel()
+
 		flags, _, err := parseFlags([]string{"md2pdf", "test.md"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -2082,6 +2229,8 @@ func TestParseFlags_NoTOC(t *testing.T) {
 	})
 
 	t.Run("--no-toc combined with other flags", func(t *testing.T) {
+		t.Parallel()
+
 		flags, _, err := parseFlags([]string{"md2pdf", "--no-toc", "--no-cover", "--quiet", "test.md"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -2102,6 +2251,8 @@ func TestParseFlags_NoTOC(t *testing.T) {
 type PageBreaksConfig = config.PageBreaksConfig
 
 func TestParseBreakBefore(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name   string
 		input  string
@@ -2197,6 +2348,8 @@ func TestParseBreakBefore(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			gotH1, gotH2, gotH3 := parseBreakBefore(tt.input)
 
 			if gotH1 != tt.wantH1 {
@@ -2213,6 +2366,8 @@ func TestParseBreakBefore(t *testing.T) {
 }
 
 func TestBuildPageBreaksData(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name         string
 		flags        *cliFlags
@@ -2317,6 +2472,8 @@ func TestBuildPageBreaksData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := buildPageBreaksData(tt.flags, tt.cfg)
 
 			if tt.wantNil {
@@ -2349,7 +2506,10 @@ func TestBuildPageBreaksData(t *testing.T) {
 }
 
 func TestParseFlags_PageBreaks(t *testing.T) {
+	t.Parallel()
+
 	t.Run("--no-page-breaks flag sets noPageBreaks true", func(t *testing.T) {
+		t.Parallel()
 		flags, _, err := parseFlags([]string{"md2pdf", "--no-page-breaks", "test.md"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -2360,6 +2520,8 @@ func TestParseFlags_PageBreaks(t *testing.T) {
 	})
 
 	t.Run("--break-before flag parses value", func(t *testing.T) {
+		t.Parallel()
+
 		flags, _, err := parseFlags([]string{"md2pdf", "--break-before", "h1,h2", "test.md"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -2370,6 +2532,8 @@ func TestParseFlags_PageBreaks(t *testing.T) {
 	})
 
 	t.Run("--orphans flag parses value", func(t *testing.T) {
+		t.Parallel()
+
 		flags, _, err := parseFlags([]string{"md2pdf", "--orphans", "3", "test.md"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -2380,6 +2544,8 @@ func TestParseFlags_PageBreaks(t *testing.T) {
 	})
 
 	t.Run("--widows flag parses value", func(t *testing.T) {
+		t.Parallel()
+
 		flags, _, err := parseFlags([]string{"md2pdf", "--widows", "4", "test.md"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -2390,6 +2556,8 @@ func TestParseFlags_PageBreaks(t *testing.T) {
 	})
 
 	t.Run("all page break flags combined", func(t *testing.T) {
+		t.Parallel()
+
 		flags, _, err := parseFlags([]string{
 			"md2pdf",
 			"--break-before", "h1,h2,h3",
@@ -2412,6 +2580,8 @@ func TestParseFlags_PageBreaks(t *testing.T) {
 	})
 
 	t.Run("--no-page-breaks with other page break flags", func(t *testing.T) {
+		t.Parallel()
+
 		flags, _, err := parseFlags([]string{
 			"md2pdf",
 			"--no-page-breaks",
@@ -2436,6 +2606,8 @@ func TestParseFlags_PageBreaks(t *testing.T) {
 }
 
 func TestMergeFlags(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name  string
 		flags *convertFlags
@@ -2702,6 +2874,8 @@ func TestMergeFlags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			mergeFlags(tt.flags, tt.cfg)
 			tt.check(t, tt.cfg)
 		})
@@ -2709,6 +2883,7 @@ func TestMergeFlags(t *testing.T) {
 }
 
 func TestParseConvertFlags_NewFlags(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		args  []string
@@ -2944,6 +3119,8 @@ func TestParseConvertFlags_NewFlags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			flags, _, err := parseConvertFlags(tt.args)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -2954,6 +3131,8 @@ func TestParseConvertFlags_NewFlags(t *testing.T) {
 }
 
 func TestParseConvertFlags_PositionalArgs(t *testing.T) {
+	t.Parallel()
+
 	flags, positional, err := parseConvertFlags([]string{"--author-name", "John", "doc.md", "doc2.md"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

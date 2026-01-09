@@ -7,6 +7,8 @@ import (
 )
 
 func TestPrintUsage(t *testing.T) {
+	t.Parallel()
+
 	var buf bytes.Buffer
 	printUsage(&buf)
 	output := buf.String()
@@ -27,6 +29,8 @@ func TestPrintUsage(t *testing.T) {
 }
 
 func TestPrintConvertUsage(t *testing.T) {
+	t.Parallel()
+
 	var buf bytes.Buffer
 	printConvertUsage(&buf)
 	output := buf.String()
@@ -95,6 +99,8 @@ func TestPrintConvertUsage(t *testing.T) {
 }
 
 func TestRunHelp(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name         string
 		args         []string
@@ -130,6 +136,8 @@ func TestRunHelp(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			var stdout, stderr bytes.Buffer
 			deps := &Dependencies{
 				Stdout: &stdout,
