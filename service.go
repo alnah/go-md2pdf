@@ -5,6 +5,20 @@ import (
 	"fmt"
 )
 
+// Compile-time interface implementation checks.
+// These ensure implementations satisfy their interfaces at compile time,
+// catching signature mismatches before runtime.
+var (
+	_ markdownPreprocessor = (*commonMarkPreprocessor)(nil)
+	_ htmlConverter        = (*goldmarkConverter)(nil)
+	_ cssInjector          = (*cssInjection)(nil)
+	_ coverInjector        = (*coverInjection)(nil)
+	_ tocInjector          = (*tocInjection)(nil)
+	_ signatureInjector    = (*signatureInjection)(nil)
+	_ pdfConverter         = (*rodConverter)(nil)
+	_ pdfRenderer          = (*rodRenderer)(nil)
+)
+
 // Service orchestrates the markdown-to-PDF pipeline.
 type Service struct {
 	cfg               serviceConfig

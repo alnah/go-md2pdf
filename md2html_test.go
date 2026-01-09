@@ -7,9 +7,6 @@ import (
 	"time"
 )
 
-// Compile-time interface check.
-var _ htmlConverter = (*goldmarkConverter)(nil)
-
 func TestGoldmarkConverter_ToHTML(t *testing.T) {
 	t.Parallel()
 
