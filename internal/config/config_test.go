@@ -851,3 +851,288 @@ func TestConfig_Validate_TOC(t *testing.T) {
 		}
 	})
 }
+
+func TestConfig_Validate_Watermark(t *testing.T) {
+	t.Parallel()
+
+	t.Run("watermark disabled skips validation", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Watermark: WatermarkConfig{Enabled: false}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("watermark enabled without text returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Watermark: WatermarkConfig{
+			Enabled: true,
+			Text:    "",
+			Opacity: 0.5,
+			Angle:   -45,
+		}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("expected error for missing text")
+		}
+	})
+
+	t.Run("watermark.text too long returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Watermark: WatermarkConfig{
+			Enabled: true,
+			Text:    string(make([]byte, MaxWatermarkTextLength+1)),
+			Opacity: 0.5,
+			Angle:   -45,
+		}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("watermark.color too long returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Watermark: WatermarkConfig{
+			Enabled: true,
+			Text:    "DRAFT",
+			Color:   string(make([]byte, MaxWatermarkColorLength+1)),
+			Opacity: 0.5,
+			Angle:   -45,
+		}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("watermark.opacity below minimum returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Watermark: WatermarkConfig{
+			Enabled: true,
+			Text:    "DRAFT",
+			Opacity: -0.1,
+			Angle:   -45,
+		}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("expected error for opacity below minimum")
+		}
+	})
+
+	t.Run("watermark.opacity above maximum returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Watermark: WatermarkConfig{
+			Enabled: true,
+			Text:    "DRAFT",
+			Opacity: 1.1,
+			Angle:   -45,
+		}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("expected error for opacity above maximum")
+		}
+	})
+
+	t.Run("watermark.angle below minimum returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Watermark: WatermarkConfig{
+			Enabled: true,
+			Text:    "DRAFT",
+			Opacity: 0.5,
+			Angle:   -181,
+		}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("expected error for angle below minimum")
+		}
+	})
+
+	t.Run("watermark.angle above maximum returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Watermark: WatermarkConfig{
+			Enabled: true,
+			Text:    "DRAFT",
+			Opacity: 0.5,
+			Angle:   181,
+		}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("expected error for angle above maximum")
+		}
+	})
+
+	t.Run("valid watermark config passes", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Watermark: WatermarkConfig{
+			Enabled: true,
+			Text:    "CONFIDENTIAL",
+			Color:   "#888888",
+			Opacity: 0.5,
+			Angle:   -45,
+		}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestConfig_Validate_Footer(t *testing.T) {
+	t.Parallel()
+
+	t.Run("footer.position invalid returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Footer: FooterConfig{
+			Enabled:  true,
+			Position: "invalid",
+		}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("expected error for invalid position")
+		}
+	})
+
+	t.Run("footer.position uppercase valid", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Footer: FooterConfig{
+			Enabled:  true,
+			Position: "LEFT",
+		}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("footer.position center valid", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Footer: FooterConfig{
+			Enabled:  true,
+			Position: "center",
+		}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestConfig_Validate_Author(t *testing.T) {
+	t.Parallel()
+
+	t.Run("author.title too long returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Author: AuthorConfig{
+			Title: string(make([]byte, MaxTitleLength+1)),
+		}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("author.organization too long returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Author: AuthorConfig{
+			Organization: string(make([]byte, MaxOrganizationLength+1)),
+		}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+}
+
+func TestConfig_Validate_Document(t *testing.T) {
+	t.Parallel()
+
+	t.Run("document.title too long returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Document: DocumentConfig{
+			Title: string(make([]byte, MaxDocTitleLength+1)),
+		}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("document.subtitle too long returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Document: DocumentConfig{
+			Subtitle: string(make([]byte, MaxSubtitleLength+1)),
+		}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("document.date too long returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Document: DocumentConfig{
+			Date: string(make([]byte, MaxDateLength+1)),
+		}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+}
+
+func TestConfig_Validate_Signature(t *testing.T) {
+	t.Parallel()
+
+	t.Run("signature.imagePath too long returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Signature: SignatureConfig{
+			ImagePath: string(make([]byte, MaxURLLength+1)),
+		}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("signature.links label too long returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Signature: SignatureConfig{
+			Links: []Link{
+				{Label: string(make([]byte, MaxLabelLength+1)), URL: "https://example.com"},
+			},
+		}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+}
+
+func TestConfig_Validate_Cover(t *testing.T) {
+	t.Parallel()
+
+	t.Run("cover.logo too long returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Cover: CoverConfig{
+			Logo: string(make([]byte, MaxURLLength+1)),
+		}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("valid cover config passes", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Cover: CoverConfig{
+			Enabled: true,
+			Logo:    "https://example.com/logo.png",
+		}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+}
