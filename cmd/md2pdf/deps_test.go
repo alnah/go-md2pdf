@@ -8,6 +8,8 @@ import (
 )
 
 func TestDefaultDeps(t *testing.T) {
+	t.Parallel()
+
 	deps := DefaultDeps()
 
 	t.Run("Now returns real time", func(t *testing.T) {
@@ -34,7 +36,11 @@ func TestDefaultDeps(t *testing.T) {
 }
 
 func TestDependencyInjection(t *testing.T) {
+	t.Parallel()
+
 	t.Run("mock time is used", func(t *testing.T) {
+		t.Parallel()
+
 		fixedTime := time.Date(2025, 6, 15, 12, 0, 0, 0, time.UTC)
 		deps := &Dependencies{
 			Now:    func() time.Time { return fixedTime },
@@ -49,6 +55,8 @@ func TestDependencyInjection(t *testing.T) {
 	})
 
 	t.Run("mock stdout captures output", func(t *testing.T) {
+		t.Parallel()
+
 		var stdout bytes.Buffer
 		deps := &Dependencies{
 			Now:    time.Now,
@@ -65,6 +73,8 @@ func TestDependencyInjection(t *testing.T) {
 	})
 
 	t.Run("mock stderr captures errors", func(t *testing.T) {
+		t.Parallel()
+
 		var stderr bytes.Buffer
 		deps := &Dependencies{
 			Now:    time.Now,

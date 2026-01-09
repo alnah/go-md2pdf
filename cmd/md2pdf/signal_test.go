@@ -6,7 +6,11 @@ import (
 )
 
 func TestNotifyContext(t *testing.T) {
+	t.Parallel()
+
 	t.Run("returns non-nil context", func(t *testing.T) {
+		t.Parallel()
+
 		ctx, stop := notifyContext(context.Background())
 		defer stop()
 
@@ -16,6 +20,8 @@ func TestNotifyContext(t *testing.T) {
 	})
 
 	t.Run("context starts not cancelled", func(t *testing.T) {
+		t.Parallel()
+
 		ctx, stop := notifyContext(context.Background())
 		defer stop()
 
@@ -28,6 +34,8 @@ func TestNotifyContext(t *testing.T) {
 	})
 
 	t.Run("stop function cancels context", func(t *testing.T) {
+		t.Parallel()
+
 		ctx, stop := notifyContext(context.Background())
 		stop()
 
@@ -40,6 +48,8 @@ func TestNotifyContext(t *testing.T) {
 	})
 
 	t.Run("inherits parent cancellation", func(t *testing.T) {
+		t.Parallel()
+
 		parent, cancel := context.WithCancel(context.Background())
 		ctx, stop := notifyContext(parent)
 		defer stop()
