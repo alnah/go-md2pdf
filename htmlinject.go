@@ -549,9 +549,10 @@ func (t *tocInjection) InjectTOC(ctx context.Context, htmlContent string, data *
 
 	lowerHTML := strings.ToLower(htmlContent)
 
-	// Try inserting after cover page (look for </section> or </div> with cover class)
-	// The cover is injected as a section, so look for the end of cover
-	coverEndPattern := regexp.MustCompile(`(?i)</div>\s*</section>\s*<!--\s*cover-end\s*-->`)
+	// Try inserting after cover page marker.
+	// Note: We use <span data-cover-end> instead of <!-- cover-end --> comment
+	// because html/template strips HTML comments for security reasons.
+	coverEndPattern := regexp.MustCompile(`(?i)</div>\s*</section>\s*<span[^>]*data-cover-end[^>]*>\s*</span>`)
 	if loc := coverEndPattern.FindStringIndex(htmlContent); loc != nil {
 		insertPos := loc[1]
 		return htmlContent[:insertPos] + tocHTML + htmlContent[insertPos:], nil
