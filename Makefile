@@ -1,6 +1,6 @@
 BINARY := md2pdf
 
-.PHONY: help build test test-integration test-cover test-cover-all run clean fmt vet lint sec check check-all tools
+.PHONY: help build test test-integration test-cover test-cover-all bench bench-cpu bench-mem run clean fmt vet lint sec check check-all tools
 
 .DEFAULT_GOAL := help
 
@@ -36,11 +36,29 @@ test-cover-all: ## Run all tests with coverage report (requires pandoc)
 	go test -v -tags=integration -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 
+bench: ## Run benchmarks
+	go test -tags=bench -bench=. -benchmem ./...
+
+bench-cpu: ## Run benchmarks with CPU profiling
+	go test -tags=bench -bench=. -benchmem -cpuprofile=cpu.prof ./...
+	@echo "Run 'go tool pprof cpu.prof' to analyze"
+
+bench-mem: ## Run benchmarks with memory profiling
+	go test -tags=bench -bench=. -benchmem -memprofile=mem.prof ./...
+	@echo "Run 'go tool pprof mem.prof' to analyze"
+
+bench-compare: ## Compare benchmarks (usage: make bench-compare OLD=old.txt NEW=new.txt)
+	@if [ -z "$(OLD)" ] || [ -z "$(NEW)" ]; then \
+		echo "Usage: make bench-compare OLD=old.txt NEW=new.txt"; \
+		exit 1; \
+	fi
+	go run golang.org/x/perf/cmd/benchstat@latest $(OLD) $(NEW)
+
 run: build ## Build and run the shell
 	./$(BINARY)
 
 clean: ## Remove build artifacts
-	rm -f $(BINARY) coverage.out coverage.html
+	rm -f $(BINARY) coverage.out coverage.html cpu.prof mem.prof
 
 fmt: ## Format source code
 	go fmt ./...
