@@ -474,9 +474,9 @@ img {
 /* Signature */
 .signature-block {
   page-break-inside: avoid;
-  margin-top: var(--signature-margin-top) !important;
-  display: flex !important;
-  align-items: center !important;
+  margin-top: var(--signature-margin-top);
+  display: flex;
+  align-items: center;
   padding: 12px 15px;
   background: rgba(235, 203, 139, 0.2);
   border-radius: 8px;
