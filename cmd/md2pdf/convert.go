@@ -39,6 +39,9 @@ type Converter interface {
 	Convert(ctx context.Context, input md2pdf.Input) ([]byte, error)
 }
 
+// Compile-time interface implementation check.
+var _ Converter = (*md2pdf.Service)(nil)
+
 // Pool abstracts service pool operations for testability.
 type Pool interface {
 	Acquire() Converter

@@ -42,9 +42,6 @@ func printResults(results []ConversionResult, quiet, verbose bool) int {
 	return printResultsWithWriter(results, quiet, verbose, deps)
 }
 
-// Compile-time interface compliance check (also ensures md2pdf import is used)
-var _ Converter = (*md2pdf.Service)(nil)
-
 func TestParseFlags(t *testing.T) {
 	t.Parallel()
 
