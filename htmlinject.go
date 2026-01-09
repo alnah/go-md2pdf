@@ -16,6 +16,9 @@ import (
 // defaultFontFamily is the standard font stack for PDF footers and generated content.
 const defaultFontFamily = "'Inter', sans-serif"
 
+// watermarkFontSize is the font size for watermark text overlay.
+const watermarkFontSize = "8rem"
+
 // cssInjector defines the contract for CSS injection into HTML.
 type cssInjector interface {
 	InjectCSS(ctx context.Context, htmlContent, cssContent string) string
@@ -239,7 +242,7 @@ body::before {
   top: 50%%;
   left: 50%%;
   transform: translate(-50%%, -50%%) rotate(%.1fdeg);
-  font-size: 8rem;
+  font-size: %s;
   font-weight: bold;
   color: %s;
   opacity: %.2f;
@@ -248,7 +251,7 @@ body::before {
   white-space: nowrap;
   font-family: %s;
 }
-`, escapeCSSString(w.Text), w.Angle, w.Color, w.Opacity, defaultFontFamily)
+`, escapeCSSString(w.Text), w.Angle, watermarkFontSize, w.Color, w.Opacity, defaultFontFamily)
 }
 
 // escapeCSSString escapes a string for safe use in CSS content property.
