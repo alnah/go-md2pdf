@@ -535,7 +535,7 @@ img {
   ol {
     display: block !important;
     margin: var(--spacing-md) 0 !important;
-    padding-left: 40px !important;
+    padding-left: 2em !important;
   }
 
   li {
