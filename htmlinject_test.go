@@ -1469,7 +1469,8 @@ func TestInjectTOC(t *testing.T) {
 		t.Parallel()
 
 		ctx := context.Background()
-		html := `<html><body></div></section><!-- cover-end --><h1 id="ch1">Chapter 1</h1></body></html>`
+		// Use <span data-cover-end> marker (not HTML comment, which html/template strips)
+		html := `<html><body></div></section><span data-cover-end></span><h1 id="ch1">Chapter 1</h1></body></html>`
 		data := &tocData{Title: "Contents", MaxDepth: 3}
 
 		got, err := injector.InjectTOC(ctx, html, data)
@@ -1478,7 +1479,7 @@ func TestInjectTOC(t *testing.T) {
 		}
 
 		// TOC should appear after cover-end marker
-		coverEndIdx := strings.Index(got, "<!-- cover-end -->")
+		coverEndIdx := strings.Index(got, "data-cover-end")
 		tocIdx := strings.Index(got, `<nav class="toc">`)
 		if coverEndIdx == -1 || tocIdx == -1 {
 			t.Fatal("cover-end or toc nav not found")
@@ -1584,6 +1585,66 @@ func TestInjectTOC_ContextCancellation(t *testing.T) {
 	}
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("expected context.Canceled, got %v", err)
+	}
+}
+
+// TestInjectTOC_AfterCover verifies that TOC is injected AFTER the cover page.
+// This is a regression test for a bug where html/template strips HTML comments,
+// causing the <!-- cover-end --> marker to be removed, and TOC to be inserted
+// before the cover (at the <body> fallback position).
+func TestInjectTOC_AfterCover(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	coverInjector := newCoverInjection()
+	tocInjector := newTOCInjection()
+
+	// Start with HTML that has a heading (needed for TOC generation)
+	html := `<!DOCTYPE html>
+<html>
+<head><title>Test</title></head>
+<body>
+<h1 id="chapter-1">Chapter 1</h1>
+<p>Content here</p>
+</body>
+</html>`
+
+	// Step 1: Inject cover
+	coverData := &coverData{
+		Title:  "My Document",
+		Author: "Test Author",
+	}
+	htmlWithCover, err := coverInjector.InjectCover(ctx, html, coverData)
+	if err != nil {
+		t.Fatalf("InjectCover failed: %v", err)
+	}
+
+	// Step 2: Inject TOC
+	tocData := &tocData{
+		Title:    "Table of Contents",
+		MaxDepth: 3,
+	}
+	htmlWithTOC, err := tocInjector.InjectTOC(ctx, htmlWithCover, tocData)
+	if err != nil {
+		t.Fatalf("InjectTOC failed: %v", err)
+	}
+
+	// Verify: TOC must appear AFTER cover, not before
+	coverIdx := strings.Index(htmlWithTOC, "cover-page")
+	tocIdx := strings.Index(htmlWithTOC, `<nav class="toc">`)
+
+	if coverIdx == -1 {
+		t.Fatal("cover-page not found in output")
+	}
+	if tocIdx == -1 {
+		t.Fatal("TOC nav not found in output")
+	}
+
+	if tocIdx < coverIdx {
+		t.Errorf("BUG: TOC appears BEFORE cover (toc at %d, cover at %d).\n"+
+			"This happens because html/template strips HTML comments, "+
+			"removing the <!-- cover-end --> marker.\n"+
+			"HTML:\n%s", tocIdx, coverIdx, htmlWithTOC)
 	}
 }
 
