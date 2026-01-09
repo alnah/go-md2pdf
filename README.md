@@ -299,45 +299,45 @@ docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf convert ./docs/ -o ./pdf
 Config files are loaded from `~/.config/go-md2pdf/` or current directory.
 Supported formats: `.yaml`, `.yml`
 
-| Option                  | Type   | Default      | Description                                    |
-| ----------------------- | ------ | ------------ | ---------------------------------------------- |
-| `author.name`           | string | -            | Author name (used by cover, signature)         |
-| `author.title`          | string | -            | Author professional title                      |
-| `author.email`          | string | -            | Author email                                   |
-| `author.organization`   | string | -            | Organization name                              |
-| `document.title`        | string | -            | Document title ("" = auto from H1)             |
-| `document.subtitle`     | string | -            | Document subtitle                              |
-| `document.version`      | string | -            | Version string (used in cover, footer)         |
-| `document.date`         | string | -            | Date ("auto" = today's date)                   |
-| `input.defaultDir`      | string | -            | Default input directory                        |
-| `output.defaultDir`     | string | -            | Default output directory                       |
-| `css.style`             | string | -            | Embedded style name                            |
-| `page.size`             | string | `"letter"`   | letter, a4, legal                              |
-| `page.orientation`      | string | `"portrait"` | portrait, landscape                            |
-| `page.margin`           | float  | `0.5`        | Margin in inches (0.25-3.0)                    |
-| `cover.enabled`         | bool   | `false`      | Show cover page                                |
-| `cover.logo`            | string | -            | Logo path or URL                               |
-| `toc.enabled`           | bool   | `false`      | Show table of contents                         |
-| `toc.title`             | string | -            | TOC title (empty = no title)                   |
-| `toc.maxDepth`          | int    | `3`          | Heading depth (1-6)                            |
-| `footer.enabled`        | bool   | `false`      | Show footer                                    |
-| `footer.showPageNumber` | bool   | `false`      | Show page numbers                              |
-| `footer.position`       | string | `"right"`    | left, center, right                            |
-| `footer.text`           | string | -            | Custom footer text                             |
-| `signature.enabled`     | bool   | `false`      | Show signature block                           |
-| `signature.imagePath`   | string | -            | Photo path or URL                              |
-| `signature.links`       | array  | -            | Links (label, url)                             |
-| `watermark.enabled`     | bool   | `false`      | Show watermark                                 |
-| `watermark.text`        | string | -            | Watermark text (required if enabled)           |
-| `watermark.color`       | string | `"#888888"`  | Watermark color (hex)                          |
-| `watermark.opacity`     | float  | `0.1`        | Watermark opacity (0.0-1.0)                    |
-| `watermark.angle`       | float  | `-45`        | Watermark rotation (degrees)                   |
-| `pageBreaks.enabled`    | bool   | `false`      | Enable page break features                     |
-| `pageBreaks.beforeH1`   | bool   | `false`      | Page break before H1 headings                  |
-| `pageBreaks.beforeH2`   | bool   | `false`      | Page break before H2 headings                  |
-| `pageBreaks.beforeH3`   | bool   | `false`      | Page break before H3 headings                  |
-| `pageBreaks.orphans`    | int    | `2`          | Min lines at page bottom (1-5)                 |
-| `pageBreaks.widows`     | int    | `2`          | Min lines at page top (1-5)                    |
+| Option                  | Type   | Default      | Description                            |
+| ----------------------- | ------ | ------------ | -------------------------------------- |
+| `author.name`           | string | -            | Author name (used by cover, signature) |
+| `author.title`          | string | -            | Author professional title              |
+| `author.email`          | string | -            | Author email                           |
+| `author.organization`   | string | -            | Organization name                      |
+| `document.title`        | string | -            | Document title ("" = auto from H1)     |
+| `document.subtitle`     | string | -            | Document subtitle                      |
+| `document.version`      | string | -            | Version string (used in cover, footer) |
+| `document.date`         | string | -            | Date ("auto" = today's date)           |
+| `input.defaultDir`      | string | -            | Default input directory                |
+| `output.defaultDir`     | string | -            | Default output directory               |
+| `css.style`             | string | -            | Embedded style name                    |
+| `page.size`             | string | `"letter"`   | letter, a4, legal                      |
+| `page.orientation`      | string | `"portrait"` | portrait, landscape                    |
+| `page.margin`           | float  | `0.5`        | Margin in inches (0.25-3.0)            |
+| `cover.enabled`         | bool   | `false`      | Show cover page                        |
+| `cover.logo`            | string | -            | Logo path or URL                       |
+| `toc.enabled`           | bool   | `false`      | Show table of contents                 |
+| `toc.title`             | string | -            | TOC title (empty = no title)           |
+| `toc.maxDepth`          | int    | `3`          | Heading depth (1-6)                    |
+| `footer.enabled`        | bool   | `false`      | Show footer                            |
+| `footer.showPageNumber` | bool   | `false`      | Show page numbers                      |
+| `footer.position`       | string | `"right"`    | left, center, right                    |
+| `footer.text`           | string | -            | Custom footer text                     |
+| `signature.enabled`     | bool   | `false`      | Show signature block                   |
+| `signature.imagePath`   | string | -            | Photo path or URL                      |
+| `signature.links`       | array  | -            | Links (label, url)                     |
+| `watermark.enabled`     | bool   | `false`      | Show watermark                         |
+| `watermark.text`        | string | -            | Watermark text (required if enabled)   |
+| `watermark.color`       | string | `"#888888"`  | Watermark color (hex)                  |
+| `watermark.opacity`     | float  | `0.1`        | Watermark opacity (0.0-1.0)            |
+| `watermark.angle`       | float  | `-45`        | Watermark rotation (degrees)           |
+| `pageBreaks.enabled`    | bool   | `false`      | Enable page break features             |
+| `pageBreaks.beforeH1`   | bool   | `false`      | Page break before H1 headings          |
+| `pageBreaks.beforeH2`   | bool   | `false`      | Page break before H2 headings          |
+| `pageBreaks.beforeH3`   | bool   | `false`      | Page break before H3 headings          |
+| `pageBreaks.orphans`    | int    | `2`          | Min lines at page bottom (1-5)         |
+| `pageBreaks.widows`     | int    | `2`          | Min lines at page top (1-5)            |
 
 <details>
 <summary>Example config file</summary>
@@ -345,64 +345,84 @@ Supported formats: `.yaml`, `.yml`
 ```yaml
 # ~/.config/go-md2pdf/work.yaml
 
+# Input/Output directories
+input:
+  defaultDir: './docs/markdown' # Default input when no arg provided
+
+output:
+  defaultDir: './docs/pdf' # Default output when no -o flag
+
 # Shared author info (used by cover and signature)
 author:
   name: 'John Doe'
-  title: 'Developer'
+  title: 'Senior Developer'
   email: 'john@example.com'
   organization: 'Acme Corp'
 
 # Shared document metadata (used by cover and footer)
 document:
-  # title: auto-detected from H1 or filename
+  title: '' # "" = auto from H1 or filename
   subtitle: 'Internal Document'
   version: 'v1.0'
-  date: 'auto' # resolves to YYYY-MM-DD
+  date: 'auto' # "auto" = YYYY-MM-DD at runtime
 
-css:
-  style: 'nord' # add your styles to internal/assets/styles/, and build or install
-
+# Page layout
 page:
-  size: 'a4'
-  orientation: 'portrait'
-  margin: 0.75 # inches (0.5in = 12.7mm, 1in = 25.4mm)
+  size: 'a4' # letter (default), a4, legal
+  orientation: 'portrait' # portrait (default), landscape
+  margin: 0.75 # inches, 0.25-3.0 (default: 0.5)
 
+# Styling
+css:
+  style: 'nord' # embedded style name (in internal/assets/styles/)
+
+assets:
+  basePath: '' # "" = use embedded assets
+
+# Cover page
 cover:
   enabled: true
-  logo: '/path/to/company-logo.png'
+  logo: '/path/to/logo.png' # path or URL
 
+# Table of contents
 toc:
   enabled: true
   title: 'Table of Contents'
-  maxDepth: 3
+  maxDepth: 3 # 1-6 (default: 3)
 
+# Footer
 footer:
   enabled: true
+  position: 'center' # left, center, right (default: right)
   showPageNumber: true
-  position: 'center'
   text: '' # optional custom text
 
+# Signature block
 signature:
   enabled: true
-  imagePath: '/path/to/signature.png' # optional
+  imagePath: '/path/to/signature.png'
   links:
     - label: 'GitHub'
       url: 'https://github.com/johndoe'
+    - label: 'LinkedIn'
+      url: 'https://linkedin.com/in/johndoe'
 
+# Watermark
 watermark:
-  enabled: true
+  enabled: false
   text: 'DRAFT'
-  color: '#888888'
-  opacity: 0.1
-  angle: -45
+  color: '#888888' # default: #888888
+  opacity: 0.1 # 0.0-1.0 (default: 0.1)
+  angle: -45 # -90 to 90 (default: -45)
 
+# Page breaks
 pageBreaks:
   enabled: true
   beforeH1: true
   beforeH2: false
   beforeH3: false
-  orphans: 2
-  widows: 2
+  orphans: 2 # 1-5 (default: 2)
+  widows: 2 # 1-5 (default: 2)
 ```
 
 </details>
