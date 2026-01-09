@@ -271,9 +271,9 @@ func TestGoldmarkConverter_ToHTML_ContextCancellation(t *testing.T) {
 	t.Run("deadline exceeded returns error", func(t *testing.T) {
 		t.Parallel()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+		// Create an already-expired context to avoid flaky timing issues
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
 		defer cancel()
-		time.Sleep(1 * time.Millisecond) // Ensure timeout expires
 
 		_, err := converter.ToHTML(ctx, "# Test")
 		if err == nil {
