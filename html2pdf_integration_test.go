@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func assertValidPDF(t *testing.T, data []byte) {
@@ -229,5 +230,46 @@ func TestRodRenderer_EnsureBrowser_CI(t *testing.T) {
 
 	if renderer.browser == nil {
 		t.Error("browser should not be nil after ensureBrowser()")
+	}
+}
+
+// TestRodRenderer_RenderFromFile_ContextCancelled tests early exit on cancelled context.
+func TestRodRenderer_RenderFromFile_ContextCancelled(t *testing.T) {
+	t.Parallel()
+
+	renderer := newRodRenderer(testTimeout)
+	defer renderer.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	_, err := renderer.RenderFromFile(ctx, "/tmp/nonexistent.html", nil)
+
+	if err == nil {
+		t.Fatal("expected error for cancelled context, got nil")
+	}
+	if err != context.Canceled {
+		t.Errorf("expected context.Canceled, got %v", err)
+	}
+}
+
+// TestRodRenderer_RenderFromFile_ContextDeadlineExceeded tests early exit on expired deadline.
+func TestRodRenderer_RenderFromFile_ContextDeadlineExceeded(t *testing.T) {
+	t.Parallel()
+
+	renderer := newRodRenderer(testTimeout)
+	defer renderer.Close()
+
+	// Context with already-passed deadline
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+
+	_, err := renderer.RenderFromFile(ctx, "/tmp/nonexistent.html", nil)
+
+	if err == nil {
+		t.Fatal("expected error for expired deadline, got nil")
+	}
+	if err != context.DeadlineExceeded {
+		t.Errorf("expected context.DeadlineExceeded, got %v", err)
 	}
 }
