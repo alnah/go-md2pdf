@@ -248,10 +248,13 @@ func TestServicePool_ReleaseNilService(t *testing.T) {
 	// This test documents that behavior.
 }
 
+// TestServicePool_HighContention verifies the pool remains deadlock-free under
+// heavy concurrent access. A small pool (2 services) with many goroutines (50)
+// each performing multiple acquire/release cycles exposes race conditions and
+// channel blocking issues that wouldn't surface with lighter loads.
 func TestServicePool_HighContention(t *testing.T) {
 	t.Parallel()
 
-	// Small pool with many goroutines to stress test contention
 	pool := NewServicePool(2)
 	defer pool.Close()
 
@@ -342,4 +345,26 @@ func TestServicePool_LazyCreation(t *testing.T) {
 	}
 
 	pool.Release(svc2)
+}
+
+func TestResolvePoolSize_NegativeWorkers(t *testing.T) {
+	t.Parallel()
+
+	// Negative workers should be treated as 0 (auto-calculate)
+	got := ResolvePoolSize(-5)
+
+	if got < MinPoolSize || got > MaxPoolSize {
+		t.Errorf("ResolvePoolSize(-5) = %d, should be between %d and %d", got, MinPoolSize, MaxPoolSize)
+	}
+}
+
+func TestResolvePoolSize_LargeExplicitValue(t *testing.T) {
+	t.Parallel()
+
+	// Explicit value above MaxPoolSize should be allowed
+	got := ResolvePoolSize(100)
+
+	if got != 100 {
+		t.Errorf("ResolvePoolSize(100) = %d, want 100", got)
+	}
 }
