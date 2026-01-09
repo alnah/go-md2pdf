@@ -76,13 +76,16 @@ func (p *ServicePool) Acquire() *Service {
 }
 
 // Release returns a service to the pool.
+// The lock is released before sending to avoid deadlock when channel is full.
 func (p *ServicePool) Release(svc *Service) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	if !p.closed {
-		p.sem <- svc
+	if p.closed {
+		p.mu.Unlock()
+		return
 	}
+	p.mu.Unlock()
+
+	p.sem <- svc
 }
 
 // Close releases all browser resources.
