@@ -591,6 +591,7 @@ func buildTOCData(cfg *config.Config, tocFlags tocFlags) *md2pdf.TOC {
 
 	return &md2pdf.TOC{
 		Title:    cfg.TOC.Title,
+		MinDepth: cfg.TOC.MinDepth, // 0 = library defaults to 2
 		MaxDepth: maxDepth,
 	}
 }
