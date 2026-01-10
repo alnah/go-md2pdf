@@ -184,7 +184,7 @@ func BenchmarkExtractHeadings(b *testing.B) {
 			b.ResetTimer()
 
 			for i := 0; i < b.N; i++ {
-				result := extractHeadings(h.content, h.depth)
+				result := extractHeadings(h.content, 1, h.depth)
 				_ = result
 			}
 		})
