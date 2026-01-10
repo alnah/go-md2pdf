@@ -96,7 +96,11 @@ func runConvert(ctx context.Context, positionalArgs []string, flags *convertFlag
 	mergeFlags(flags, cfg)
 
 	// Resolve "auto" date once for entire batch
-	cfg.Document.Date = resolveDateWithTime(cfg.Document.Date, deps.Now)
+	resolvedDate, err := resolveDateWithTime(cfg.Document.Date, deps.Now)
+	if err != nil {
+		return fmt.Errorf("invalid date format: %w", err)
+	}
+	cfg.Document.Date = resolvedDate
 
 	// Resolve input path
 	inputPath, err := resolveInputPath(positionalArgs, cfg)
@@ -249,12 +253,9 @@ func mergeFlags(flags *convertFlags, cfg *config.Config) {
 	}
 }
 
-// resolveDateWithTime resolves "auto" to current date using injectable time.
-func resolveDateWithTime(date string, now func() time.Time) string {
-	if strings.ToLower(date) == "auto" {
-		return now().Format("2006-01-02")
-	}
-	return date
+// resolveDateWithTime resolves "auto" and "auto:FORMAT" to formatted date.
+func resolveDateWithTime(date string, now func() time.Time) (string, error) {
+	return md2pdf.ResolveDate(date, now())
 }
 
 // resolveInputPath determines the input path from args or config.
