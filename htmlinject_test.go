@@ -706,7 +706,7 @@ func TestBuildWatermarkCSS(t *testing.T) {
 			name:      "CSS injection attempt is escaped",
 			watermark: &Watermark{Text: `"; } body { display: none } .x { content: "`, Color: "#888888", Opacity: 0.1, Angle: -45},
 			wantContains: []string{
-				`content: "\"; } body { display: none } .x { content: \""`,
+				`content: "\"; } body { display: none } ` + "\u2024" + `x { content: \""`,
 				"opacity: 0.10", // verify CSS structure is intact after injection attempt
 			},
 		},
@@ -746,6 +746,65 @@ func TestBuildWatermarkCSS(t *testing.T) {
 				if strings.Contains(got, notWant) {
 					t.Errorf("buildWatermarkCSS() should not contain %q\nGot:\n%s", notWant, got)
 				}
+			}
+		})
+	}
+}
+
+func TestBreakURLPattern(t *testing.T) {
+	t.Parallel()
+
+	// U+2024 ONE DOT LEADER - visually identical to period but not recognized as URL
+	const dotLeader = "\u2024"
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "plain text unchanged",
+			input:    "DRAFT",
+			expected: "DRAFT",
+		},
+		{
+			name:     "CONFIDENTIAL unchanged",
+			input:    "CONFIDENTIAL",
+			expected: "CONFIDENTIAL",
+		},
+		{
+			name:     "domain.com dots replaced",
+			input:    "domain.com",
+			expected: "domain" + dotLeader + "com",
+		},
+		{
+			name:     "domain.tech dots replaced",
+			input:    "alnah.tech",
+			expected: "alnah" + dotLeader + "tech",
+		},
+		{
+			name:     "www.example.com all dots replaced",
+			input:    "www.example.com",
+			expected: "www" + dotLeader + "example" + dotLeader + "com",
+		},
+		{
+			name:     "full URL with path",
+			input:    "https://www.example.com/path",
+			expected: "https://www" + dotLeader + "example" + dotLeader + "com/path",
+		},
+		{
+			name:     "multiple dots in text",
+			input:    "version 1.0.0",
+			expected: "version 1" + dotLeader + "0" + dotLeader + "0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := breakURLPattern(tt.input)
+			if got != tt.expected {
+				t.Errorf("breakURLPattern(%q) = %q, want %q", tt.input, got, tt.expected)
 			}
 		})
 	}

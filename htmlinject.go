@@ -251,7 +251,7 @@ body::before {
   white-space: nowrap;
   font-family: %s;
 }
-`, escapeCSSString(w.Text), w.Angle, watermarkFontSize, w.Color, w.Opacity, defaultFontFamily)
+`, escapeCSSString(breakURLPattern(w.Text)), w.Angle, watermarkFontSize, w.Color, w.Opacity, defaultFontFamily)
 }
 
 // escapeCSSString escapes a string for safe use in CSS content property.
@@ -264,6 +264,17 @@ func escapeCSSString(s string) string {
 	s = strings.ReplaceAll(s, "\r", "")
 	s = strings.ReplaceAll(s, `%`, `%%`)
 	return s
+}
+
+// breakURLPattern replaces ALL dots with a Unicode lookalike (ONE DOT LEADER U+2024)
+// to prevent PDF viewers from auto-detecting URLs and making them clickable.
+// The character ․ looks identical to . but is not recognized as a URL separator.
+//
+// Note: This affects all dots unconditionally, including version numbers (1.0.0),
+// abbreviations (e.g.), and decimal numbers. This is intentional - the U+2024
+// character is visually indistinguishable from a period in rendered output.
+func breakURLPattern(text string) string {
+	return strings.ReplaceAll(text, ".", "\u2024")
 }
 
 // buildPageBreaksCSS generates CSS for page break control.
