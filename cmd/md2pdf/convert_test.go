@@ -1747,9 +1747,10 @@ func TestResolveDateWithTime(t *testing.T) {
 	mockNow := func() time.Time { return fixedTime }
 
 	tests := []struct {
-		name  string
-		input string
-		want  string
+		name    string
+		input   string
+		want    string
+		wantErr error
 	}{
 		{
 			name:  "auto returns fixed date",
@@ -1781,13 +1782,40 @@ func TestResolveDateWithTime(t *testing.T) {
 			input: "January 2025",
 			want:  "January 2025",
 		},
+		// Error cases
+		{
+			name:    "auto with empty format returns error",
+			input:   "auto:",
+			wantErr: md2pdf.ErrInvalidDateFormat,
+		},
+		{
+			name:    "invalid auto syntax returns error",
+			input:   "autoXXX",
+			wantErr: md2pdf.ErrInvalidDateFormat,
+		},
+		{
+			name:    "unclosed bracket returns error",
+			input:   "auto:[Date",
+			wantErr: md2pdf.ErrInvalidDateFormat,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := resolveDateWithTime(tt.input, mockNow)
+			got, err := resolveDateWithTime(tt.input, mockNow)
+
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("resolveDateWithTime(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("resolveDateWithTime(%q) unexpected error: %v", tt.input, err)
+			}
 			if got != tt.want {
 				t.Errorf("resolveDateWithTime(%q) = %q, want %q", tt.input, got, tt.want)
 			}
