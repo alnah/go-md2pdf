@@ -33,4 +33,7 @@ var (
 	// Page breaks validation errors.
 	ErrInvalidOrphans = errors.New("invalid orphans value")
 	ErrInvalidWidows  = errors.New("invalid widows value")
+
+	// Date format validation errors.
+	ErrInvalidDateFormat = errors.New("invalid date format")
 )
