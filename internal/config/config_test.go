@@ -1080,6 +1080,61 @@ func TestConfig_Validate_Document(t *testing.T) {
 			t.Errorf("error = %v, want ErrFieldTooLong", err)
 		}
 	})
+
+	t.Run("document.date auto passthrough is valid", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Document: DocumentConfig{
+			Date: "auto",
+		}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("document.date auto:FORMAT with valid format passes", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Document: DocumentConfig{
+			Date: "auto:DD/MM/YYYY",
+		}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("document.date auto:preset with valid preset passes", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Document: DocumentConfig{
+			Date: "auto:european",
+		}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("document.date auto: with empty format returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Document: DocumentConfig{
+			Date: "auto:",
+		}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("expected error for empty format after auto:")
+		}
+	})
+
+	t.Run("document.date literal value passes", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Document: DocumentConfig{
+			Date: "2024-01-15",
+		}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
 }
 
 func TestConfig_Validate_Signature(t *testing.T) {

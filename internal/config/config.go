@@ -89,7 +89,7 @@ type DocumentConfig struct {
 	Date     string `yaml:"date"`     // "auto" = YYYY-MM-DD at startup
 }
 
-// Validate checks document field lengths.
+// Validate checks document field lengths and date format.
 func (d *DocumentConfig) Validate() error {
 	if err := validateFieldLength("document.title", d.Title, MaxDocTitleLength); err != nil {
 		return err
@@ -102,6 +102,27 @@ func (d *DocumentConfig) Validate() error {
 	}
 	if err := validateFieldLength("document.date", d.Date, MaxDateLength); err != nil {
 		return err
+	}
+	// Validate date format if using auto syntax
+	if err := validateDateFormat(d.Date); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateDateFormat checks that auto:FORMAT syntax uses valid tokens.
+func validateDateFormat(date string) error {
+	if date == "" {
+		return nil
+	}
+	lower := strings.ToLower(date)
+	if !strings.HasPrefix(lower, "auto:") {
+		return nil // Not auto syntax, skip validation
+	}
+	// Use ParseDateFormat to validate (ignore result, just check error)
+	formatPart := date[5:]
+	if _, err := md2pdf.ParseDateFormat(formatPart); err != nil {
+		return fmt.Errorf("document.date: %w", err)
 	}
 	return nil
 }
