@@ -62,8 +62,11 @@ COPY --from=builder /go-md2pdf /usr/bin/go-md2pdf
 # Create non-root user with home directory (rod needs it for cache)
 RUN useradd -r -u 1000 -m -s /bin/false appuser
 
-# Tell rod where to find the pre-installed browser
-ENV ROD_BROWSER_BIN=/headless-shell/headless-shell
+# Rod configuration:
+# - ROD_BROWSER_BIN: use pre-installed headless Chrome
+# - ROD_NO_SANDBOX: Docker lacks kernel capabilities for Chrome sandboxing
+ENV ROD_BROWSER_BIN=/headless-shell/headless-shell \
+    ROD_NO_SANDBOX=1
 
 USER appuser
 
