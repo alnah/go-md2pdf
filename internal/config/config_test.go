@@ -850,6 +850,54 @@ func TestConfig_Validate_TOC(t *testing.T) {
 			t.Fatal("expected error for negative depth")
 		}
 	})
+
+	t.Run("toc enabled with valid minDepth passes", func(t *testing.T) {
+		cfg := &Config{TOC: TOCConfig{Enabled: true, MinDepth: 2, MaxDepth: 4}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("toc enabled with minDepth 0 passes (uses default)", func(t *testing.T) {
+		cfg := &Config{TOC: TOCConfig{Enabled: true, MinDepth: 0, MaxDepth: 3}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("toc enabled with minDepth 7 returns error", func(t *testing.T) {
+		cfg := &Config{TOC: TOCConfig{Enabled: true, MinDepth: 7}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("expected error for invalid minDepth")
+		}
+	})
+
+	t.Run("toc enabled with negative minDepth returns error", func(t *testing.T) {
+		cfg := &Config{TOC: TOCConfig{Enabled: true, MinDepth: -1}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("expected error for negative minDepth")
+		}
+	})
+
+	t.Run("toc enabled with minDepth greater than maxDepth returns error", func(t *testing.T) {
+		cfg := &Config{TOC: TOCConfig{Enabled: true, MinDepth: 4, MaxDepth: 2}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("expected error for minDepth > maxDepth")
+		}
+	})
+
+	t.Run("toc enabled with minDepth equal to maxDepth passes", func(t *testing.T) {
+		cfg := &Config{TOC: TOCConfig{Enabled: true, MinDepth: 3, MaxDepth: 3}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
 }
 
 func TestConfig_Validate_Watermark(t *testing.T) {
