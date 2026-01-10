@@ -300,46 +300,46 @@ docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf convert ./docs/ -o ./pdf
 Config files are loaded from `~/.config/go-md2pdf/` or current directory.
 Supported formats: `.yaml`, `.yml`
 
-| Option                  | Type   | Default      | Description                            |
-| ----------------------- | ------ | ------------ | -------------------------------------- |
-| `author.name`           | string | -            | Author name (used by cover, signature) |
-| `author.title`          | string | -            | Author professional title              |
-| `author.email`          | string | -            | Author email                           |
-| `author.organization`   | string | -            | Organization name                      |
-| `document.title`        | string | -            | Document title ("" = auto from H1)     |
-| `document.subtitle`     | string | -            | Document subtitle                      |
-| `document.version`      | string | -            | Version string (used in cover, footer) |
-| `document.date`         | string | -            | Date (see [Date Formats](#date-formats))|
-| `input.defaultDir`      | string | -            | Default input directory                |
-| `output.defaultDir`     | string | -            | Default output directory               |
-| `css.style`             | string | -            | Embedded style name                    |
-| `page.size`             | string | `"letter"`   | letter, a4, legal                      |
-| `page.orientation`      | string | `"portrait"` | portrait, landscape                    |
-| `page.margin`           | float  | `0.5`        | Margin in inches (0.25-3.0)            |
-| `cover.enabled`         | bool   | `false`      | Show cover page                        |
-| `cover.logo`            | string | -            | Logo path or URL                       |
-| `toc.enabled`           | bool   | `false`      | Show table of contents                 |
-| `toc.title`             | string | -            | TOC title (empty = no title)           |
-| `toc.minDepth`          | int    | `2`          | Min heading depth (1-6, skips H1)      |
-| `toc.maxDepth`          | int    | `3`          | Max heading depth (1-6)                |
-| `footer.enabled`        | bool   | `false`      | Show footer                            |
-| `footer.showPageNumber` | bool   | `false`      | Show page numbers                      |
-| `footer.position`       | string | `"right"`    | left, center, right                    |
-| `footer.text`           | string | -            | Custom footer text                     |
-| `signature.enabled`     | bool   | `false`      | Show signature block                   |
-| `signature.imagePath`   | string | -            | Photo path or URL                      |
-| `signature.links`       | array  | -            | Links (label, url)                     |
-| `watermark.enabled`     | bool   | `false`      | Show watermark                         |
-| `watermark.text`        | string | -            | Watermark text (required if enabled)   |
-| `watermark.color`       | string | `"#888888"`  | Watermark color (hex)                  |
-| `watermark.opacity`     | float  | `0.1`        | Watermark opacity (0.0-1.0)            |
-| `watermark.angle`       | float  | `-45`        | Watermark rotation (degrees)           |
-| `pageBreaks.enabled`    | bool   | `false`      | Enable page break features             |
-| `pageBreaks.beforeH1`   | bool   | `false`      | Page break before H1 headings          |
-| `pageBreaks.beforeH2`   | bool   | `false`      | Page break before H2 headings          |
-| `pageBreaks.beforeH3`   | bool   | `false`      | Page break before H3 headings          |
-| `pageBreaks.orphans`    | int    | `2`          | Min lines at page bottom (1-5)         |
-| `pageBreaks.widows`     | int    | `2`          | Min lines at page top (1-5)            |
+| Option                  | Type   | Default      | Description                              |
+| ----------------------- | ------ | ------------ | ---------------------------------------- |
+| `author.name`           | string | -            | Author name (used by cover, signature)   |
+| `author.title`          | string | -            | Author professional title                |
+| `author.email`          | string | -            | Author email                             |
+| `author.organization`   | string | -            | Organization name                        |
+| `document.title`        | string | -            | Document title ("" = auto from H1)       |
+| `document.subtitle`     | string | -            | Document subtitle                        |
+| `document.version`      | string | -            | Version string (used in cover, footer)   |
+| `document.date`         | string | -            | Date (see [Date Formats](#date-formats)) |
+| `input.defaultDir`      | string | -            | Default input directory                  |
+| `output.defaultDir`     | string | -            | Default output directory                 |
+| `css.style`             | string | -            | Embedded style name                      |
+| `page.size`             | string | `"letter"`   | letter, a4, legal                        |
+| `page.orientation`      | string | `"portrait"` | portrait, landscape                      |
+| `page.margin`           | float  | `0.5`        | Margin in inches (0.25-3.0)              |
+| `cover.enabled`         | bool   | `false`      | Show cover page                          |
+| `cover.logo`            | string | -            | Logo path or URL                         |
+| `toc.enabled`           | bool   | `false`      | Show table of contents                   |
+| `toc.title`             | string | -            | TOC title (empty = no title)             |
+| `toc.minDepth`          | int    | `2`          | Min heading depth (1-6, skips H1)        |
+| `toc.maxDepth`          | int    | `3`          | Max heading depth (1-6)                  |
+| `footer.enabled`        | bool   | `false`      | Show footer                              |
+| `footer.showPageNumber` | bool   | `false`      | Show page numbers                        |
+| `footer.position`       | string | `"right"`    | left, center, right                      |
+| `footer.text`           | string | -            | Custom footer text                       |
+| `signature.enabled`     | bool   | `false`      | Show signature block                     |
+| `signature.imagePath`   | string | -            | Photo path or URL                        |
+| `signature.links`       | array  | -            | Links (label, url)                       |
+| `watermark.enabled`     | bool   | `false`      | Show watermark                           |
+| `watermark.text`        | string | -            | Watermark text (required if enabled)     |
+| `watermark.color`       | string | `"#888888"`  | Watermark color (hex)                    |
+| `watermark.opacity`     | float  | `0.1`        | Watermark opacity (0.0-1.0)              |
+| `watermark.angle`       | float  | `-45`        | Watermark rotation (degrees)             |
+| `pageBreaks.enabled`    | bool   | `false`      | Enable page break features               |
+| `pageBreaks.beforeH1`   | bool   | `false`      | Page break before H1 headings            |
+| `pageBreaks.beforeH2`   | bool   | `false`      | Page break before H2 headings            |
+| `pageBreaks.beforeH3`   | bool   | `false`      | Page break before H3 headings            |
+| `pageBreaks.orphans`    | int    | `2`          | Min lines at page bottom (1-5)           |
+| `pageBreaks.widows`     | int    | `2`          | Min lines at page top (1-5)              |
 
 <details>
 <summary>Example config file</summary>
@@ -434,11 +434,11 @@ pageBreaks:
 
 The `document.date` field supports auto-generation with customizable formats:
 
-| Syntax | Example | Output |
-|--------|---------|--------|
-| `auto` | `auto` | 2026-01-09 |
-| `auto:FORMAT` | `auto:DD/MM/YYYY` | 09/01/2026 |
-| `auto:preset` | `auto:long` | January 9, 2026 |
+| Syntax        | Example           | Output          |
+| ------------- | ----------------- | --------------- |
+| `auto`        | `auto`            | 2026-01-09      |
+| `auto:FORMAT` | `auto:DD/MM/YYYY` | 09/01/2026      |
+| `auto:preset` | `auto:long`       | January 9, 2026 |
 
 **Presets:** `iso` (YYYY-MM-DD), `european` (DD/MM/YYYY), `us` (MM/DD/YYYY), `long` (MMMM D, YYYY)
 
