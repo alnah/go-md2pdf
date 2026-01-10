@@ -106,7 +106,8 @@ pdf, err := svc.Convert(ctx, md2pdf.Input{
     Markdown: content,
     TOC: &md2pdf.TOC{
         Title:    "Contents",
-        MaxDepth: 3, // Include h1, h2, h3
+        MinDepth: 2, // Start at h2 (skip document title)
+        MaxDepth: 3, // Include up to h3
     },
 })
 ```
@@ -208,7 +209,7 @@ Document:
       --doc-title <s>       Document title ("" = auto from H1)
       --doc-subtitle <s>    Document subtitle
       --doc-version <s>     Version string
-      --doc-date <s>        Date ("auto" = today's date)
+      --doc-date <s>        Date (see Date Formats section)
 
 Page:
   -p, --page-size <s>       Page size: letter, a4, legal
@@ -308,7 +309,7 @@ Supported formats: `.yaml`, `.yml`
 | `document.title`        | string | -            | Document title ("" = auto from H1)     |
 | `document.subtitle`     | string | -            | Document subtitle                      |
 | `document.version`      | string | -            | Version string (used in cover, footer) |
-| `document.date`         | string | -            | Date ("auto" = today's date)           |
+| `document.date`         | string | -            | Date (see [Date Formats](#date-formats))|
 | `input.defaultDir`      | string | -            | Default input directory                |
 | `output.defaultDir`     | string | -            | Default output directory               |
 | `css.style`             | string | -            | Embedded style name                    |
@@ -319,7 +320,8 @@ Supported formats: `.yaml`, `.yml`
 | `cover.logo`            | string | -            | Logo path or URL                       |
 | `toc.enabled`           | bool   | `false`      | Show table of contents                 |
 | `toc.title`             | string | -            | TOC title (empty = no title)           |
-| `toc.maxDepth`          | int    | `3`          | Heading depth (1-6)                    |
+| `toc.minDepth`          | int    | `2`          | Min heading depth (1-6, skips H1)      |
+| `toc.maxDepth`          | int    | `3`          | Max heading depth (1-6)                |
 | `footer.enabled`        | bool   | `false`      | Show footer                            |
 | `footer.showPageNumber` | bool   | `false`      | Show page numbers                      |
 | `footer.position`       | string | `"right"`    | left, center, right                    |
@@ -364,7 +366,7 @@ document:
   title: '' # "" = auto from H1 or filename
   subtitle: 'Internal Document'
   version: 'v1.0'
-  date: 'auto' # "auto" = YYYY-MM-DD at runtime
+  date: 'auto' # or "auto:long", "auto:european", "auto:DD/MM/YYYY"
 
 # Page layout
 page:
@@ -388,6 +390,7 @@ cover:
 toc:
   enabled: true
   title: 'Table of Contents'
+  minDepth: 2 # 1-6 (default: 2, skips H1)
   maxDepth: 3 # 1-6 (default: 3)
 
 # Footer
@@ -426,6 +429,22 @@ pageBreaks:
 ```
 
 </details>
+
+### Date Formats
+
+The `document.date` field supports auto-generation with customizable formats:
+
+| Syntax | Example | Output |
+|--------|---------|--------|
+| `auto` | `auto` | 2026-01-09 |
+| `auto:FORMAT` | `auto:DD/MM/YYYY` | 09/01/2026 |
+| `auto:preset` | `auto:long` | January 9, 2026 |
+
+**Presets:** `iso` (YYYY-MM-DD), `european` (DD/MM/YYYY), `us` (MM/DD/YYYY), `long` (MMMM D, YYYY)
+
+**Tokens:** `YYYY`, `YY`, `MMMM` (January), `MMM` (Jan), `MM`, `M`, `DD`, `D`
+
+**Escaping:** Use brackets for literal text: `auto:[Date:] YYYY-MM-DD` → "Date: 2026-01-09"
 
 ## Project Structure
 
