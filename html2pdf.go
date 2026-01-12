@@ -275,12 +275,12 @@ func (r *rodRenderer) buildPDFOptions(opts *pdfOptions) *proto.PagePrintToPDF {
 	w, h, margin, bottomMargin := resolvePageDimensions(page, hasFooter)
 
 	pdfOpts := &proto.PagePrintToPDF{
-		PaperWidth:      floatPtr(w),
-		PaperHeight:     floatPtr(h),
-		MarginTop:       floatPtr(margin),
-		MarginBottom:    floatPtr(bottomMargin),
-		MarginLeft:      floatPtr(margin),
-		MarginRight:     floatPtr(margin),
+		PaperWidth:      toFloatPtr(w),
+		PaperHeight:     toFloatPtr(h),
+		MarginTop:       toFloatPtr(margin),
+		MarginBottom:    toFloatPtr(bottomMargin),
+		MarginLeft:      toFloatPtr(margin),
+		MarginRight:     toFloatPtr(margin),
 		PrintBackground: true,
 	}
 
@@ -311,6 +311,9 @@ func buildFooterTemplate(data *footerData) string {
 	if data.Status != "" {
 		parts = append(parts, html.EscapeString(data.Status))
 	}
+	if data.DocumentID != "" {
+		parts = append(parts, html.EscapeString(data.DocumentID))
+	}
 	if data.Text != "" {
 		parts = append(parts, html.EscapeString(data.Text))
 	}
@@ -334,8 +337,8 @@ func buildFooterTemplate(data *footerData) string {
 		footerFontSize, defaultFontFamily, footerColor, textAlign, footerPaddingH, content)
 }
 
-// floatPtr returns a pointer to a float64 value.
-func floatPtr(v float64) *float64 {
+// toFloatPtr returns a pointer to a float64 value.
+func toFloatPtr(v float64) *float64 {
 	return &v
 }
 
