@@ -828,7 +828,7 @@ img {
   background: var(--color-accent-emphasis);
   color: var(--color-fg-on-emphasis);
   border-radius: 4px;
-  margin-bottom: var(--spacing-xs);
+  margin-bottom: var(--spacing-lg);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -858,8 +858,8 @@ img {
 .cover-meta {
   order: 8;
   width: 100%;
-  margin-top: 0;
-  padding-top: var(--spacing-xs);
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-sm);
   border-top: 1px solid var(--color-border-default);
   display: grid;
   grid-template-columns: 1fr 1fr;
