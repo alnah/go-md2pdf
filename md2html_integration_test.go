@@ -149,4 +149,120 @@ Ceci est un test avec des caracteres speciaux.`
 			t.Fatalf("whitespace-only content should be valid, got error: %v", err)
 		}
 	})
+
+	t.Run("highlight placeholders pass through Goldmark unchanged", func(t *testing.T) {
+		// The ==highlight== feature uses Unicode Private Use Area placeholders
+		// that pass through Goldmark unchanged (no WithUnsafe needed).
+		// Post-processing then converts them to <mark> tags.
+		t.Parallel()
+
+		// Simulate what convertHighlights() produces (placeholder, not <mark>)
+		content := "This is " + MarkStartPlaceholder + "highlighted" + MarkEndPlaceholder + " text"
+
+		converter := newGoldmarkConverter()
+		got, err := converter.ToHTML(ctx, content)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// Placeholders should survive Goldmark
+		if !strings.Contains(got, MarkStartPlaceholder) || !strings.Contains(got, MarkEndPlaceholder) {
+			t.Errorf("placeholders should pass through Goldmark unchanged.\n"+
+				"Got: %q", got)
+		}
+
+		// After post-processing, should become <mark>
+		final := convertMarkPlaceholders(got)
+		if !strings.Contains(final, "<mark>highlighted</mark>") {
+			t.Errorf("convertMarkPlaceholders should convert to <mark> tags.\n"+
+				"Got: %q", final)
+		}
+	})
+
+	t.Run("raw HTML is sanitized for security", func(t *testing.T) {
+		// Verify that raw HTML does NOT pass through (no WithUnsafe).
+		// This is critical for web API security.
+		t.Parallel()
+
+		content := "This has <script>alert('xss')</script> injection"
+
+		converter := newGoldmarkConverter()
+		got, err := converter.ToHTML(ctx, content)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if strings.Contains(got, "<script>") {
+			t.Errorf("raw HTML should be sanitized (no WithUnsafe).\n"+
+				"Got: %q", got)
+		}
+	})
+}
+
+// TestHighlightFullPipeline tests the ==text== highlight feature through
+// the complete preprocessing + HTML conversion + post-processing pipeline.
+// This is a regression test to ensure highlights work end-to-end.
+func TestHighlightFullPipeline(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name     string
+		markdown string
+		wantMark string
+	}{
+		{
+			name:     "single highlight",
+			markdown: "This is ==important== text",
+			wantMark: "<mark>important</mark>",
+		},
+		{
+			name:     "multiple highlights",
+			markdown: "Both ==one== and ==two== work",
+			wantMark: "<mark>one</mark>",
+		},
+		{
+			name:     "highlight in heading",
+			markdown: "# Title with ==emphasis==",
+			wantMark: "<mark>emphasis</mark>",
+		},
+		{
+			name:     "highlight with unicode",
+			markdown: "Text ==日本語== here",
+			wantMark: "<mark>日本語</mark>",
+		},
+	}
+
+	preprocessor := &commonMarkPreprocessor{}
+	converter := newGoldmarkConverter()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Step 1: Preprocessing converts ==text== to placeholders
+			preprocessed := preprocessor.PreprocessMarkdown(ctx, tt.markdown)
+
+			// Step 2: Goldmark converts to HTML (placeholders pass through)
+			html, err := converter.ToHTML(ctx, preprocessed)
+			if err != nil {
+				t.Fatalf("ToHTML() error: %v", err)
+			}
+
+			// Step 3: Post-processing converts placeholders to <mark> tags
+			final := convertMarkPlaceholders(html)
+
+			// Verify the <mark> tag is in the final output
+			if !strings.Contains(final, tt.wantMark) {
+				t.Errorf("highlight not preserved through pipeline.\n"+
+					"Input:        %q\n"+
+					"Preprocessed: %q\n"+
+					"After Goldmark: %q\n"+
+					"Final HTML:   %q\n"+
+					"Expected:     %q",
+					tt.markdown, preprocessed, html, final, tt.wantMark)
+			}
+		})
+	}
 }

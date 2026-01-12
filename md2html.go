@@ -53,6 +53,8 @@ func newGoldmarkConverter() *goldmarkConverter {
 		goldmark.WithRendererOptions(
 			html.WithHardWraps(), // Treat newlines as <br>
 			html.WithXHTML(),     // Self-closing tags
+			// Note: WithUnsafe() intentionally NOT used for security.
+			// The ==highlight== feature uses placeholders converted after Goldmark.
 		),
 	)
 	return &goldmarkConverter{md: md}

@@ -107,6 +107,11 @@ func TestCompressBlankLines(t *testing.T) {
 func TestConvertHighlights(t *testing.T) {
 	t.Parallel()
 
+	// Helper to build expected output with placeholders
+	mark := func(s string) string {
+		return MarkStartPlaceholder + s + MarkEndPlaceholder
+	}
+
 	tests := []struct {
 		name     string
 		input    string
@@ -115,22 +120,22 @@ func TestConvertHighlights(t *testing.T) {
 		{
 			name:     "single highlight",
 			input:    "This is ==highlighted== text",
-			expected: "This is <mark>highlighted</mark> text",
+			expected: "This is " + mark("highlighted") + " text",
 		},
 		{
 			name:     "multiple highlights",
 			input:    "==one== and ==two==",
-			expected: "<mark>one</mark> and <mark>two</mark>",
+			expected: mark("one") + " and " + mark("two"),
 		},
 		{
 			name:     "empty highlight",
 			input:    "empty ==== here",
-			expected: "empty <mark></mark> here",
+			expected: "empty " + mark("") + " here",
 		},
 		{
 			name:     "highlight with spaces",
 			input:    "==hello world==",
-			expected: "<mark>hello world</mark>",
+			expected: mark("hello world"),
 		},
 		{
 			name:     "no highlights",
@@ -145,12 +150,12 @@ func TestConvertHighlights(t *testing.T) {
 		{
 			name:     "unicode highlight",
 			input:    "This is ==日本語== text",
-			expected: "This is <mark>日本語</mark> text",
+			expected: "This is " + mark("日本語") + " text",
 		},
 		{
 			name:     "triple equals captures inner equals with trailing",
 			input:    "===not highlight===",
-			expected: "<mark>=not highlight</mark>=",
+			expected: mark("=not highlight") + "=",
 		},
 		{
 			name:     "empty string",
@@ -171,8 +176,60 @@ func TestConvertHighlights(t *testing.T) {
 	}
 }
 
+func TestConvertMarkPlaceholders(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "single placeholder",
+			input:    "text " + MarkStartPlaceholder + "highlighted" + MarkEndPlaceholder + " more",
+			expected: "text <mark>highlighted</mark> more",
+		},
+		{
+			name:     "multiple placeholders",
+			input:    MarkStartPlaceholder + "one" + MarkEndPlaceholder + " and " + MarkStartPlaceholder + "two" + MarkEndPlaceholder,
+			expected: "<mark>one</mark> and <mark>two</mark>",
+		},
+		{
+			name:     "no placeholders",
+			input:    "plain text without markers",
+			expected: "plain text without markers",
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "nested in HTML",
+			input:    "<p>" + MarkStartPlaceholder + "important" + MarkEndPlaceholder + "</p>",
+			expected: "<p><mark>important</mark></p>",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := convertMarkPlaceholders(tt.input)
+			if got != tt.expected {
+				t.Errorf("convertMarkPlaceholders() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestCommonMarkPreprocessor_PreprocessMarkdown(t *testing.T) {
 	t.Parallel()
+
+	// Helper to build expected output with placeholders
+	mark := func(s string) string {
+		return MarkStartPlaceholder + s + MarkEndPlaceholder
+	}
 
 	tests := []struct {
 		name     string
@@ -200,14 +257,14 @@ func TestCommonMarkPreprocessor_PreprocessMarkdown(t *testing.T) {
 			expected: "line1\nline2\nline3",
 		},
 		{
-			name:     "highlights converted",
+			name:     "highlights converted to placeholders",
 			input:    "This is ==important== text",
-			expected: "This is <mark>important</mark> text",
+			expected: "This is " + mark("important") + " text",
 		},
 		{
-			name:     "multiple highlights converted",
+			name:     "multiple highlights converted to placeholders",
 			input:    "==one== and ==two==",
-			expected: "<mark>one</mark> and <mark>two</mark>",
+			expected: mark("one") + " and " + mark("two"),
 		},
 		{
 			name:     "multiple blank lines compressed to two",
@@ -217,7 +274,7 @@ func TestCommonMarkPreprocessor_PreprocessMarkdown(t *testing.T) {
 		{
 			name:     "full pipeline: normalize, highlight, compress",
 			input:    "Title\r\n\r\n\r\n\r\nText with ==highlight==\r\n\r\n\r\nEnd",
-			expected: "Title\n\nText with <mark>highlight</mark>\n\nEnd",
+			expected: "Title\n\nText with " + mark("highlight") + "\n\nEnd",
 		},
 	}
 

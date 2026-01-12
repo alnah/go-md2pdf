@@ -192,7 +192,10 @@ func TestGoldmarkConverter_ToHTML(t *testing.T) {
 			},
 		},
 		{
-			name:  "raw HTML is omitted by goldmark",
+			// Raw HTML is sanitized by Goldmark (no WithUnsafe option).
+			// This is intentional for security - the ==highlight== feature uses
+			// placeholders that are converted to <mark> AFTER Goldmark processing.
+			name:  "raw HTML is sanitized for security",
 			input: "<script>alert('xss')</script>",
 			wantContains: []string{
 				"<!-- raw HTML omitted -->",
