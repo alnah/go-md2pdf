@@ -37,6 +37,15 @@ const (
 	MaxVersionLength        = 50   // Version string
 	MaxDateLength           = 30   // "2025-12-31" or "December 31, 2025"
 	MaxTOCTitleLength       = 100  // TOC title
+	// Extended metadata field limits
+	MaxPhoneLength        = 30  // Phone number
+	MaxAddressLength      = 200 // Postal address (multiline)
+	MaxDepartmentLength   = 100 // Department name
+	MaxClientNameLength   = 100 // Client/customer name
+	MaxProjectNameLength  = 100 // Project name
+	MaxDocumentTypeLength = 50  // Document type label
+	MaxDocumentIDLength   = 50  // Document reference ID
+	MaxDescriptionLength  = 500 // Document summary
 )
 
 // Config holds all configuration for document generation.
@@ -62,6 +71,10 @@ type AuthorConfig struct {
 	Title        string `yaml:"title"`
 	Email        string `yaml:"email"`
 	Organization string `yaml:"organization"`
+	// Extended metadata fields
+	Phone      string `yaml:"phone"`      // Contact phone number
+	Address    string `yaml:"address"`    // Postal address (use YAML literal block for multiline)
+	Department string `yaml:"department"` // Department name
 }
 
 // Validate checks author field lengths.
@@ -78,6 +91,15 @@ func (a *AuthorConfig) Validate() error {
 	if err := validateFieldLength("author.organization", a.Organization, MaxOrganizationLength); err != nil {
 		return err
 	}
+	if err := validateFieldLength("author.phone", a.Phone, MaxPhoneLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("author.address", a.Address, MaxAddressLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("author.department", a.Department, MaxDepartmentLength); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -87,6 +109,12 @@ type DocumentConfig struct {
 	Subtitle string `yaml:"subtitle"` // Optional subtitle
 	Version  string `yaml:"version"`  // Version string (used in cover and footer)
 	Date     string `yaml:"date"`     // "auto" = YYYY-MM-DD at startup
+	// Extended metadata fields
+	ClientName   string `yaml:"clientName"`   // Client/customer name
+	ProjectName  string `yaml:"projectName"`  // Project name
+	DocumentType string `yaml:"documentType"` // e.g., "Technical Specification"
+	DocumentID   string `yaml:"documentID"`   // e.g., "DOC-2024-001"
+	Description  string `yaml:"description"`  // Brief document summary
 }
 
 // Validate checks document field lengths and date format.
@@ -105,6 +133,21 @@ func (d *DocumentConfig) Validate() error {
 	}
 	// Validate date format if using auto syntax
 	if err := validateDateFormat(d.Date); err != nil {
+		return err
+	}
+	if err := validateFieldLength("document.clientName", d.ClientName, MaxClientNameLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("document.projectName", d.ProjectName, MaxProjectNameLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("document.documentType", d.DocumentType, MaxDocumentTypeLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("document.documentID", d.DocumentID, MaxDocumentIDLength); err != nil {
+		return err
+	}
+	if err := validateFieldLength("document.description", d.Description, MaxDescriptionLength); err != nil {
 		return err
 	}
 	return nil
@@ -149,6 +192,7 @@ type FooterConfig struct {
 	Position       string `yaml:"position"`       // "left", "center", "right" (default: "right")
 	ShowPageNumber bool   `yaml:"showPageNumber"` // Show page numbers
 	Text           string `yaml:"text"`           // Optional free-form text
+	ShowDocumentID bool   `yaml:"showDocumentID"` // Display DocumentID from document config
 }
 
 // Validate checks footer field values.
@@ -255,8 +299,9 @@ func (w *WatermarkConfig) Validate() error {
 // CoverConfig defines cover page options.
 // Uses author.* and document.* for author info and metadata.
 type CoverConfig struct {
-	Enabled bool   `yaml:"enabled"`
-	Logo    string `yaml:"logo"` // Logo path or URL (cover-specific)
+	Enabled        bool   `yaml:"enabled"`
+	Logo           string `yaml:"logo"`           // Logo path or URL (cover-specific)
+	ShowDepartment bool   `yaml:"showDepartment"` // Show author.department on cover
 }
 
 // Validate checks cover field values.

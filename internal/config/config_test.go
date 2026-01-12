@@ -1091,6 +1091,53 @@ func TestConfig_Validate_Author(t *testing.T) {
 			t.Errorf("error = %v, want ErrFieldTooLong", err)
 		}
 	})
+
+	t.Run("author.phone too long returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Author: AuthorConfig{
+			Phone: string(make([]byte, MaxPhoneLength+1)),
+		}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("author.address too long returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Author: AuthorConfig{
+			Address: string(make([]byte, MaxAddressLength+1)),
+		}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("author.department too long returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Author: AuthorConfig{
+			Department: string(make([]byte, MaxDepartmentLength+1)),
+		}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("valid extended author fields pass validation", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Author: AuthorConfig{
+			Name:       "John Doe",
+			Phone:      "+1-555-123-4567",
+			Address:    "123 Main St\nCity, State 12345",
+			Department: "Engineering",
+		}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
 }
 
 func TestConfig_Validate_Document(t *testing.T) {
@@ -1177,6 +1224,77 @@ func TestConfig_Validate_Document(t *testing.T) {
 		t.Parallel()
 		cfg := &Config{Document: DocumentConfig{
 			Date: "2024-01-15",
+		}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("document.clientName too long returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Document: DocumentConfig{
+			ClientName: string(make([]byte, MaxClientNameLength+1)),
+		}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("document.projectName too long returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Document: DocumentConfig{
+			ProjectName: string(make([]byte, MaxProjectNameLength+1)),
+		}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("document.documentType too long returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Document: DocumentConfig{
+			DocumentType: string(make([]byte, MaxDocumentTypeLength+1)),
+		}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("document.documentID too long returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Document: DocumentConfig{
+			DocumentID: string(make([]byte, MaxDocumentIDLength+1)),
+		}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("document.description too long returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Document: DocumentConfig{
+			Description: string(make([]byte, MaxDescriptionLength+1)),
+		}}
+		err := cfg.Validate()
+		if !errors.Is(err, ErrFieldTooLong) {
+			t.Errorf("error = %v, want ErrFieldTooLong", err)
+		}
+	})
+
+	t.Run("valid extended document fields pass validation", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Document: DocumentConfig{
+			Title:        "Design Document",
+			ClientName:   "Acme Corporation",
+			ProjectName:  "Project Phoenix",
+			DocumentType: "Technical Specification",
+			DocumentID:   "DOC-2024-001",
+			Description:  "Technical specification for the Phoenix system",
 		}}
 		err := cfg.Validate()
 		if err != nil {

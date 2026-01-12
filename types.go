@@ -179,6 +179,13 @@ type Cover struct {
 	Organization string // Organization name (optional)
 	Date         string // Date string (optional)
 	Version      string // Version string (optional)
+	// Extended metadata fields
+	ClientName   string // Client/customer name (optional)
+	ProjectName  string // Project name (optional)
+	DocumentType string // Document type, e.g., "Technical Specification" (optional)
+	DocumentID   string // Document reference, e.g., "DOC-2024-001" (optional)
+	Description  string // Brief document summary (optional)
+	Department   string // Author's department (optional, shared with Signature via config)
 }
 
 // Validate checks that cover settings are valid.
@@ -259,6 +266,7 @@ type Footer struct {
 	Date           string
 	Status         string
 	Text           string
+	DocumentID     string // Document reference number (optional)
 }
 
 // Validate checks that footer settings are valid.
@@ -283,6 +291,10 @@ type Signature struct {
 	Organization string
 	ImagePath    string
 	Links        []Link
+	// Extended metadata fields
+	Phone      string // Contact phone number (optional)
+	Address    string // Postal address (optional, use YAML literal block for multiline)
+	Department string // Department name (optional)
 }
 
 // Link represents a clickable link.
