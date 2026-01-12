@@ -20,18 +20,26 @@ type commonFlags struct {
 
 // authorFlags holds author-related flags.
 type authorFlags struct {
-	name  string
-	title string
-	email string
-	org   string
+	name       string
+	title      string
+	email      string
+	org        string
+	phone      string
+	address    string
+	department string
 }
 
 // documentFlags holds document metadata flags.
 type documentFlags struct {
-	title    string
-	subtitle string
-	version  string
-	date     string
+	title        string
+	subtitle     string
+	version      string
+	date         string
+	clientName   string
+	projectName  string
+	documentType string
+	documentID   string
+	description  string
 }
 
 // pageFlags holds page layout flags.
@@ -43,16 +51,18 @@ type pageFlags struct {
 
 // footerFlags holds footer-related flags.
 type footerFlags struct {
-	position   string
-	text       string
-	pageNumber bool
-	disabled   bool
+	position       string
+	text           string
+	pageNumber     bool
+	showDocumentID bool
+	disabled       bool
 }
 
 // coverFlags holds cover page flags.
 type coverFlags struct {
-	logo     string
-	disabled bool
+	logo           string
+	showDepartment bool
+	disabled       bool
 }
 
 // signatureFlags holds signature block flags.
@@ -122,6 +132,9 @@ func addAuthorFlags(fs *flag.FlagSet, f *authorFlags) {
 	fs.StringVar(&f.title, "author-title", "", "author professional title")
 	fs.StringVar(&f.email, "author-email", "", "author email")
 	fs.StringVar(&f.org, "author-org", "", "organization name")
+	fs.StringVar(&f.phone, "author-phone", "", "author phone number")
+	fs.StringVar(&f.address, "author-address", "", "author postal address")
+	fs.StringVar(&f.department, "author-dept", "", "author department")
 }
 
 // addDocumentFlags adds document metadata flags to a FlagSet.
@@ -130,6 +143,11 @@ func addDocumentFlags(fs *flag.FlagSet, f *documentFlags) {
 	fs.StringVar(&f.subtitle, "doc-subtitle", "", "document subtitle")
 	fs.StringVar(&f.version, "doc-version", "", "document version")
 	fs.StringVar(&f.date, "doc-date", "", "document date (\"auto\" = today)")
+	fs.StringVar(&f.clientName, "doc-client", "", "client name")
+	fs.StringVar(&f.projectName, "doc-project", "", "project name")
+	fs.StringVar(&f.documentType, "doc-type", "", "document type")
+	fs.StringVar(&f.documentID, "doc-id", "", "document ID/reference")
+	fs.StringVar(&f.description, "doc-desc", "", "document description")
 }
 
 // addPageFlags adds page layout flags to a FlagSet.
@@ -144,12 +162,14 @@ func addFooterFlags(fs *flag.FlagSet, f *footerFlags) {
 	fs.StringVar(&f.position, "footer-position", "", "footer position: left, center, right")
 	fs.StringVar(&f.text, "footer-text", "", "custom footer text")
 	fs.BoolVar(&f.pageNumber, "footer-page-number", false, "show page numbers in footer")
+	fs.BoolVar(&f.showDocumentID, "footer-doc-id", false, "show document ID in footer")
 	fs.BoolVar(&f.disabled, "no-footer", false, "disable footer")
 }
 
 // addCoverFlags adds cover page flags to a FlagSet.
 func addCoverFlags(fs *flag.FlagSet, f *coverFlags) {
 	fs.StringVar(&f.logo, "cover-logo", "", "cover page logo path or URL")
+	fs.BoolVar(&f.showDepartment, "cover-dept", false, "show author department on cover")
 	fs.BoolVar(&f.disabled, "no-cover", false, "disable cover page")
 }
 
