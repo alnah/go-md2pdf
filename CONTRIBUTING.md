@@ -28,7 +28,7 @@ Small fixes (typos, broken links) are exempt from this rule.
 ## Contributing Styles
 
 New CSS styles in `internal/assets/styles/` are welcome. They must follow the
-established structure (see `minimal.css` or `nord.css` as reference):
+established structure (see `technical.css` or `creative.css` as reference):
 
 1. CSS Variables - Central configuration
 2. Reset and base styles
