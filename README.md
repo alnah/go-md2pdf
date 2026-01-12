@@ -1,7 +1,7 @@
 # go-md2pdf
 
 [![Go Reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/alnah/go-md2pdf)
-[![Go Report Card](https://goreportcard.com/badge/github.com/alnah/go-md2pdf)](https://goreportcard.com/report/github.com/alnah/go-md2pdf)
+[![Go Report Card](https://img.shields.io/badge/go%20report-A+-brightgreen)](https://goreportcard.com/report/github.com/alnah/go-md2pdf)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/alnah/go-md2pdf/ci.yml?branch=main)](https://github.com/alnah/go-md2pdf/actions)
 [![Coverage](https://codecov.io/gh/alnah/go-md2pdf/branch/main/graph/badge.svg)](https://codecov.io/gh/alnah/go-md2pdf)
 [![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](LICENSE.txt)
@@ -95,6 +95,10 @@ pdf, err := svc.Convert(ctx, md2pdf.Input{
         Date:         "2025-12-15",
         Version:      "v1.0",
         Logo:         "/path/to/logo.png", // or URL
+        ClientName:   "Client Corp",       // extended metadata
+        ProjectName:  "Project Alpha",
+        DocumentType: "Technical Report",
+        DocumentID:   "DOC-2025-001",
     },
 })
 ```
@@ -132,9 +136,12 @@ pdf, err := svc.Convert(ctx, md2pdf.Input{
 pdf, err := svc.Convert(ctx, md2pdf.Input{
     Markdown: content,
     Signature: &md2pdf.Signature{
-        Name:  "John Doe",
-        Title: "Senior Developer",
-        Email: "john@example.com",
+        Name:         "John Doe",
+        Title:        "Senior Developer",
+        Email:        "john@example.com",
+        Organization: "Acme Corp",
+        Phone:        "+1 555-0123",  // extended metadata
+        Department:   "Engineering",
     },
 })
 ```
@@ -204,12 +211,20 @@ Author:
       --author-title <s>    Author professional title
       --author-email <s>    Author email
       --author-org <s>      Organization name
+      --author-phone <s>    Author phone number
+      --author-address <s>  Author postal address
+      --author-dept <s>     Author department
 
 Document:
       --doc-title <s>       Document title ("" = auto from H1)
       --doc-subtitle <s>    Document subtitle
       --doc-version <s>     Version string
       --doc-date <s>        Date (see Date Formats section)
+      --doc-client <s>      Client name
+      --doc-project <s>     Project name
+      --doc-type <s>        Document type
+      --doc-id <s>          Document ID/reference
+      --doc-desc <s>        Document description
 
 Page:
   -p, --page-size <s>       Page size: letter, a4, legal
@@ -220,10 +235,12 @@ Footer:
       --footer-position <s> Position: left, center, right
       --footer-text <s>     Custom footer text
       --footer-page-number  Show page numbers
+      --footer-doc-id       Show document ID in footer
       --no-footer           Disable footer
 
 Cover:
       --cover-logo <path>   Logo path or URL
+      --cover-dept          Show author department on cover
       --no-cover            Disable cover page
 
 Signature:
@@ -302,22 +319,31 @@ Supported formats: `.yaml`, `.yml`
 
 | Option                  | Type   | Default      | Description                              |
 | ----------------------- | ------ | ------------ | ---------------------------------------- |
+| `output.defaultDir`     | string | -            | Default output directory                 |
+| `css.style`             | string | -            | Embedded style name                      |
 | `author.name`           | string | -            | Author name (used by cover, signature)   |
 | `author.title`          | string | -            | Author professional title                |
 | `author.email`          | string | -            | Author email                             |
 | `author.organization`   | string | -            | Organization name                        |
+| `author.phone`          | string | -            | Contact phone number                     |
+| `author.address`        | string | -            | Postal address (multiline via YAML `\|`) |
+| `author.department`     | string | -            | Department name                          |
 | `document.title`        | string | -            | Document title ("" = auto from H1)       |
 | `document.subtitle`     | string | -            | Document subtitle                        |
 | `document.version`      | string | -            | Version string (used in cover, footer)   |
 | `document.date`         | string | -            | Date (see [Date Formats](#date-formats)) |
+| `document.clientName`   | string | -            | Client/customer name                     |
+| `document.projectName`  | string | -            | Project name                             |
+| `document.documentType` | string | -            | Document type (e.g., "Specification")    |
+| `document.documentID`   | string | -            | Document ID (e.g., "DOC-2025-001")       |
+| `document.description`  | string | -            | Brief document summary                   |
 | `input.defaultDir`      | string | -            | Default input directory                  |
-| `output.defaultDir`     | string | -            | Default output directory                 |
-| `css.style`             | string | -            | Embedded style name                      |
 | `page.size`             | string | `"letter"`   | letter, a4, legal                        |
 | `page.orientation`      | string | `"portrait"` | portrait, landscape                      |
 | `page.margin`           | float  | `0.5`        | Margin in inches (0.25-3.0)              |
 | `cover.enabled`         | bool   | `false`      | Show cover page                          |
 | `cover.logo`            | string | -            | Logo path or URL                         |
+| `cover.showDepartment`  | bool   | `false`      | Show author.department on cover          |
 | `toc.enabled`           | bool   | `false`      | Show table of contents                   |
 | `toc.title`             | string | -            | TOC title (empty = no title)             |
 | `toc.minDepth`          | int    | `2`          | Min heading depth (1-6, skips H1)        |
@@ -326,6 +352,7 @@ Supported formats: `.yaml`, `.yml`
 | `footer.showPageNumber` | bool   | `false`      | Show page numbers                        |
 | `footer.position`       | string | `"right"`    | left, center, right                      |
 | `footer.text`           | string | -            | Custom footer text                       |
+| `footer.showDocumentID` | bool   | `false`      | Show document.documentID in footer       |
 | `signature.enabled`     | bool   | `false`      | Show signature block                     |
 | `signature.imagePath`   | string | -            | Photo path or URL                        |
 | `signature.links`       | array  | -            | Links (label, url)                       |
@@ -360,23 +387,49 @@ author:
   title: 'Senior Developer'
   email: 'john@example.com'
   organization: 'Acme Corp'
+  phone: '+1 555-0123'
+  address: |
+    123 Main Street
+    San Francisco, CA 94102
+  department: 'Engineering'
 
 # Shared document metadata (used by cover and footer)
 document:
   title: '' # "" = auto from H1 or filename
   subtitle: 'Internal Document'
   version: 'v1.0'
-  date: 'auto' # or "auto:long", "auto:european", "auto:DD/MM/YYYY"
+  # Date formats:
+  #   - Literal: '2025-01-11'
+  #   - Auto (ISO): 'auto' -> 2025-01-11
+  #   - Auto with format: 'auto:DD/MM/YYYY' -> 11/01/2025
+  #   - Auto with preset: 'auto:long' -> January 11, 2025
+  # Presets: iso, european, us, long
+  # Tokens: YYYY, YY, MMMM, MMM, MM, M, DD, D
+  # Escaping: [text] -> literal text
+  date: 'auto'
+  clientName: 'Client Corp'
+  projectName: 'Project Alpha'
+  documentType: 'Technical Specification'
+  documentID: 'DOC-2025-001'
+  description: 'Technical documentation for Project Alpha'
 
 # Page layout
 page:
-  size: 'a4' # letter (default), a4, legal
+  size: 'a4'           # letter (default), a4, legal
   orientation: 'portrait' # portrait (default), landscape
-  margin: 0.75 # inches, 0.25-3.0 (default: 0.5)
+  margin: 0.75         # inches, 0.25-3.0 (default: 0.5)
 
 # Styling
 css:
-  style: 'nord' # embedded style name (in internal/assets/styles/)
+  # Available styles:
+  #   - technical: system-ui, clean borders, GitHub syntax highlighting
+  #   - creative: colorful headings, badges, bullet points
+  #   - academic: Georgia/Times serif, 1.8 line height, academic tables
+  #   - corporate: Arial/Helvetica, blue accents, business style
+  #   - legal: Times New Roman, double line height, wide margins
+  #   - invoice: Arial, optimized tables, minimal cover
+  #   - manuscript: Courier New mono, scene breaks, simplified cover
+  style: 'technical'
 
 assets:
   basePath: '' # "" = use embedded assets
@@ -385,6 +438,7 @@ assets:
 cover:
   enabled: true
   logo: '/path/to/logo.png' # path or URL
+  showDepartment: true      # show author.department on cover
 
 # Table of contents
 toc:
@@ -396,9 +450,10 @@ toc:
 # Footer
 footer:
   enabled: true
-  position: 'center' # left, center, right (default: right)
+  position: 'center'     # left, center, right (default: right)
   showPageNumber: true
-  text: '' # optional custom text
+  showDocumentID: true   # show document.documentID in footer
+  text: ''               # optional custom text
 
 # Signature block
 signature:
@@ -413,10 +468,10 @@ signature:
 # Watermark
 watermark:
   enabled: false
-  text: 'DRAFT'
-  color: '#888888' # default: #888888
-  opacity: 0.1 # 0.0-1.0 (default: 0.1)
-  angle: -45 # -90 to 90 (default: -45)
+  text: 'DRAFT'      # DRAFT, CONFIDENTIAL, SAMPLE, PREVIEW, etc.
+  color: '#888888'   # hex color (default: #888888)
+  opacity: 0.1       # 0.0-1.0 (default: 0.1, recommended: 0.05-0.15)
+  angle: -45         # -90 to 90 (default: -45 = diagonal)
 
 # Page breaks
 pageBreaks:
@@ -424,8 +479,8 @@ pageBreaks:
   beforeH1: true
   beforeH2: false
   beforeH3: false
-  orphans: 2 # 1-5 (default: 2)
-  widows: 2 # 1-5 (default: 2)
+  orphans: 2 # min lines at page bottom, 1-5 (default: 2)
+  widows: 2  # min lines at page top, 1-5 (default: 2)
 ```
 
 </details>
