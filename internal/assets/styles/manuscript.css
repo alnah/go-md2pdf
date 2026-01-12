@@ -1,0 +1,721 @@
+/*
+ * Manuscript theme
+ * Traditional manuscript styling for editorial submissions
+ * Monospace font, double spacing, page numbers
+ */
+
+/* 1. CSS VARIABLES - Central configuration */
+:root {
+  /* Manuscript color palette - minimal, black and white */
+  --color-fg-default: #000000;
+  --color-fg-muted: #333333;
+  --color-fg-subtle: #666666;
+  --color-fg-on-emphasis: #ffffff;
+
+  --color-canvas-default: #ffffff;
+  --color-canvas-subtle: #f5f5f5;
+
+  --color-border-default: #000000;
+  --color-border-muted: #cccccc;
+
+  --color-accent-fg: #000000;
+  --color-accent-emphasis: #000000;
+
+  --color-success-fg: #000000;
+  --color-attention-fg: #000000;
+  --color-danger-fg: #000000;
+
+  /* Syntax highlighting - minimal */
+  --color-syntax-comment: #666666;
+  --color-syntax-keyword: #000000;
+  --color-syntax-string: #333333;
+  --color-syntax-number: #000000;
+  --color-syntax-function: #000000;
+  --color-syntax-variable: #333333;
+
+  /* Standard spacing */
+  --spacing-xs: 0.25em;
+  --spacing-sm: 0.5em;
+  --spacing-md: 1em;
+  --spacing-lg: 1.5em;
+  --spacing-xl: 2em;
+
+  /* Font sizes */
+  --font-size-base: 12pt;
+  --font-size-small: 0.9em;
+  --font-size-tiny: 0.8em;
+  --line-height: 2;
+
+  /* Component-specific values */
+  --checkbox-offset-top: -2px;
+  --checkbox-offset-left: 2px;
+  --signature-margin-top: 40px;
+
+  /* Image shape - signature profile and cover logo */
+  --signature-image-radius: 0;
+  --cover-logo-radius: 0;
+}
+
+/* 2. RESET AND BASE STYLES */
+* {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+body {
+  font-family: "Courier New", Courier, monospace;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height);
+  color: var(--color-fg-default);
+  background: var(--color-canvas-default);
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+p {
+  text-align: left;
+  margin: var(--spacing-md) 0;
+}
+
+
+/* 3. TYPOGRAPHY - Headings and hierarchy */
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Courier New", Courier, monospace;
+  font-weight: normal;
+  page-break-after: avoid;
+  color: var(--color-fg-default);
+  margin-top: var(--spacing-xl);
+  margin-bottom: var(--spacing-lg);
+  text-transform: uppercase;
+}
+
+h1 {
+  font-size: 12pt;
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: var(--spacing-xl);
+}
+
+h2 {
+  font-size: 12pt;
+  text-align: center;
+}
+
+h3 {
+  font-size: 12pt;
+  text-align: left;
+  text-transform: none;
+}
+
+h4 {
+  font-size: 12pt;
+  text-align: left;
+  text-transform: none;
+  font-style: italic;
+}
+
+h5 {
+  font-size: 12pt;
+  text-align: left;
+  text-transform: none;
+}
+
+h6 {
+  font-size: 12pt;
+  text-align: left;
+  text-transform: none;
+  color: var(--color-fg-muted);
+}
+
+/* 4. TEXT FORMATTING */
+strong, b {
+  font-weight: bold;
+}
+
+em, i {
+  font-style: italic;
+}
+
+strong em, em strong, b i, i b {
+  font-weight: bold;
+  font-style: italic;
+}
+
+mark {
+  background-color: #ffff00;
+  color: var(--color-fg-default);
+  padding: 0;
+}
+
+a {
+  color: var(--color-fg-default);
+  text-decoration: underline;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Scene break */
+hr {
+  border: none;
+  text-align: center;
+  margin: var(--spacing-xl) 0;
+}
+
+hr::before {
+  content: '# # #';
+  display: block;
+}
+
+/* 5. COMPONENTS - Blockquotes */
+blockquote {
+  margin: var(--spacing-lg) 0;
+  padding-left: 1em;
+  border-left: 2px solid var(--color-fg-default);
+  background: transparent;
+  color: var(--color-fg-default);
+  font-style: italic;
+  page-break-inside: avoid;
+  text-align: left;
+}
+
+blockquote > *:first-child {
+  margin-top: 0;
+}
+
+blockquote > *:last-child {
+  margin-bottom: 0;
+}
+
+blockquote ul {
+  list-style-type: none !important;
+  padding-left: 1.5em !important;
+  margin: 0 !important;
+}
+
+blockquote ul > li {
+  list-style: none !important;
+  position: relative;
+}
+
+blockquote ul > li::before {
+  content: '–';
+  position: absolute;
+  left: -1.2em;
+}
+
+blockquote blockquote {
+  margin-left: var(--spacing-md);
+}
+
+/* 6. COMPONENTS - Lists */
+ul, ol {
+  margin: var(--spacing-md) 0;
+  padding-left: 3em;
+  display: block;
+}
+
+li {
+  margin: var(--spacing-sm) 0;
+  line-height: var(--line-height);
+  page-break-inside: avoid;
+  display: list-item;
+}
+
+li + li {
+  margin-top: var(--spacing-sm);
+}
+
+ul:not(.task-list) {
+  list-style-type: none;
+  padding-left: 1.5em;
+}
+
+ul:not(.task-list) > li {
+  position: relative;
+}
+
+ul:not(.task-list) > li::before {
+  content: '–';
+  position: absolute;
+  left: -1.2em;
+}
+
+ul ul {
+  margin: var(--spacing-xs) 0;
+}
+
+ol {
+  list-style-type: decimal;
+}
+
+ul.task-list, ul.contains-task-list {
+  padding-left: 0;
+  list-style: none;
+}
+
+li.task-list-item {
+  list-style: none;
+  margin: var(--spacing-sm) 0;
+  display: flex;
+  align-items: flex-start;
+}
+
+li.task-list-item::before {
+  content: none;
+}
+
+.task-list-item input[type='checkbox'] {
+  flex-shrink: 0;
+  margin: 0.5em var(--spacing-sm) 0 0;
+  width: 1em;
+  height: 1em;
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: var(--color-canvas-default);
+  border: 1px solid var(--color-fg-default);
+  position: relative;
+}
+
+.task-list-item input[type='checkbox']:checked {
+  background-color: var(--color-fg-default);
+}
+
+.task-list-item input[type='checkbox']:checked::after {
+  content: 'X';
+  position: absolute;
+  top: var(--checkbox-offset-top);
+  left: var(--checkbox-offset-left);
+  color: var(--color-fg-on-emphasis);
+  font-size: 0.85em;
+  font-weight: bold;
+}
+
+/* 7. COMPONENTS - Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--spacing-md) 0;
+  page-break-inside: avoid;
+  border-spacing: 0;
+}
+
+table thead th {
+  font-weight: bold;
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-fg-default);
+  background: transparent;
+}
+
+table tbody td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border-muted);
+}
+
+/* 8. CODE AND SYNTAX HIGHLIGHTING */
+code {
+  font-family: "Courier New", Courier, monospace;
+  font-size: inherit;
+  background: transparent;
+  color: var(--color-fg-default);
+  padding: 0;
+}
+
+pre {
+  background: var(--color-canvas-subtle);
+  border: 1px solid var(--color-border-muted);
+  padding: var(--spacing-md);
+  margin: var(--spacing-md) 0;
+  overflow-x: auto;
+  page-break-inside: avoid;
+  font-size: 12pt;
+  line-height: var(--line-height);
+}
+
+pre code {
+  background: none;
+  color: var(--color-fg-default);
+  padding: 0;
+  font-size: inherit;
+}
+
+/* Syntax highlighting - minimal for manuscripts */
+.c, .ch, .cm, .c1, .cs, .cp, .cpf { color: var(--color-syntax-comment); font-style: italic; }
+.k, .kc, .kd, .kn, .kp, .kr, .kt { color: var(--color-syntax-keyword); }
+.s, .sa, .sb, .sc, .sd, .se, .sh, .si, .sr, .ss, .sx, .s1, .s2 { color: var(--color-syntax-string); }
+.m, .mb, .mf, .mh, .mi, .mo, .il { color: var(--color-syntax-number); }
+.nf, .fm, .nc, .nd, .ne, .ni, .nl { color: var(--color-syntax-function); }
+.nv, .vc, .vg, .vi, .vm { color: var(--color-syntax-variable); }
+.nb, .bp { color: var(--color-syntax-function); }
+.nt { color: var(--color-syntax-keyword); }
+.na { color: var(--color-syntax-number); }
+.nn, .kn { color: var(--color-fg-default); }
+.o, .ow { color: var(--color-syntax-keyword); }
+.p { color: var(--color-fg-default); }
+.err { color: var(--color-danger-fg); }
+.gd { text-decoration: line-through; }
+.gi { font-weight: bold; }
+.gh, .gu { font-weight: bold; }
+.ge { font-style: italic; }
+.gs { font-weight: bold; }
+.ln, .lnt { color: var(--color-fg-subtle); }
+.chroma { background: var(--color-canvas-subtle); }
+
+/* 9. IMAGES AND MEDIA */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: var(--spacing-md) auto;
+  background-color: var(--color-canvas-default);
+}
+
+.footnote-ref {
+  color: var(--color-fg-default);
+  font-size: var(--font-size-tiny);
+  vertical-align: super;
+}
+
+/* Signature - Two column layout */
+.signature-block {
+  page-break-inside: avoid;
+  margin-top: var(--signature-margin-top);
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  border-top: 1px solid var(--color-fg-default);
+  gap: 1rem;
+  font-size: 0.95em;
+}
+
+.signature-block img {
+  display: none;
+}
+
+.sig-person {
+  flex: 1;
+  line-height: 1.5;
+}
+
+.sig-person strong {
+  display: block;
+  color: var(--color-fg-default);
+  font-size: 1em;
+  margin-bottom: 0.1em;
+}
+
+.sig-person em {
+  display: block;
+  color: var(--color-fg-muted);
+  font-size: 0.9em;
+  font-style: italic;
+  margin-bottom: 0.2em;
+}
+
+.sig-person a[href^="mailto"] {
+  display: block;
+  color: var(--color-fg-default);
+  font-size: 0.85em;
+  margin-bottom: 0.1em;
+}
+
+.sig-person .sig-phone {
+  display: block;
+  font-size: 0.85em;
+  color: var(--color-fg-default);
+}
+
+.sig-org {
+  flex: 1;
+  text-align: right;
+  line-height: 1.5;
+}
+
+.sig-org .sig-department {
+  display: block;
+  color: var(--color-fg-muted);
+  font-size: 0.85em;
+  margin-bottom: 0.1em;
+}
+
+.sig-org .sig-organization {
+  display: block;
+  color: var(--color-fg-default);
+  font-size: 0.9em;
+  margin-bottom: 0.2em;
+}
+
+.sig-org .sig-address {
+  display: block;
+  font-size: 0.8em;
+  color: var(--color-fg-muted);
+  white-space: pre-line;
+  line-height: 1.4;
+  margin-bottom: 0.2em;
+}
+
+.sig-org .sig-links a {
+  display: block;
+  color: var(--color-fg-default);
+  font-size: 0.85em;
+}
+
+/* Conditional signature styles */
+.signature-block:not(:has(img)) {
+  gap: 1.5rem;
+}
+
+.signature-block:not(:has(img)) .sig-person {
+  flex: 1.2;
+}
+
+.signature-block:not(:has(.sig-org > *)) .sig-person {
+  flex: 1;
+}
+
+.signature-block:not(:has(.sig-org > *)) .sig-org {
+  display: none;
+}
+
+.signature-block:not(:has(.sig-person > *)) .sig-org {
+  flex: 1;
+}
+
+.signature-block:not(:has(.sig-person > *)) .sig-person {
+  display: none;
+}
+
+.sig-person > *:last-child,
+.sig-org > *:last-child {
+  margin-bottom: 0;
+}
+
+.sig-person:not(:has(.sig-phone)) a[href^="mailto"] {
+  margin-bottom: 0;
+}
+
+.sig-org:not(:has(.sig-organization)) .sig-department {
+  font-weight: 500;
+}
+
+.sig-org:not(:has(.sig-organization)):not(:has(.sig-department)):not(:has(.sig-address)):has(.sig-links) {
+  display: flex;
+  align-items: center;
+}
+
+.footnotes {
+  margin-top: 3em;
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-fg-default);
+  font-size: var(--font-size-small);
+}
+
+/* 10. CHROME PDF SPECIFIC RULES */
+@media all {
+  ul, ol {
+    display: block !important;
+    margin: var(--spacing-md) 0 !important;
+    padding-left: 3em !important;
+  }
+
+  li {
+    display: list-item !important;
+    margin: var(--spacing-sm) 0 !important;
+    line-height: var(--line-height) !important;
+    white-space: normal !important;
+  }
+
+  li strong, li b {
+    display: inline !important;
+  }
+
+  ul:not(.task-list) > li {
+    list-style: none !important;
+    list-style-type: none !important;
+  }
+
+  ol > li {
+    list-style: decimal outside !important;
+  }
+}
+
+/* 11. COVER PAGE - Flexbox layout, centered, minimal for manuscripts */
+.cover-page {
+  page-break-after: always;
+  page-break-inside: avoid;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 5rem 2rem 2rem 2rem;
+  min-height: auto;
+  box-sizing: border-box;
+}
+
+/* Hidden elements for manuscript style */
+.cover-logo {
+  display: none;
+}
+
+.cover-context {
+  display: none;
+}
+
+.cover-client {
+  display: none;
+}
+
+.cover-project {
+  display: none;
+}
+
+.cover-doctype {
+  display: none;
+}
+
+.cover-organization {
+  display: none;
+}
+
+.cover-department {
+  display: none;
+}
+
+.cover-docid {
+  display: none;
+}
+
+.cover-author-title {
+  display: none;
+}
+
+/* Title group */
+.cover-title {
+  order: 1;
+  font-size: 12pt;
+  font-weight: normal;
+  color: var(--color-fg-default);
+  margin: 0 0 var(--spacing-lg) 0;
+  text-transform: uppercase;
+}
+
+.cover-subtitle {
+  order: 2;
+  font-size: 12pt;
+  color: var(--color-fg-default);
+  margin: 0 0 var(--spacing-xl) 0;
+  font-weight: normal;
+  font-style: italic;
+}
+
+/* Description - tagline or genre */
+.cover-description {
+  order: 3;
+  font-size: 12pt;
+  color: var(--color-fg-muted);
+  margin: 0 0 var(--spacing-xl) 0;
+  max-width: 80%;
+  text-align: center;
+  font-style: italic;
+  line-height: var(--line-height);
+}
+
+/* Author info */
+.cover-meta {
+  order: 4;
+  margin-top: var(--spacing-xl);
+}
+
+.cover-meta p {
+  margin: 0.3em 0;
+  text-align: center;
+}
+
+.cover-author {
+  font-size: 12pt;
+  font-weight: normal;
+  color: var(--color-fg-default);
+}
+
+.cover-date {
+  font-size: 12pt;
+  color: var(--color-fg-default);
+  margin-top: var(--spacing-lg);
+}
+
+.cover-version {
+  font-size: 11pt;
+  color: var(--color-fg-muted);
+}
+
+/* 12. TABLE OF CONTENTS */
+.toc {
+  page-break-after: always;
+  padding: 2rem 0;
+}
+
+.toc-title {
+  font-size: 12pt;
+  font-weight: normal;
+  color: var(--color-fg-default);
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+  text-transform: uppercase;
+}
+
+.toc-item {
+  margin: 0.5em 0;
+  line-height: var(--line-height);
+}
+
+.toc-item a {
+  color: var(--color-fg-default);
+  text-decoration: none;
+}
+
+.toc-item a:hover {
+  text-decoration: underline;
+}
+
+/* 13. PRINT SETTINGS */
+@page {
+  margin: 2.5cm;
+}
+
+@media print {
+  body {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    font-size: 12pt;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+
+  table, figure, blockquote, pre {
+    page-break-inside: avoid;
+  }
+
+  li {
+    page-break-inside: avoid;
+  }
+
+  ul, ol {
+    display: block !important;
+  }
+
+  ul > li, ol > li {
+    display: list-item !important;
+    margin: var(--spacing-sm) 0 !important;
+  }
+
+  ul:not(.task-list) > li {
+    list-style: none !important;
+    list-style-type: none !important;
+  }
+}

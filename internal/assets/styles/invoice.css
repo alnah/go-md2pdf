@@ -1,0 +1,849 @@
+/*
+ * Invoice theme
+ * Clean styling for invoices, quotes, and financial documents
+ * Table-focused, minimal styling, clear hierarchy
+ */
+
+/* 1. CSS VARIABLES - Central configuration */
+:root {
+  /* Invoice color palette - black and grey, professional */
+  --color-fg-default: #000000;
+  --color-fg-muted: #444444;
+  --color-fg-subtle: #666666;
+  --color-fg-on-emphasis: #ffffff;
+
+  --color-canvas-default: #ffffff;
+  --color-canvas-subtle: #f5f5f5;
+
+  --color-border-default: #cccccc;
+  --color-border-muted: #e0e0e0;
+
+  --color-accent-fg: #0066cc;
+  --color-accent-emphasis: #333333;
+
+  --color-success-fg: #16a34a;
+  --color-attention-fg: #ca8a04;
+  --color-danger-fg: #dc2626;
+
+  /* Syntax highlighting */
+  --color-syntax-comment: #6b7280;
+  --color-syntax-keyword: #7c3aed;
+  --color-syntax-string: #059669;
+  --color-syntax-number: #dc2626;
+  --color-syntax-function: #2563eb;
+  --color-syntax-variable: #d97706;
+
+  /* Standard spacing */
+  --spacing-xs: 0.25em;
+  --spacing-sm: 0.5em;
+  --spacing-md: 1em;
+  --spacing-lg: 1.5em;
+  --spacing-xl: 2em;
+
+  /* Font sizes */
+  --font-size-base: 10pt;
+  --font-size-small: 0.9em;
+  --font-size-tiny: 0.8em;
+  --line-height: 1.5;
+
+  /* Component-specific values */
+  --checkbox-offset-top: -2px;
+  --checkbox-offset-left: 2px;
+  --signature-margin-top: 30px;
+
+  /* Image shape - signature profile and cover logo */
+  --signature-image-radius: 50%;
+  --cover-logo-radius: 0;
+}
+
+/* 2. RESET AND BASE STYLES */
+* {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height);
+  color: var(--color-fg-default);
+  background: var(--color-canvas-default);
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+p {
+  text-align: left;
+  margin: var(--spacing-sm) 0;
+}
+
+/* 3. TYPOGRAPHY - Headings and hierarchy */
+h1, h2, h3, h4, h5, h6 {
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: bold;
+  page-break-after: avoid;
+  color: var(--color-fg-default);
+  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-sm);
+}
+
+h1 {
+  font-size: 1.5em;
+  color: var(--color-fg-default);
+  margin-top: 0;
+}
+
+h2 {
+  font-size: 1.2em;
+  border-bottom: 1px solid var(--color-border-default);
+  padding-bottom: 0.2em;
+}
+
+h3 {
+  font-size: 1.1em;
+}
+
+h4 {
+  font-size: 1em;
+}
+
+h5 {
+  font-size: 0.95em;
+  color: var(--color-fg-muted);
+}
+
+h6 {
+  font-size: 0.9em;
+  color: var(--color-fg-muted);
+}
+
+/* 4. TEXT FORMATTING */
+strong, b {
+  font-weight: bold;
+}
+
+em, i {
+  font-style: italic;
+}
+
+strong em, em strong, b i, i b {
+  font-weight: bold;
+  font-style: italic;
+}
+
+mark {
+  background-color: #fef08a;
+  color: var(--color-fg-default);
+  padding: 0.1em 0.2em;
+}
+
+a {
+  color: var(--color-accent-fg);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--color-border-default);
+  margin: var(--spacing-lg) 0;
+}
+
+/* 5. COMPONENTS - Blockquotes */
+blockquote {
+  margin: var(--spacing-sm) 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-left: 3px solid var(--color-accent-emphasis);
+  background: var(--color-canvas-subtle);
+  color: var(--color-fg-default);
+  page-break-inside: avoid;
+}
+
+blockquote > *:first-child {
+  margin-top: 0;
+}
+
+blockquote > *:last-child {
+  margin-bottom: 0;
+}
+
+blockquote ul {
+  list-style-type: none !important;
+  padding-left: 1.5em !important;
+  margin: 0 !important;
+}
+
+blockquote ul > li {
+  list-style: none !important;
+  position: relative;
+}
+
+blockquote ul > li::before {
+  content: '–';
+  position: absolute;
+  left: -1.2em;
+}
+
+blockquote blockquote {
+  margin-left: var(--spacing-md);
+}
+
+/* 6. COMPONENTS - Lists */
+ul, ol {
+  margin: var(--spacing-sm) 0;
+  padding-left: 1.5em;
+  display: block;
+}
+
+li {
+  margin: var(--spacing-xs) 0;
+  line-height: var(--line-height);
+  page-break-inside: avoid;
+  display: list-item;
+}
+
+li + li {
+  margin-top: var(--spacing-xs);
+}
+
+ul:not(.task-list) {
+  list-style-type: none;
+  padding-left: 1.5em;
+}
+
+ul:not(.task-list) > li {
+  position: relative;
+}
+
+ul:not(.task-list) > li::before {
+  content: '–';
+  position: absolute;
+  left: -1.2em;
+}
+
+ul ul {
+  margin: var(--spacing-xs) 0;
+}
+
+ol {
+  list-style-type: decimal;
+}
+
+ul.task-list, ul.contains-task-list {
+  padding-left: 0;
+  list-style: none;
+}
+
+li.task-list-item {
+  list-style: none;
+  margin: var(--spacing-xs) 0;
+  display: flex;
+  align-items: flex-start;
+}
+
+li.task-list-item::before {
+  content: none;
+}
+
+.task-list-item input[type='checkbox'] {
+  flex-shrink: 0;
+  margin: 0.2em var(--spacing-sm) 0 0;
+  width: 1em;
+  height: 1em;
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: var(--color-canvas-default);
+  border: 1px solid var(--color-border-default);
+  border-radius: 2px;
+  position: relative;
+}
+
+.task-list-item input[type='checkbox']:checked {
+  background-color: var(--color-success-fg);
+  border-color: var(--color-success-fg);
+}
+
+.task-list-item input[type='checkbox']:checked::after {
+  content: '✓';
+  position: absolute;
+  top: var(--checkbox-offset-top);
+  left: var(--checkbox-offset-left);
+  color: var(--color-fg-on-emphasis);
+  font-size: 0.85em;
+  font-weight: bold;
+}
+
+/* 7. COMPONENTS - Tables - ENHANCED FOR INVOICES */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--spacing-md) 0;
+  page-break-inside: avoid;
+  border-spacing: 0;
+}
+
+table thead th {
+  font-weight: bold;
+  padding: 10px 12px;
+  text-align: left;
+  background: var(--color-fg-default);
+  color: var(--color-fg-on-emphasis);
+  font-size: 0.9em;
+}
+
+/* Right-align numeric columns */
+table thead th:last-child,
+table tbody td:last-child {
+  text-align: right;
+}
+
+table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border-muted);
+}
+
+table tbody tr:nth-child(even) {
+  background: var(--color-canvas-subtle);
+}
+
+/* Total row styling */
+table tbody tr:last-child td {
+  font-weight: bold;
+  border-top: 2px solid var(--color-fg-default);
+  border-bottom: none;
+}
+
+/* 8. CODE AND SYNTAX HIGHLIGHTING */
+code {
+  font-family: "Courier New", Courier, monospace;
+  font-size: var(--font-size-small);
+  background: var(--color-canvas-subtle);
+  color: var(--color-fg-default);
+  padding: 0.2em 0.4em;
+  border-radius: 2px;
+}
+
+pre {
+  background: var(--color-canvas-subtle);
+  border: 1px solid var(--color-border-muted);
+  padding: var(--spacing-sm);
+  margin: var(--spacing-sm) 0;
+  overflow-x: auto;
+  page-break-inside: avoid;
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+
+pre code {
+  background: none;
+  color: var(--color-fg-default);
+  padding: 0;
+  font-size: inherit;
+}
+
+/* Syntax highlighting */
+.c, .ch, .cm, .c1, .cs, .cp, .cpf { color: var(--color-syntax-comment); }
+.k, .kc, .kd, .kn, .kp, .kr, .kt { color: var(--color-syntax-keyword); }
+.s, .sa, .sb, .sc, .sd, .se, .sh, .si, .sr, .ss, .sx, .s1, .s2 { color: var(--color-syntax-string); }
+.m, .mb, .mf, .mh, .mi, .mo, .il { color: var(--color-syntax-number); }
+.nf, .fm, .nc, .nd, .ne, .ni, .nl { color: var(--color-syntax-function); }
+.nv, .vc, .vg, .vi, .vm { color: var(--color-syntax-variable); }
+.nb, .bp { color: var(--color-syntax-function); }
+.nt { color: var(--color-syntax-keyword); }
+.na { color: var(--color-syntax-number); }
+.nn, .kn { color: var(--color-fg-default); }
+.o, .ow { color: var(--color-syntax-keyword); }
+.p { color: var(--color-fg-default); }
+.err { color: var(--color-danger-fg); }
+.gd { color: var(--color-danger-fg); }
+.gi { color: var(--color-success-fg); }
+.gh, .gu { color: var(--color-syntax-function); }
+.ge { font-style: italic; }
+.gs { font-weight: bold; }
+.ln, .lnt { color: var(--color-fg-subtle); }
+.chroma { background: var(--color-canvas-subtle); }
+
+/* 9. IMAGES AND MEDIA */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: var(--spacing-sm) auto;
+  background-color: var(--color-canvas-default);
+}
+
+.footnote-ref {
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-tiny);
+  vertical-align: super;
+}
+
+/* Signature - Two column layout like cover metadata */
+.signature-block {
+  page-break-inside: avoid;
+  margin-top: var(--signature-margin-top);
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  gap: 0 1.5em;
+  align-items: center;
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border-default);
+  font-size: 0.95em;
+  position: relative;
+}
+
+/* Vertical divider */
+.signature-block::before {
+  content: '';
+  grid-column: 2;
+  grid-row: 1;
+  background: var(--color-border-default);
+  width: 1px;
+  height: 100%;
+}
+
+/* Profile image - positioned absolutely so it doesn't affect grid */
+.signature-block img {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 50px !important;
+  height: 50px !important;
+  border-radius: var(--signature-image-radius);
+  border: none;
+  object-fit: cover;
+}
+
+/* Person data (left column) - with padding for image */
+.sig-person {
+  grid-column: 1;
+  grid-row: 1;
+  padding-left: 62px; /* 50px image + 12px gap */
+  text-align: left;
+  line-height: 1.4;
+}
+
+/* Organization data (right) */
+.sig-org {
+  grid-column: 3;
+  grid-row: 1;
+  text-align: left;
+  line-height: 1.4;
+}
+
+.sig-person strong {
+  display: block;
+  color: var(--color-fg-default);
+  font-size: 0.9em;
+  margin-bottom: 0.1em;
+}
+
+.sig-person em {
+  display: block;
+  color: var(--color-fg-muted);
+  font-size: 0.8em;
+  font-style: normal;
+  margin-bottom: 0.15em;
+}
+
+.sig-person a[href^="mailto"] {
+  display: block;
+  color: var(--color-fg-default);
+  font-size: 0.75em;
+  margin-bottom: 0.1em;
+}
+
+.sig-person .sig-phone {
+  display: block;
+  font-size: 0.75em;
+  color: var(--color-fg-default);
+}
+
+.sig-org .sig-department {
+  display: block;
+  color: var(--color-fg-muted);
+  font-size: 0.75em;
+  margin-bottom: 0.1em;
+}
+
+.sig-org .sig-organization {
+  display: block;
+  color: var(--color-fg-default);
+  font-size: 0.8em;
+  font-weight: 500;
+  margin-bottom: 0.15em;
+}
+
+.sig-org .sig-address {
+  display: block;
+  font-size: 0.7em;
+  color: var(--color-fg-muted);
+  white-space: pre-line;
+  line-height: 1.3;
+  margin-bottom: 0.15em;
+}
+
+.sig-org .sig-links a {
+  display: block;
+  color: var(--color-fg-default);
+  font-size: 0.75em;
+}
+
+/* Conditional signature styles */
+
+/* No image: adjust grid */
+.signature-block:not(:has(img)) {
+  grid-template-columns: 1fr 1px 1fr;
+}
+
+.signature-block:not(:has(img)) .sig-person {
+  grid-column: 1;
+  padding-left: 0;
+}
+
+.signature-block:not(:has(img))::before {
+  grid-column: 2;
+}
+
+.signature-block:not(:has(img)) .sig-org {
+  grid-column: 3;
+}
+
+/* No org content: hide org column */
+.signature-block:not(:has(.sig-org > *)) {
+  grid-template-columns: auto 1fr;
+}
+
+.signature-block:not(:has(.sig-org > *))::before {
+  display: none;
+}
+
+.signature-block:not(:has(.sig-org > *)) .sig-org {
+  display: none;
+}
+
+/* No person content: hide person column */
+.signature-block:not(:has(.sig-person > *)) {
+  grid-template-columns: auto 1fr;
+}
+
+.signature-block:not(:has(.sig-person > *))::before {
+  display: none;
+}
+
+.signature-block:not(:has(.sig-person > *)) .sig-person {
+  display: none;
+}
+
+.signature-block:not(:has(.sig-person > *)) .sig-org {
+  grid-column: 2;
+}
+
+.sig-person > *:last-child,
+.sig-org > *:last-child {
+  margin-bottom: 0;
+}
+
+.sig-person:not(:has(.sig-phone)) a[href^="mailto"] {
+  margin-bottom: 0;
+}
+
+.sig-org:not(:has(.sig-organization)) .sig-department {
+  font-weight: 500;
+  color: var(--color-fg-default);
+}
+
+.sig-org:not(:has(.sig-organization)):not(:has(.sig-department)):not(:has(.sig-address)):has(.sig-links) {
+  display: flex;
+  align-items: center;
+}
+
+.footnotes {
+  margin-top: 2em;
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border-default);
+  font-size: var(--font-size-small);
+}
+
+/* 10. CHROME PDF SPECIFIC RULES */
+@media all {
+  ul, ol {
+    display: block !important;
+    margin: var(--spacing-sm) 0 !important;
+    padding-left: 1.5em !important;
+  }
+
+  li {
+    display: list-item !important;
+    margin: var(--spacing-xs) 0 !important;
+    line-height: var(--line-height) !important;
+    white-space: normal !important;
+  }
+
+  li strong, li b {
+    display: inline !important;
+  }
+
+  ul:not(.task-list) > li {
+    list-style: none !important;
+    list-style-type: none !important;
+  }
+
+  ol > li {
+    list-style: decimal outside !important;
+  }
+}
+
+/* 11. COVER PAGE - Flexbox layout with order, left-aligned for invoices */
+.cover-page {
+  page-break-after: always;
+  page-break-inside: avoid;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  padding: 2rem;
+  min-height: auto;
+  box-sizing: border-box;
+}
+
+/* Logo and DocID group */
+.cover-logo {
+  order: 1;
+  max-height: 60px;
+  max-width: 150px;
+  margin-bottom: var(--spacing-sm);
+  object-fit: contain;
+  border-radius: var(--cover-logo-radius);
+}
+
+/* DocID moved to metadata section - right column */
+
+/* Document type badge */
+.cover-doctype {
+  order: 2;
+  display: inline-block;
+  font-size: 0.75em;
+  padding: 0.3em 0.6em;
+  background: var(--color-accent-emphasis);
+  color: var(--color-fg-on-emphasis);
+  border-radius: 2px;
+  margin-bottom: var(--spacing-xs);
+  text-transform: uppercase;
+}
+
+/* Title group */
+.cover-title {
+  order: 3;
+  font-size: 1.5em;
+  font-weight: bold;
+  color: var(--color-fg-default);
+  margin: 0 0 var(--spacing-xs) 0;
+}
+
+.cover-subtitle {
+  order: 4;
+  font-size: 1.1em;
+  color: var(--color-fg-muted);
+  margin: 0 0 var(--spacing-xl) 0;
+  font-weight: normal;
+}
+
+/* Client context block */
+.cover-context {
+  order: 5;
+  margin-bottom: var(--spacing-xl);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-canvas-subtle);
+  border-left: 3px solid var(--color-accent-emphasis);
+}
+
+.cover-client {
+  font-size: 1em;
+  color: var(--color-fg-default);
+  margin: 0;
+  font-weight: bold;
+}
+
+.cover-project {
+  font-size: 0.9em;
+  color: var(--color-fg-muted);
+  margin: 0.2rem 0 0 0;
+}
+
+/* Description */
+.cover-description {
+  order: 6;
+  font-size: 0.9em;
+  color: var(--color-fg-muted);
+  margin: 0 0 var(--spacing-xl) 0;
+  max-width: 80%;
+  line-height: 1.5;
+}
+
+/* Organization */
+.cover-organization {
+  order: 7;
+  font-size: 1em;
+  color: var(--color-fg-default);
+  margin: 0;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Metadata section - two columns with vertical divider */
+.cover-meta {
+  order: 8;
+  width: 100%;
+  margin-top: 0;
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border-default);
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  gap: 0 1.5em;
+  align-items: start;
+}
+
+/* Vertical divider */
+.cover-meta::before {
+  content: '';
+  grid-column: 2;
+  grid-row: 1 / 4;
+  background: var(--color-border-default);
+  width: 1px;
+  height: 100%;
+}
+
+.cover-meta p {
+  margin: 0.15em 0;
+  font-size: 0.9em;
+}
+
+/* Left column - person info */
+.cover-author,
+.cover-author-title,
+.cover-department {
+  grid-column: 1;
+  text-align: left;
+}
+
+.cover-author {
+  grid-row: 1;
+  font-size: 1em;
+  font-weight: bold;
+  color: var(--color-fg-default);
+}
+
+.cover-author-title {
+  grid-row: 2;
+  font-size: 0.9em;
+  color: var(--color-fg-muted);
+}
+
+.cover-department {
+  grid-row: 3;
+  font-size: 0.85em;
+  color: var(--color-fg-muted);
+}
+
+/* Right column - document info */
+.cover-date,
+.cover-version {
+  grid-column: 3;
+  text-align: left;
+}
+
+.cover-date {
+  grid-row: 1;
+  font-size: 0.9em;
+  color: var(--color-fg-default);
+}
+
+.cover-version {
+  grid-row: 2;
+  font-size: 0.85em;
+  color: var(--color-fg-subtle);
+}
+
+/* DocID - right column */
+.cover-docid {
+  grid-column: 3;
+  grid-row: 3;
+  text-align: left;
+  font-size: 0.85em;
+  font-family: "Courier New", Courier, monospace;
+  color: var(--color-fg-muted);
+}
+
+/* 12. TABLE OF CONTENTS */
+.toc {
+  page-break-after: always;
+  padding: 1.5rem 0;
+}
+
+.toc-title {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: var(--color-fg-default);
+  margin-bottom: 1rem;
+}
+
+.toc-item {
+  margin: 0.3em 0;
+  line-height: 1.4;
+}
+
+.toc-item a {
+  color: var(--color-fg-default);
+  text-decoration: none;
+}
+
+.toc-item a:hover {
+  text-decoration: underline;
+}
+
+/* 13. PRINT SETTINGS */
+@page {
+  margin: 1.5cm;
+}
+
+@media print {
+  body {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    font-size: 10pt;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+
+  table, figure, blockquote, pre {
+    page-break-inside: avoid;
+  }
+
+  li {
+    page-break-inside: avoid;
+  }
+
+  ul, ol {
+    display: block !important;
+  }
+
+  ul > li, ol > li {
+    display: list-item !important;
+    margin: var(--spacing-xs) 0 !important;
+  }
+
+  ul:not(.task-list) > li {
+    list-style: none !important;
+    list-style-type: none !important;
+  }
+}

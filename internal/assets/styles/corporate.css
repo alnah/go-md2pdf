@@ -1,0 +1,786 @@
+/*
+ * Corporate theme
+ * Clean, professional styling for business documents
+ * Arial/Helvetica body, modern structure
+ */
+
+/* 1. CSS VARIABLES - Central configuration */
+:root {
+  /* Corporate color palette - professional, clean */
+  --color-fg-default: #2d3748;
+  --color-fg-muted: #4a5568;
+  --color-fg-subtle: #718096;
+  --color-fg-on-emphasis: #ffffff;
+
+  --color-canvas-default: #ffffff;
+  --color-canvas-subtle: #f7fafc;
+
+  --color-border-default: #e2e8f0;
+  --color-border-muted: #edf2f7;
+
+  --color-accent-fg: #1a365d;
+  --color-accent-emphasis: #2c5282;
+
+  --color-success-fg: #276749;
+  --color-attention-fg: #c05621;
+  --color-danger-fg: #c53030;
+
+  /* Syntax highlighting */
+  --color-syntax-comment: #718096;
+  --color-syntax-keyword: #805ad5;
+  --color-syntax-string: #2f855a;
+  --color-syntax-number: #dd6b20;
+  --color-syntax-function: #2c5282;
+  --color-syntax-variable: #c05621;
+
+  /* Standard spacing */
+  --spacing-xs: 0.25em;
+  --spacing-sm: 0.5em;
+  --spacing-md: 1em;
+  --spacing-lg: 1.5em;
+  --spacing-xl: 2em;
+
+  /* Font sizes */
+  --font-size-base: 11pt;
+  --font-size-small: 0.9em;
+  --font-size-tiny: 0.8em;
+  --line-height: 1.6;
+
+  /* Component-specific values */
+  --checkbox-offset-top: -2px;
+  --checkbox-offset-left: 2px;
+  --signature-margin-top: 30px;
+
+  /* Image shape - signature profile and cover logo */
+  --signature-image-radius: 4px;
+  --cover-logo-radius: 0;
+}
+
+/* 2. RESET AND BASE STYLES */
+* {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height);
+  color: var(--color-fg-default);
+  background: var(--color-canvas-default);
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+p {
+  text-align: justify;
+  text-justify: inter-word;
+  margin: var(--spacing-md) 0;
+}
+
+/* 3. TYPOGRAPHY - Headings and hierarchy */
+h1, h2, h3, h4, h5, h6 {
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: bold;
+  page-break-after: avoid;
+  color: var(--color-fg-default);
+  margin-top: var(--spacing-xl);
+  margin-bottom: var(--spacing-md);
+}
+
+h1 {
+  font-size: 1.8em;
+  color: var(--color-accent-fg);
+  border-bottom: 2px solid var(--color-accent-emphasis);
+  padding-bottom: 0.3em;
+}
+
+h2 {
+  font-size: 1.4em;
+  color: var(--color-accent-fg);
+  border-bottom: 1px solid var(--color-border-default);
+  padding-bottom: 0.2em;
+}
+
+h3 {
+  font-size: 1.2em;
+}
+
+h4 {
+  font-size: 1.1em;
+}
+
+h5 {
+  font-size: 1em;
+  color: var(--color-fg-muted);
+}
+
+h6 {
+  font-size: 0.95em;
+  color: var(--color-fg-muted);
+}
+
+/* 4. TEXT FORMATTING */
+strong, b {
+  font-weight: bold;
+}
+
+em, i {
+  font-style: italic;
+}
+
+strong em, em strong, b i, i b {
+  font-weight: bold;
+  font-style: italic;
+}
+
+mark {
+  background-color: #fef3c7;
+  color: var(--color-fg-default);
+  padding: 0.1em 0.2em;
+  border-radius: 2px;
+}
+
+a {
+  color: var(--color-accent-fg);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--color-border-default);
+  margin: var(--spacing-xl) 0;
+}
+
+/* 5. COMPONENTS - Blockquotes */
+blockquote {
+  margin: var(--spacing-md) 0;
+  padding: var(--spacing-md);
+  border-left: 4px solid var(--color-accent-emphasis);
+  background: var(--color-canvas-subtle);
+  color: var(--color-fg-default);
+  page-break-inside: avoid;
+  text-align: justify;
+}
+
+blockquote > *:first-child {
+  margin-top: 0;
+}
+
+blockquote > *:last-child {
+  margin-bottom: 0;
+}
+
+blockquote ul {
+  list-style-type: none !important;
+  padding-left: 1.5em !important;
+  margin: 0 !important;
+}
+
+blockquote ul > li {
+  list-style: none !important;
+  position: relative;
+}
+
+blockquote ul > li::before {
+  content: '–';
+  position: absolute;
+  left: -1.2em;
+}
+
+blockquote blockquote {
+  margin-left: var(--spacing-md);
+}
+
+/* 6. COMPONENTS - Lists */
+ul, ol {
+  margin: var(--spacing-md) 0;
+  padding-left: 2em;
+  display: block;
+}
+
+li {
+  margin: var(--spacing-xs) 0;
+  line-height: var(--line-height);
+  page-break-inside: avoid;
+  display: list-item;
+}
+
+li + li {
+  margin-top: var(--spacing-xs);
+}
+
+ul:not(.task-list) {
+  list-style-type: none;
+  padding-left: 1.5em;
+}
+
+ul:not(.task-list) > li {
+  position: relative;
+}
+
+ul:not(.task-list) > li::before {
+  content: '–';
+  position: absolute;
+  left: -1.2em;
+}
+
+ul ul {
+  margin: var(--spacing-xs) 0;
+}
+
+ol {
+  list-style-type: decimal;
+}
+
+ul.task-list, ul.contains-task-list {
+  padding-left: 0;
+  list-style: none;
+}
+
+li.task-list-item {
+  list-style: none;
+  margin: var(--spacing-xs) 0;
+  display: flex;
+  align-items: flex-start;
+}
+
+li.task-list-item::before {
+  content: none;
+}
+
+.task-list-item input[type='checkbox'] {
+  flex-shrink: 0;
+  margin: 0.3em var(--spacing-sm) 0 0;
+  width: 1em;
+  height: 1em;
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: var(--color-canvas-default);
+  border: 1px solid var(--color-border-default);
+  border-radius: 3px;
+  position: relative;
+}
+
+.task-list-item input[type='checkbox']:checked {
+  background-color: var(--color-accent-emphasis);
+  border-color: var(--color-accent-emphasis);
+}
+
+.task-list-item input[type='checkbox']:checked::after {
+  content: '✓';
+  position: absolute;
+  top: var(--checkbox-offset-top);
+  left: var(--checkbox-offset-left);
+  color: var(--color-fg-on-emphasis);
+  font-size: 0.85em;
+  font-weight: bold;
+}
+
+/* 7. COMPONENTS - Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--spacing-md) 0;
+  page-break-inside: avoid;
+  border-spacing: 0;
+}
+
+table thead th {
+  font-weight: bold;
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 2px solid var(--color-accent-emphasis);
+  background: var(--color-canvas-subtle);
+  color: var(--color-fg-default);
+}
+
+table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border-muted);
+}
+
+table tbody tr:nth-child(even) {
+  background: var(--color-canvas-subtle);
+}
+
+/* 8. CODE AND SYNTAX HIGHLIGHTING */
+code {
+  font-family: "Courier New", Courier, monospace;
+  font-size: var(--font-size-small);
+  background: var(--color-canvas-subtle);
+  color: var(--color-fg-default);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  border: 1px solid var(--color-border-muted);
+}
+
+pre {
+  background: var(--color-canvas-subtle);
+  border: 1px solid var(--color-border-muted);
+  border-radius: 4px;
+  padding: var(--spacing-md);
+  margin: var(--spacing-md) 0;
+  overflow-x: auto;
+  page-break-inside: avoid;
+  font-size: 0.9em;
+  line-height: 1.5;
+}
+
+pre code {
+  background: none;
+  color: var(--color-fg-default);
+  padding: 0;
+  font-size: inherit;
+  border-radius: 0;
+  border: none;
+}
+
+/* Syntax highlighting */
+.c, .ch, .cm, .c1, .cs, .cp, .cpf { color: var(--color-syntax-comment); }
+.k, .kc, .kd, .kn, .kp, .kr, .kt { color: var(--color-syntax-keyword); }
+.s, .sa, .sb, .sc, .sd, .se, .sh, .si, .sr, .ss, .sx, .s1, .s2 { color: var(--color-syntax-string); }
+.m, .mb, .mf, .mh, .mi, .mo, .il { color: var(--color-syntax-number); }
+.nf, .fm, .nc, .nd, .ne, .ni, .nl { color: var(--color-syntax-function); }
+.nv, .vc, .vg, .vi, .vm { color: var(--color-syntax-variable); }
+.nb, .bp { color: var(--color-syntax-function); }
+.nt { color: var(--color-syntax-keyword); }
+.na { color: var(--color-syntax-number); }
+.nn, .kn { color: var(--color-fg-default); }
+.o, .ow { color: var(--color-syntax-keyword); }
+.p { color: var(--color-fg-default); }
+.err { color: var(--color-danger-fg); }
+.gd { color: var(--color-danger-fg); background: #fed7d7; }
+.gi { color: var(--color-success-fg); background: #c6f6d5; }
+.gh, .gu { color: var(--color-syntax-function); }
+.ge { font-style: italic; }
+.gs { font-weight: bold; }
+.ln, .lnt { color: var(--color-fg-subtle); }
+.chroma { background: var(--color-canvas-subtle); }
+
+/* 9. IMAGES AND MEDIA */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: var(--spacing-md) auto;
+  background-color: var(--color-canvas-default);
+}
+
+.footnote-ref {
+  color: var(--color-accent-fg);
+  font-size: var(--font-size-tiny);
+  vertical-align: super;
+}
+
+/* Signature - Two column layout */
+.signature-block {
+  page-break-inside: avoid;
+  margin-top: var(--signature-margin-top);
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--color-canvas-subtle);
+  border: 1px solid var(--color-border-default);
+  border-left: 4px solid var(--color-accent-emphasis);
+  gap: 0.75rem;
+  font-size: 0.9em;
+}
+
+.signature-block img {
+  width: 55px !important;
+  height: 55px !important;
+  border-radius: var(--signature-image-radius);
+  border: none;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.sig-person {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.sig-person strong {
+  display: block;
+  color: var(--color-fg-default);
+  font-size: 0.95em;
+  margin-bottom: 0.1em;
+}
+
+.sig-person em {
+  display: block;
+  color: var(--color-fg-muted);
+  font-size: 0.85em;
+  font-style: normal;
+  margin-bottom: 0.2em;
+}
+
+.sig-person a[href^="mailto"] {
+  display: block;
+  color: var(--color-accent-fg);
+  font-size: 0.8em;
+  margin-bottom: 0.1em;
+}
+
+.sig-person .sig-phone {
+  display: block;
+  font-size: 0.8em;
+  color: var(--color-fg-default);
+}
+
+.sig-org {
+  flex: 1;
+  text-align: right;
+  line-height: 1.4;
+}
+
+.sig-org .sig-department {
+  display: block;
+  color: var(--color-accent-fg);
+  font-size: 0.8em;
+  margin-bottom: 0.1em;
+}
+
+.sig-org .sig-organization {
+  display: block;
+  color: var(--color-fg-default);
+  font-size: 0.85em;
+  font-weight: 500;
+  margin-bottom: 0.2em;
+}
+
+.sig-org .sig-address {
+  display: block;
+  font-size: 0.75em;
+  color: var(--color-fg-muted);
+  white-space: pre-line;
+  line-height: 1.3;
+  margin-bottom: 0.2em;
+}
+
+.sig-org .sig-links a {
+  display: block;
+  color: var(--color-accent-fg);
+  font-size: 0.8em;
+}
+
+/* Conditional signature styles */
+.signature-block:not(:has(img)) {
+  gap: 1.5rem;
+}
+
+.signature-block:not(:has(img)) .sig-person {
+  flex: 1.2;
+}
+
+.signature-block:not(:has(.sig-org > *)) .sig-person {
+  flex: 1;
+}
+
+.signature-block:not(:has(.sig-org > *)) .sig-org {
+  display: none;
+}
+
+.signature-block:not(:has(.sig-person > *)) .sig-org {
+  flex: 1;
+}
+
+.signature-block:not(:has(.sig-person > *)) .sig-person {
+  display: none;
+}
+
+.sig-person > *:last-child,
+.sig-org > *:last-child {
+  margin-bottom: 0;
+}
+
+.sig-person:not(:has(.sig-phone)) a[href^="mailto"] {
+  margin-bottom: 0;
+}
+
+.sig-org:not(:has(.sig-organization)) .sig-department {
+  font-weight: 500;
+  color: var(--color-fg-default);
+}
+
+.sig-org:not(:has(.sig-organization)):not(:has(.sig-department)):not(:has(.sig-address)):has(.sig-links) {
+  display: flex;
+  align-items: center;
+}
+
+.footnotes {
+  margin-top: 3em;
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-default);
+  font-size: var(--font-size-small);
+}
+
+/* 10. CHROME PDF SPECIFIC RULES */
+@media all {
+  ul, ol {
+    display: block !important;
+    margin: var(--spacing-md) 0 !important;
+    padding-left: 2em !important;
+  }
+
+  li {
+    display: list-item !important;
+    margin: var(--spacing-xs) 0 !important;
+    line-height: var(--line-height) !important;
+    white-space: normal !important;
+  }
+
+  li strong, li b {
+    display: inline !important;
+  }
+
+  ul:not(.task-list) > li {
+    list-style: none !important;
+    list-style-type: none !important;
+  }
+
+  ol > li {
+    list-style: decimal outside !important;
+  }
+}
+
+/* 11. COVER PAGE - Flexbox layout with order, left-aligned */
+.cover-page {
+  page-break-after: always;
+  page-break-inside: avoid;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  padding: 2rem;
+  min-height: auto;
+  box-sizing: border-box;
+}
+
+.cover-logo {
+  order: 1;
+  max-height: 80px;
+  max-width: 200px;
+  margin-bottom: 1.5rem;
+  object-fit: contain;
+  border-radius: var(--cover-logo-radius);
+}
+
+/* Context block - client and project info */
+.cover-context {
+  order: 2;
+  margin-bottom: var(--spacing-lg);
+  padding: 0.5em 1em;
+  border-left: 3px solid var(--color-accent-emphasis);
+  background: var(--color-canvas-subtle);
+}
+
+.cover-client {
+  font-size: 0.9em;
+  color: var(--color-accent-fg);
+  margin: 0;
+  font-weight: bold;
+}
+
+.cover-project {
+  font-size: 0.95em;
+  color: var(--color-fg-muted);
+  margin: 0.25rem 0 0 0;
+}
+
+/* Title - matches h1 scale (1.8em) */
+.cover-title {
+  order: 3;
+  font-size: 1.8em;
+  font-weight: bold;
+  color: var(--color-accent-fg);
+  margin: 0 0 0.5rem 0;
+  border-bottom: 3px solid var(--color-accent-emphasis);
+  padding-bottom: 0.3em;
+}
+
+/* Subtitle - matches h2 scale (1.4em) */
+.cover-subtitle {
+  order: 4;
+  font-size: 1.4em;
+  color: var(--color-fg-muted);
+  margin: 0 0 var(--spacing-xl) 0;
+  font-weight: normal;
+}
+
+/* Document type - matches h3 scale (1.2em) */
+.cover-doctype {
+  order: 5;
+  display: inline-block;
+  font-size: 1.2em;
+  padding: 0.3em 0.8em;
+  background: var(--color-fg-muted);
+  color: var(--color-fg-on-emphasis);
+  border-radius: 3px;
+  margin-bottom: var(--spacing-xs);
+}
+
+/* Description */
+.cover-description {
+  order: 6;
+  font-size: 1em;
+  color: var(--color-fg-muted);
+  margin: 0 0 var(--spacing-xl) 0;
+  max-width: 80%;
+  line-height: 1.6;
+}
+
+/* Organization */
+.cover-organization {
+  order: 7;
+  font-size: 1em;
+  color: var(--color-fg-default);
+  margin: 0;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Metadata section - two columns */
+.cover-meta {
+  order: 8;
+  width: 100%;
+  margin-top: 0;
+  padding-top: var(--spacing-xs);
+  border-top: 1px solid var(--color-border-default);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-flow: dense;
+  gap: 0 1em;
+  align-items: start;
+}
+
+.cover-meta p {
+  margin: 0.15em 0;
+  font-size: 0.9em;
+}
+
+/* Left column - person info */
+.cover-author,
+.cover-author-title,
+.cover-department {
+  grid-column: 1;
+  text-align: left;
+}
+
+.cover-author {
+  font-size: 1em;
+  font-weight: bold;
+  color: var(--color-fg-default);
+}
+
+.cover-author-title {
+  font-size: 0.9em;
+  color: var(--color-fg-muted);
+}
+
+.cover-department {
+  font-size: 0.85em;
+  color: var(--color-accent-fg);
+}
+
+/* Right column - document info */
+.cover-date,
+.cover-docid,
+.cover-version {
+  grid-column: 2;
+  text-align: right;
+}
+
+.cover-date {
+  grid-row: 1;
+  font-size: 0.9em;
+  color: var(--color-fg-default);
+}
+
+.cover-docid {
+  font-size: 0.8em;
+  font-family: "Courier New", Courier, monospace;
+  color: var(--color-fg-subtle);
+}
+
+.cover-version {
+  font-size: 0.85em;
+  color: var(--color-fg-subtle);
+}
+
+/* 12. TABLE OF CONTENTS */
+.toc {
+  page-break-after: always;
+  padding: 2rem 0;
+}
+
+.toc-title {
+  font-size: 1.5em;
+  font-weight: bold;
+  color: var(--color-accent-fg);
+  border-bottom: 2px solid var(--color-accent-emphasis);
+  padding-bottom: 0.3em;
+  margin-bottom: 1.5rem;
+}
+
+.toc-item {
+  margin: 0.5em 0;
+  line-height: 1.4;
+}
+
+.toc-item a {
+  color: var(--color-fg-default);
+  text-decoration: none;
+}
+
+.toc-item a:hover {
+  text-decoration: underline;
+  color: var(--color-accent-fg);
+}
+
+/* 13. PRINT SETTINGS */
+@page {
+  margin: 2cm 2cm 2.5cm 2cm;
+}
+
+@media print {
+  body {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    font-size: 11pt;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+
+  table, figure, blockquote, pre {
+    page-break-inside: avoid;
+  }
+
+  li {
+    page-break-inside: avoid;
+  }
+
+  ul, ol {
+    display: block !important;
+  }
+
+  ul > li, ol > li {
+    display: list-item !important;
+    margin: var(--spacing-xs) 0 !important;
+  }
+
+  ul:not(.task-list) > li {
+    list-style: none !important;
+    list-style-type: none !important;
+  }
+}
