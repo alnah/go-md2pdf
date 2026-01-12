@@ -79,6 +79,10 @@ type signatureData struct {
 	Organization string
 	ImagePath    string
 	Links        []signatureLink
+	// Extended metadata fields
+	Phone      string
+	Address    string
+	Department string
 }
 
 // signatureLink represents a clickable link in the signature block.
@@ -154,6 +158,13 @@ type coverData struct {
 	Organization string
 	Date         string
 	Version      string
+	// Extended metadata fields
+	ClientName   string
+	ProjectName  string
+	DocumentType string
+	DocumentID   string
+	Description  string
+	Department   string // From author config (DRY)
 }
 
 // coverInjector defines the contract for cover injection into HTML.
@@ -225,6 +236,7 @@ type footerData struct {
 	Date           string
 	Status         string
 	Text           string
+	DocumentID     string // Document reference number
 }
 
 // buildWatermarkCSS generates CSS for a diagonal background watermark.
