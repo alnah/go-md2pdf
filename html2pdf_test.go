@@ -222,6 +222,25 @@ func TestBuildFooterTemplate(t *testing.T) {
 			data:    &footerData{Text: "<script>alert('xss')</script>"},
 			wantNot: "<script>",
 		},
+		{
+			name:     "DocumentID only",
+			data:     &footerData{DocumentID: "DOC-2024-001"},
+			wantPart: "DOC-2024-001",
+		},
+		{
+			name: "DocumentID with other fields",
+			data: &footerData{
+				Date:       "2025-01-15",
+				Status:     "FINAL",
+				DocumentID: "REF-001",
+			},
+			wantPart: "REF-001",
+		},
+		{
+			name:    "DocumentID HTML escapes special chars",
+			data:    &footerData{DocumentID: "<doc>&test</doc>"},
+			wantNot: "<doc>",
+		},
 	}
 
 	for _, tt := range tests {

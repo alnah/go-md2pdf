@@ -82,6 +82,11 @@ func (s *Service) Convert(ctx context.Context, input Input) (result []byte, err 
 		return nil, fmt.Errorf("converting to HTML: %w", err)
 	}
 
+	// Convert highlight placeholders to <mark> tags.
+	// This completes the ==text== feature started in preprocessing.
+	// Done after Goldmark to avoid needing html.WithUnsafe().
+	htmlContent = convertMarkPlaceholders(htmlContent)
+
 	// Build combined CSS (page breaks + watermark + user CSS)
 	// Order matters: page breaks first (lowest priority), user CSS last (can override)
 	cssContent := input.CSS
@@ -198,6 +203,9 @@ func toSignatureData(sig *Signature) *signatureData {
 		Organization: sig.Organization,
 		ImagePath:    sig.ImagePath,
 		Links:        links,
+		Phone:        sig.Phone,
+		Address:      sig.Address,
+		Department:   sig.Department,
 	}
 }
 
@@ -212,6 +220,7 @@ func toFooterData(f *Footer) *footerData {
 		Date:           f.Date,
 		Status:         f.Status,
 		Text:           f.Text,
+		DocumentID:     f.DocumentID,
 	}
 }
 
@@ -229,6 +238,12 @@ func toCoverData(c *Cover) *coverData {
 		Organization: c.Organization,
 		Date:         c.Date,
 		Version:      c.Version,
+		ClientName:   c.ClientName,
+		ProjectName:  c.ProjectName,
+		DocumentType: c.DocumentType,
+		DocumentID:   c.DocumentID,
+		Description:  c.Description,
+		Department:   c.Department,
 	}
 }
 

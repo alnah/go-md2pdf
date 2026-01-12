@@ -531,6 +531,29 @@ func TestToSignatureData(t *testing.T) {
 			t.Errorf("Links[0] = %+v, want {GitHub, https://github.com/john}", result.Links[0])
 		}
 	})
+
+	t.Run("converts extended metadata fields", func(t *testing.T) {
+		t.Parallel()
+
+		sig := &Signature{
+			Name:       "Jane Smith",
+			Phone:      "+1-555-123-4567",
+			Address:    "123 Main St\nCity, State 12345",
+			Department: "Engineering",
+		}
+
+		result := toSignatureData(sig)
+
+		if result.Phone != sig.Phone {
+			t.Errorf("Phone = %q, want %q", result.Phone, sig.Phone)
+		}
+		if result.Address != sig.Address {
+			t.Errorf("Address = %q, want %q", result.Address, sig.Address)
+		}
+		if result.Department != sig.Department {
+			t.Errorf("Department = %q, want %q", result.Department, sig.Department)
+		}
+	})
 }
 
 func TestToFooterData(t *testing.T) {
@@ -571,6 +594,21 @@ func TestToFooterData(t *testing.T) {
 		}
 		if result.Text != footer.Text {
 			t.Errorf("Text = %q, want %q", result.Text, footer.Text)
+		}
+	})
+
+	t.Run("converts DocumentID field", func(t *testing.T) {
+		t.Parallel()
+
+		footer := &Footer{
+			Position:   "right",
+			DocumentID: "DOC-2024-001",
+		}
+
+		result := toFooterData(footer)
+
+		if result.DocumentID != footer.DocumentID {
+			t.Errorf("DocumentID = %q, want %q", result.DocumentID, footer.DocumentID)
 		}
 	})
 }
@@ -649,6 +687,41 @@ func TestToCoverData(t *testing.T) {
 		}
 		if result.Author != "" {
 			t.Errorf("Author = %q, want empty", result.Author)
+		}
+	})
+
+	t.Run("converts extended metadata fields", func(t *testing.T) {
+		t.Parallel()
+
+		cover := &Cover{
+			Title:        "Project Spec",
+			ClientName:   "Acme Corporation",
+			ProjectName:  "Project Phoenix",
+			DocumentType: "Technical Specification",
+			DocumentID:   "DOC-2024-001",
+			Description:  "System design document",
+			Department:   "Engineering",
+		}
+
+		result := toCoverData(cover)
+
+		if result.ClientName != cover.ClientName {
+			t.Errorf("ClientName = %q, want %q", result.ClientName, cover.ClientName)
+		}
+		if result.ProjectName != cover.ProjectName {
+			t.Errorf("ProjectName = %q, want %q", result.ProjectName, cover.ProjectName)
+		}
+		if result.DocumentType != cover.DocumentType {
+			t.Errorf("DocumentType = %q, want %q", result.DocumentType, cover.DocumentType)
+		}
+		if result.DocumentID != cover.DocumentID {
+			t.Errorf("DocumentID = %q, want %q", result.DocumentID, cover.DocumentID)
+		}
+		if result.Description != cover.Description {
+			t.Errorf("Description = %q, want %q", result.Description, cover.Description)
+		}
+		if result.Department != cover.Department {
+			t.Errorf("Department = %q, want %q", result.Department, cover.Department)
 		}
 	})
 }
