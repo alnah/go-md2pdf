@@ -72,6 +72,8 @@
   --checkbox-offset-top: -2px;
   --checkbox-offset-left: 2px;
   --signature-margin-top: 30px;
+  --signature-image-size: 55px;
+  --signature-image-gap: 12px;
 
   /* Image shape - signature profile and cover logo */
   --signature-image-radius: 50%;
@@ -556,7 +558,7 @@ img {
   grid-template-columns: 1fr 1fr;
   gap: 0 3em;
   align-items: center;
-  padding: 10px 12px 10px 79px; /* Extra left padding for image: 12px + 55px + 12px */
+  padding: 10px var(--signature-image-gap) 10px calc(var(--signature-image-gap) + var(--signature-image-size) + var(--signature-image-gap));
   background: var(--color-canvas-subtle);
   border: 1px solid var(--color-border-default);
   border-radius: 6px;
@@ -567,12 +569,12 @@ img {
 /* Profile image - positioned absolutely, vertically centered */
 .signature-block img {
   position: absolute;
-  left: 12px;
+  left: var(--signature-image-gap);
   top: 0;
   bottom: 0;
   margin: auto 0;
-  width: 55px !important;
-  height: 55px !important;
+  width: var(--signature-image-size) !important;
+  height: var(--signature-image-size) !important;
   border-radius: var(--signature-image-radius);
   border: none;
   object-fit: cover;
@@ -657,7 +659,7 @@ img {
 
 /* No image: restore normal left padding */
 .signature-block:not(:has(img)) {
-  padding-left: 12px;
+  padding-left: var(--signature-image-gap);
 }
 
 /* No org content: hide org column and divider */
