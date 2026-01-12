@@ -193,6 +193,15 @@ func mergeFlags(flags *convertFlags, cfg *config.Config) {
 	if flags.author.org != "" {
 		cfg.Author.Organization = flags.author.org
 	}
+	if flags.author.phone != "" {
+		cfg.Author.Phone = flags.author.phone
+	}
+	if flags.author.address != "" {
+		cfg.Author.Address = flags.author.address
+	}
+	if flags.author.department != "" {
+		cfg.Author.Department = flags.author.department
+	}
 
 	// Document flags
 	if flags.document.title != "" {
@@ -207,6 +216,21 @@ func mergeFlags(flags *convertFlags, cfg *config.Config) {
 	if flags.document.date != "" {
 		cfg.Document.Date = flags.document.date
 	}
+	if flags.document.clientName != "" {
+		cfg.Document.ClientName = flags.document.clientName
+	}
+	if flags.document.projectName != "" {
+		cfg.Document.ProjectName = flags.document.projectName
+	}
+	if flags.document.documentType != "" {
+		cfg.Document.DocumentType = flags.document.documentType
+	}
+	if flags.document.documentID != "" {
+		cfg.Document.DocumentID = flags.document.documentID
+	}
+	if flags.document.description != "" {
+		cfg.Document.Description = flags.document.description
+	}
 
 	// Footer flags
 	if flags.footer.position != "" {
@@ -219,10 +243,17 @@ func mergeFlags(flags *convertFlags, cfg *config.Config) {
 		cfg.Footer.ShowPageNumber = true
 		cfg.Footer.Enabled = true
 	}
+	if flags.footer.showDocumentID {
+		cfg.Footer.ShowDocumentID = true
+		cfg.Footer.Enabled = true
+	}
 
 	// Cover flags
 	if flags.cover.logo != "" {
 		cfg.Cover.Logo = flags.cover.logo
+	}
+	if flags.cover.showDepartment {
+		cfg.Cover.ShowDepartment = true
 	}
 
 	// Signature flags
@@ -379,6 +410,7 @@ func validateWorkers(n int) error {
 
 // buildSignatureData creates md2pdf.Signature from config.
 // Uses cfg.Author.* for author information.
+// Department is always shown if defined (signature always displays it).
 func buildSignatureData(cfg *config.Config, noSignature bool) (*md2pdf.Signature, error) {
 	if noSignature || !cfg.Signature.Enabled {
 		return nil, nil
@@ -404,14 +436,23 @@ func buildSignatureData(cfg *config.Config, noSignature bool) (*md2pdf.Signature
 		Organization: cfg.Author.Organization,
 		ImagePath:    cfg.Signature.ImagePath,
 		Links:        links,
+		Phone:        cfg.Author.Phone,
+		Address:      cfg.Author.Address,
+		Department:   cfg.Author.Department,
 	}, nil
 }
 
 // buildFooterData creates md2pdf.Footer from config.
 // Uses cfg.Document.Date and cfg.Document.Version for date/status.
+// DocumentID is only shown if cfg.Footer.ShowDocumentID is true.
 func buildFooterData(cfg *config.Config, noFooter bool) *md2pdf.Footer {
 	if noFooter || !cfg.Footer.Enabled {
 		return nil
+	}
+
+	var docID string
+	if cfg.Footer.ShowDocumentID {
+		docID = cfg.Document.DocumentID
 	}
 
 	return &md2pdf.Footer{
@@ -420,6 +461,7 @@ func buildFooterData(cfg *config.Config, noFooter bool) *md2pdf.Footer {
 		Date:           cfg.Document.Date,
 		Status:         cfg.Document.Version,
 		Text:           cfg.Footer.Text,
+		DocumentID:     docID,
 	}
 }
 
@@ -531,12 +573,12 @@ func buildPageSettings(flags *convertFlags, cfg *config.Config) (*md2pdf.PageSet
 	return ps, nil
 }
 
-// headingPattern matches the first # heading in markdown content.
-var headingPattern = regexp.MustCompile(`(?m)^#\s+(.+)$`)
+// firstHeadingPattern matches the first # heading in markdown content.
+var firstHeadingPattern = regexp.MustCompile(`(?m)^#\s+(.+)$`)
 
 // extractFirstHeading extracts the first # heading from markdown content.
 func extractFirstHeading(markdown string) string {
-	matches := headingPattern.FindStringSubmatch(markdown)
+	matches := firstHeadingPattern.FindStringSubmatch(markdown)
 	if len(matches) >= 2 {
 		return strings.TrimSpace(matches[1])
 	}
@@ -545,6 +587,7 @@ func extractFirstHeading(markdown string) string {
 
 // buildCoverData creates md2pdf.Cover from config and markdown content.
 // Uses cfg.Author.* and cfg.Document.* for metadata.
+// Department is only shown if cfg.Cover.ShowDepartment is true.
 func buildCoverData(cfg *config.Config, markdownContent, filename string) (*md2pdf.Cover, error) {
 	if !cfg.Cover.Enabled {
 		return nil, nil
@@ -570,6 +613,18 @@ func buildCoverData(cfg *config.Config, markdownContent, filename string) (*md2p
 	c.Organization = cfg.Author.Organization
 	c.Date = cfg.Document.Date // Already resolved
 	c.Version = cfg.Document.Version
+
+	// Extended metadata fields
+	c.ClientName = cfg.Document.ClientName
+	c.ProjectName = cfg.Document.ProjectName
+	c.DocumentType = cfg.Document.DocumentType
+	c.DocumentID = cfg.Document.DocumentID
+	c.Description = cfg.Document.Description
+
+	// Department only if explicitly enabled on cover
+	if cfg.Cover.ShowDepartment {
+		c.Department = cfg.Author.Department
+	}
 
 	if err := c.Validate(); err != nil {
 		return nil, err

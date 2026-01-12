@@ -634,7 +634,7 @@ func TestResolveCSSContent(t *testing.T) {
 	t.Run("config style loads from embedded assets", func(t *testing.T) {
 		t.Parallel()
 
-		cfg := &Config{CSS: CSSConfig{Style: "nord"}}
+		cfg := &Config{CSS: CSSConfig{Style: "creative"}}
 		got, err := resolveCSSContent("", cfg, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -654,7 +654,7 @@ func TestResolveCSSContent(t *testing.T) {
 			t.Fatalf("failed to write CSS file: %v", err)
 		}
 
-		cfg := &Config{CSS: CSSConfig{Style: "nord"}}
+		cfg := &Config{CSS: CSSConfig{Style: "creative"}}
 		got, err := resolveCSSContent(cssPath, cfg, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -677,7 +677,7 @@ func TestResolveCSSContent(t *testing.T) {
 	t.Run("noStyle flag returns empty even with config style", func(t *testing.T) {
 		t.Parallel()
 
-		cfg := &Config{CSS: CSSConfig{Style: "nord"}}
+		cfg := &Config{CSS: CSSConfig{Style: "creative"}}
 		got, err := resolveCSSContent("", cfg, true)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -903,6 +903,36 @@ func TestBuildSignatureData(t *testing.T) {
 			t.Fatal("expected SignatureData, got nil")
 		}
 	})
+
+	t.Run("extended metadata fields are included", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &Config{
+			Author: AuthorConfig{
+				Name:       "Jane Smith",
+				Phone:      "+1-555-123-4567",
+				Address:    "123 Main St\nCity, State 12345",
+				Department: "Engineering",
+			},
+			Signature: SignatureConfig{Enabled: true},
+		}
+		got, err := buildSignatureData(cfg, false)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected SignatureData, got nil")
+		}
+		if got.Phone != "+1-555-123-4567" {
+			t.Errorf("Phone = %q, want %q", got.Phone, "+1-555-123-4567")
+		}
+		if got.Address != "123 Main St\nCity, State 12345" {
+			t.Errorf("Address = %q, want %q", got.Address, "123 Main St\nCity, State 12345")
+		}
+		if got.Department != "Engineering" {
+			t.Errorf("Department = %q, want %q", got.Department, "Engineering")
+		}
+	})
 }
 
 func TestIsURL(t *testing.T) {
@@ -1027,6 +1057,48 @@ func TestBuildFooterData(t *testing.T) {
 		got := buildFooterData(cfg, true)
 		if got != nil {
 			t.Error("expected nil when noFooter=true, got FooterData")
+		}
+	})
+
+	t.Run("ShowDocumentID includes DocumentID in footer", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &Config{
+			Document: DocumentConfig{
+				DocumentID: "DOC-2024-001",
+			},
+			Footer: FooterConfig{
+				Enabled:        true,
+				ShowDocumentID: true,
+			},
+		}
+		got := buildFooterData(cfg, false)
+		if got == nil {
+			t.Fatal("expected FooterData, got nil")
+		}
+		if got.DocumentID != "DOC-2024-001" {
+			t.Errorf("DocumentID = %q, want %q", got.DocumentID, "DOC-2024-001")
+		}
+	})
+
+	t.Run("ShowDocumentID false excludes DocumentID", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &Config{
+			Document: DocumentConfig{
+				DocumentID: "DOC-2024-001",
+			},
+			Footer: FooterConfig{
+				Enabled:        true,
+				ShowDocumentID: false,
+			},
+		}
+		got := buildFooterData(cfg, false)
+		if got == nil {
+			t.Fatal("expected FooterData, got nil")
+		}
+		if got.DocumentID != "" {
+			t.Errorf("DocumentID = %q, want empty", got.DocumentID)
 		}
 	})
 }
@@ -2132,6 +2204,78 @@ func TestBuildCoverData(t *testing.T) {
 			t.Errorf("Organization = %q, want empty", got.Organization)
 		}
 	})
+
+	t.Run("extended metadata fields are included", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &Config{
+			Author: AuthorConfig{
+				Department: "Engineering",
+			},
+			Document: DocumentConfig{
+				Title:        "Project Specification",
+				ClientName:   "Acme Corporation",
+				ProjectName:  "Project Phoenix",
+				DocumentType: "Technical Specification",
+				DocumentID:   "DOC-2024-001",
+				Description:  "System design document for Project Phoenix",
+			},
+			Cover: CoverConfig{
+				Enabled:        true,
+				ShowDepartment: true,
+			},
+		}
+		got, err := buildCoverData(cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.ClientName != "Acme Corporation" {
+			t.Errorf("ClientName = %q, want %q", got.ClientName, "Acme Corporation")
+		}
+		if got.ProjectName != "Project Phoenix" {
+			t.Errorf("ProjectName = %q, want %q", got.ProjectName, "Project Phoenix")
+		}
+		if got.DocumentType != "Technical Specification" {
+			t.Errorf("DocumentType = %q, want %q", got.DocumentType, "Technical Specification")
+		}
+		if got.DocumentID != "DOC-2024-001" {
+			t.Errorf("DocumentID = %q, want %q", got.DocumentID, "DOC-2024-001")
+		}
+		if got.Description != "System design document for Project Phoenix" {
+			t.Errorf("Description = %q, want %q", got.Description, "System design document for Project Phoenix")
+		}
+		if got.Department != "Engineering" {
+			t.Errorf("Department = %q, want %q", got.Department, "Engineering")
+		}
+	})
+
+	t.Run("ShowDepartment false excludes department", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &Config{
+			Author: AuthorConfig{
+				Department: "Engineering",
+			},
+			Document: DocumentConfig{Title: "Doc Title"},
+			Cover: CoverConfig{
+				Enabled:        true,
+				ShowDepartment: false,
+			},
+		}
+		got, err := buildCoverData(cfg, "", "doc.md")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected Cover, got nil")
+		}
+		if got.Department != "" {
+			t.Errorf("Department = %q, want empty when ShowDepartment=false", got.Department)
+		}
+	})
 }
 
 // TOCConfig alias for test file
@@ -2892,6 +3036,110 @@ func TestMergeFlags(t *testing.T) {
 				}
 				if cfg.Author.Organization != "Config Org" {
 					t.Errorf("Author.Organization = %q, want %q (should be preserved)", cfg.Author.Organization, "Config Org")
+				}
+			},
+		},
+		// Extended metadata flags
+		{
+			name:  "author.phone overrides config",
+			flags: &convertFlags{author: authorFlags{phone: "+1-555-123-4567"}},
+			cfg:   &Config{Author: AuthorConfig{Phone: "+1-555-000-0000"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Author.Phone != "+1-555-123-4567" {
+					t.Errorf("Author.Phone = %q, want %q", cfg.Author.Phone, "+1-555-123-4567")
+				}
+			},
+		},
+		{
+			name:  "author.address overrides config",
+			flags: &convertFlags{author: authorFlags{address: "123 CLI St"}},
+			cfg:   &Config{Author: AuthorConfig{Address: "456 Config Ave"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Author.Address != "123 CLI St" {
+					t.Errorf("Author.Address = %q, want %q", cfg.Author.Address, "123 CLI St")
+				}
+			},
+		},
+		{
+			name:  "author.department overrides config",
+			flags: &convertFlags{author: authorFlags{department: "CLI Engineering"}},
+			cfg:   &Config{Author: AuthorConfig{Department: "Config Engineering"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Author.Department != "CLI Engineering" {
+					t.Errorf("Author.Department = %q, want %q", cfg.Author.Department, "CLI Engineering")
+				}
+			},
+		},
+		{
+			name:  "document.clientName overrides config",
+			flags: &convertFlags{document: documentFlags{clientName: "CLI Client"}},
+			cfg:   &Config{Document: DocumentConfig{ClientName: "Config Client"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Document.ClientName != "CLI Client" {
+					t.Errorf("Document.ClientName = %q, want %q", cfg.Document.ClientName, "CLI Client")
+				}
+			},
+		},
+		{
+			name:  "document.projectName overrides config",
+			flags: &convertFlags{document: documentFlags{projectName: "CLI Project"}},
+			cfg:   &Config{Document: DocumentConfig{ProjectName: "Config Project"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Document.ProjectName != "CLI Project" {
+					t.Errorf("Document.ProjectName = %q, want %q", cfg.Document.ProjectName, "CLI Project")
+				}
+			},
+		},
+		{
+			name:  "document.documentType overrides config",
+			flags: &convertFlags{document: documentFlags{documentType: "CLI Spec"}},
+			cfg:   &Config{Document: DocumentConfig{DocumentType: "Config Spec"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Document.DocumentType != "CLI Spec" {
+					t.Errorf("Document.DocumentType = %q, want %q", cfg.Document.DocumentType, "CLI Spec")
+				}
+			},
+		},
+		{
+			name:  "document.documentID overrides config",
+			flags: &convertFlags{document: documentFlags{documentID: "CLI-001"}},
+			cfg:   &Config{Document: DocumentConfig{DocumentID: "CFG-001"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Document.DocumentID != "CLI-001" {
+					t.Errorf("Document.DocumentID = %q, want %q", cfg.Document.DocumentID, "CLI-001")
+				}
+			},
+		},
+		{
+			name:  "document.description overrides config",
+			flags: &convertFlags{document: documentFlags{description: "CLI Description"}},
+			cfg:   &Config{Document: DocumentConfig{Description: "Config Description"}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Document.Description != "CLI Description" {
+					t.Errorf("Document.Description = %q, want %q", cfg.Document.Description, "CLI Description")
+				}
+			},
+		},
+		{
+			name:  "footer.showDocumentID enables footer and shows doc ID",
+			flags: &convertFlags{footer: footerFlags{showDocumentID: true}},
+			cfg:   &Config{Footer: FooterConfig{Enabled: false, ShowDocumentID: false}},
+			check: func(t *testing.T, cfg *Config) {
+				if !cfg.Footer.ShowDocumentID {
+					t.Error("Footer.ShowDocumentID should be true")
+				}
+				if !cfg.Footer.Enabled {
+					t.Error("Footer.Enabled should be true when showDocumentID is set")
+				}
+			},
+		},
+		{
+			name:  "cover.showDepartment enables department on cover",
+			flags: &convertFlags{cover: coverFlags{showDepartment: true}},
+			cfg:   &Config{Cover: CoverConfig{ShowDepartment: false}},
+			check: func(t *testing.T, cfg *Config) {
+				if !cfg.Cover.ShowDepartment {
+					t.Error("Cover.ShowDepartment should be true")
 				}
 			},
 		},
