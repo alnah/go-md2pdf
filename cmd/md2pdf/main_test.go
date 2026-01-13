@@ -9,7 +9,6 @@ import (
 	"time"
 
 	md2pdf "github.com/alnah/go-md2pdf"
-	"github.com/alnah/go-md2pdf/internal/assets"
 )
 
 // wrongTypeConverter is a Converter that is NOT *md2pdf.Service.
@@ -204,12 +203,13 @@ func TestRunMain(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
+			loader, _ := md2pdf.NewAssetLoader("")
 			var stdout, stderr bytes.Buffer
 			env := &Environment{
 				Now:         func() time.Time { return time.Now() },
 				Stdout:      &stdout,
 				Stderr:      &stderr,
-				AssetLoader: assets.NewEmbeddedLoader(),
+				AssetLoader: loader,
 			}
 
 			code := runMain(tt.args, env)

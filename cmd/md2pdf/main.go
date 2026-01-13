@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	md2pdf "github.com/alnah/go-md2pdf"
-	"github.com/alnah/go-md2pdf/internal/assets"
 	"github.com/alnah/go-md2pdf/internal/config"
 	"go.uber.org/automaxprocs/maxprocs"
 )
@@ -111,11 +110,11 @@ func runConvertCmd(args []string, env *Environment) error {
 
 	// Configure asset loader from resolved path
 	if assetBasePath != "" {
-		resolver, err := assets.NewAssetResolver(assetBasePath)
+		loader, err := md2pdf.NewAssetLoader(assetBasePath)
 		if err != nil {
 			return fmt.Errorf("initializing assets: %w", err)
 		}
-		env.AssetLoader = resolver
+		env.AssetLoader = loader
 		if flags.common.verbose {
 			fmt.Fprintf(env.Stderr, "Using custom assets from: %s\n", assetBasePath)
 		}

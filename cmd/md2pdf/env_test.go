@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alnah/go-md2pdf/internal/assets"
+	md2pdf "github.com/alnah/go-md2pdf"
 )
 
 func TestDefaultEnv(t *testing.T) {
@@ -36,18 +36,17 @@ func TestDefaultEnv(t *testing.T) {
 		}
 	})
 
-	t.Run("AssetLoader is EmbeddedLoader", func(t *testing.T) {
+	t.Run("AssetLoader is not nil", func(t *testing.T) {
 		if env.AssetLoader == nil {
 			t.Error("AssetLoader should not be nil")
-		}
-		if _, ok := env.AssetLoader.(*assets.EmbeddedLoader); !ok {
-			t.Errorf("AssetLoader should be *assets.EmbeddedLoader, got %T", env.AssetLoader)
 		}
 	})
 }
 
 func TestEnvironmentInjection(t *testing.T) {
 	t.Parallel()
+
+	loader, _ := md2pdf.NewAssetLoader("")
 
 	t.Run("mock time is used", func(t *testing.T) {
 		t.Parallel()
@@ -57,7 +56,7 @@ func TestEnvironmentInjection(t *testing.T) {
 			Now:         func() time.Time { return fixedTime },
 			Stdout:      &bytes.Buffer{},
 			Stderr:      &bytes.Buffer{},
-			AssetLoader: assets.NewEmbeddedLoader(),
+			AssetLoader: loader,
 		}
 
 		got := env.Now()
@@ -74,7 +73,7 @@ func TestEnvironmentInjection(t *testing.T) {
 			Now:         time.Now,
 			Stdout:      &stdout,
 			Stderr:      &bytes.Buffer{},
-			AssetLoader: assets.NewEmbeddedLoader(),
+			AssetLoader: loader,
 		}
 
 		// Simulate writing to stdout
@@ -93,7 +92,7 @@ func TestEnvironmentInjection(t *testing.T) {
 			Now:         time.Now,
 			Stdout:      &bytes.Buffer{},
 			Stderr:      &stderr,
-			AssetLoader: assets.NewEmbeddedLoader(),
+			AssetLoader: loader,
 		}
 
 		// Simulate writing to stderr

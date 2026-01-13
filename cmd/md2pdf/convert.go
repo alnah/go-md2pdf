@@ -13,8 +13,8 @@ import (
 	"time"
 
 	md2pdf "github.com/alnah/go-md2pdf"
-	"github.com/alnah/go-md2pdf/internal/assets"
 	"github.com/alnah/go-md2pdf/internal/config"
+	"github.com/alnah/go-md2pdf/internal/fileutil"
 )
 
 // Sentinel errors for CLI operations.
@@ -311,14 +311,14 @@ func resolveOutputDir(flagOutput string, cfg *config.Config) string {
 // If templateFlag is empty, loads the default template set.
 // If templateFlag looks like a path, loads from the filesystem directory.
 // Otherwise, treats it as a template set name and uses the loader.
-func resolveTemplateSet(templateFlag string, loader assets.AssetLoader) (*assets.TemplateSet, error) {
+func resolveTemplateSet(templateFlag string, loader md2pdf.AssetLoader) (*md2pdf.TemplateSet, error) {
 	// Use default if not specified
 	if templateFlag == "" {
-		return loader.LoadTemplateSet(assets.DefaultTemplateSetName)
+		return loader.LoadTemplateSet(md2pdf.DefaultTemplateSet)
 	}
 
 	// If it looks like a path, load from filesystem directory
-	if md2pdf.IsFilePath(templateFlag) {
+	if fileutil.IsFilePath(templateFlag) {
 		return loadTemplateSetFromDir(templateFlag)
 	}
 
@@ -327,7 +327,7 @@ func resolveTemplateSet(templateFlag string, loader assets.AssetLoader) (*assets
 }
 
 // loadTemplateSetFromDir loads cover.html and signature.html from a directory.
-func loadTemplateSetFromDir(dirPath string) (*assets.TemplateSet, error) {
+func loadTemplateSetFromDir(dirPath string) (*md2pdf.TemplateSet, error) {
 	coverPath := filepath.Join(dirPath, "cover.html")
 	sigPath := filepath.Join(dirPath, "signature.html")
 
@@ -336,7 +336,7 @@ func loadTemplateSetFromDir(dirPath string) (*assets.TemplateSet, error) {
 
 	// If both files are missing, the directory is not a valid template set
 	if os.IsNotExist(coverErr) && os.IsNotExist(sigErr) {
-		return nil, fmt.Errorf("%w: %q (directory has no templates)", assets.ErrTemplateSetNotFound, dirPath)
+		return nil, fmt.Errorf("%w: %q (directory has no templates)", md2pdf.ErrTemplateSetNotFound, dirPath)
 	}
 
 	// Handle read errors (not just not-exist)
@@ -349,24 +349,20 @@ func loadTemplateSetFromDir(dirPath string) (*assets.TemplateSet, error) {
 
 	// If only one file is missing, the template set is incomplete
 	if os.IsNotExist(coverErr) {
-		return nil, fmt.Errorf("%w: %q missing cover.html", assets.ErrIncompleteTemplateSet, dirPath)
+		return nil, fmt.Errorf("%w: %q missing cover.html", md2pdf.ErrIncompleteTemplateSet, dirPath)
 	}
 	if os.IsNotExist(sigErr) {
-		return nil, fmt.Errorf("%w: %q missing signature.html", assets.ErrIncompleteTemplateSet, dirPath)
+		return nil, fmt.Errorf("%w: %q missing signature.html", md2pdf.ErrIncompleteTemplateSet, dirPath)
 	}
 
-	return &assets.TemplateSet{
-		Name:      dirPath,
-		Cover:     string(cover),
-		Signature: string(signature),
-	}, nil
+	return md2pdf.NewTemplateSet(dirPath, string(cover), string(signature)), nil
 }
 
 // resolveCSSContent resolves CSS content from CLI flag, config, or asset loader.
 // Priority: CLI flag > config style > default style.
 // If the style value looks like a path (contains / or \), read it directly.
 // Otherwise, treat it as a style name and use the asset loader.
-func resolveCSSContent(styleFlag string, cfg *config.Config, noStyle bool, loader assets.AssetLoader) (string, error) {
+func resolveCSSContent(styleFlag string, cfg *config.Config, noStyle bool, loader md2pdf.AssetLoader) (string, error) {
 	if noStyle {
 		return "", nil
 	}
@@ -377,11 +373,11 @@ func resolveCSSContent(styleFlag string, cfg *config.Config, noStyle bool, loade
 		style = cfg.Style
 	}
 	if style == "" {
-		style = assets.DefaultStyleName
+		style = md2pdf.DefaultStyle
 	}
 
 	// If it looks like a path, read the file directly
-	if md2pdf.IsFilePath(style) {
+	if fileutil.IsFilePath(style) {
 		content, err := os.ReadFile(style) // #nosec G304 -- user-provided path
 		if err != nil {
 			return "", fmt.Errorf("%w: %v", ErrReadCSS, err)
@@ -481,8 +477,8 @@ func buildSignatureData(cfg *config.Config, noSignature bool) (*md2pdf.Signature
 	}
 
 	// Validate image path if set (and not a URL)
-	if cfg.Signature.ImagePath != "" && !md2pdf.IsURL(cfg.Signature.ImagePath) {
-		if !md2pdf.FileExists(cfg.Signature.ImagePath) {
+	if cfg.Signature.ImagePath != "" && !fileutil.IsURL(cfg.Signature.ImagePath) {
+		if !fileutil.FileExists(cfg.Signature.ImagePath) {
 			return nil, fmt.Errorf("%w: %s", ErrSignatureImagePath, cfg.Signature.ImagePath)
 		}
 	}

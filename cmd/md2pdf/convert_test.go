@@ -11,8 +11,9 @@ import (
 	"time"
 
 	md2pdf "github.com/alnah/go-md2pdf"
-	"github.com/alnah/go-md2pdf/internal/assets"
 	"github.com/alnah/go-md2pdf/internal/config"
+	"github.com/alnah/go-md2pdf/internal/dateutil"
+	"github.com/alnah/go-md2pdf/internal/fileutil"
 )
 
 // Aliases for cleaner test code
@@ -585,7 +586,7 @@ func TestDiscoverFiles(t *testing.T) {
 func TestResolveCSSContent(t *testing.T) {
 	t.Parallel()
 
-	loader := assets.NewEmbeddedLoader()
+	loader, _ := md2pdf.NewAssetLoader("")
 
 	t.Run("empty style flag and no config returns default style", func(t *testing.T) {
 		t.Parallel()
@@ -957,7 +958,7 @@ func TestIsURL(t *testing.T) {
 		t.Run(tt.input, func(t *testing.T) {
 			t.Parallel()
 
-			got := md2pdf.IsURL(tt.input)
+			got := fileutil.IsURL(tt.input)
 			if got != tt.want {
 				t.Errorf("IsURL(%q) = %v, want %v", tt.input, got, tt.want)
 			}
@@ -1863,17 +1864,17 @@ func TestResolveDateWithTime(t *testing.T) {
 		{
 			name:    "auto with empty format returns error",
 			input:   "auto:",
-			wantErr: md2pdf.ErrInvalidDateFormat,
+			wantErr: dateutil.ErrInvalidDateFormat,
 		},
 		{
 			name:    "invalid auto syntax returns error",
 			input:   "autoXXX",
-			wantErr: md2pdf.ErrInvalidDateFormat,
+			wantErr: dateutil.ErrInvalidDateFormat,
 		},
 		{
 			name:    "unclosed bracket returns error",
 			input:   "auto:[Date",
-			wantErr: md2pdf.ErrInvalidDateFormat,
+			wantErr: dateutil.ErrInvalidDateFormat,
 		},
 	}
 
@@ -3523,7 +3524,7 @@ func TestLoadTemplateSetFromDir(t *testing.T) {
 		}
 
 		_, err := loadTemplateSetFromDir(tmpDir)
-		if !errors.Is(err, assets.ErrIncompleteTemplateSet) {
+		if !errors.Is(err, md2pdf.ErrIncompleteTemplateSet) {
 			t.Errorf("loadTemplateSetFromDir() error = %v, want ErrIncompleteTemplateSet", err)
 		}
 	})
@@ -3537,7 +3538,7 @@ func TestLoadTemplateSetFromDir(t *testing.T) {
 		}
 
 		_, err := loadTemplateSetFromDir(tmpDir)
-		if !errors.Is(err, assets.ErrIncompleteTemplateSet) {
+		if !errors.Is(err, md2pdf.ErrIncompleteTemplateSet) {
 			t.Errorf("loadTemplateSetFromDir() error = %v, want ErrIncompleteTemplateSet", err)
 		}
 	})
@@ -3548,7 +3549,7 @@ func TestLoadTemplateSetFromDir(t *testing.T) {
 		tmpDir := t.TempDir()
 
 		_, err := loadTemplateSetFromDir(tmpDir)
-		if !errors.Is(err, assets.ErrTemplateSetNotFound) {
+		if !errors.Is(err, md2pdf.ErrTemplateSetNotFound) {
 			t.Errorf("loadTemplateSetFromDir() error = %v, want ErrTemplateSetNotFound", err)
 		}
 	})
@@ -3557,15 +3558,15 @@ func TestLoadTemplateSetFromDir(t *testing.T) {
 		t.Parallel()
 
 		_, err := loadTemplateSetFromDir("/nonexistent/path/to/templates")
-		if !errors.Is(err, assets.ErrTemplateSetNotFound) {
+		if !errors.Is(err, md2pdf.ErrTemplateSetNotFound) {
 			t.Errorf("loadTemplateSetFromDir() error = %v, want ErrTemplateSetNotFound", err)
 		}
 	})
 }
 
-// mockTemplateLoader implements assets.AssetLoader for testing resolveTemplateSet.
+// mockTemplateLoader implements md2pdf.AssetLoader for testing resolveTemplateSet.
 type mockTemplateLoader struct {
-	templateSets map[string]*assets.TemplateSet
+	templateSets map[string]*md2pdf.TemplateSet
 	err          error
 }
 
@@ -3573,14 +3574,14 @@ func (m *mockTemplateLoader) LoadStyle(name string) (string, error) {
 	return "", nil
 }
 
-func (m *mockTemplateLoader) LoadTemplateSet(name string) (*assets.TemplateSet, error) {
+func (m *mockTemplateLoader) LoadTemplateSet(name string) (*md2pdf.TemplateSet, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 	if ts, ok := m.templateSets[name]; ok {
 		return ts, nil
 	}
-	return nil, fmt.Errorf("%w: %q", assets.ErrTemplateSetNotFound, name)
+	return nil, fmt.Errorf("%w: %q", md2pdf.ErrTemplateSetNotFound, name)
 }
 
 func TestResolveTemplateSet(t *testing.T) {
@@ -3590,7 +3591,7 @@ func TestResolveTemplateSet(t *testing.T) {
 		t.Parallel()
 
 		loader := &mockTemplateLoader{
-			templateSets: map[string]*assets.TemplateSet{
+			templateSets: map[string]*md2pdf.TemplateSet{
 				"default": {Name: "default", Cover: "<cover/>", Signature: "<sig/>"},
 			},
 		}
@@ -3608,7 +3609,7 @@ func TestResolveTemplateSet(t *testing.T) {
 		t.Parallel()
 
 		loader := &mockTemplateLoader{
-			templateSets: map[string]*assets.TemplateSet{
+			templateSets: map[string]*md2pdf.TemplateSet{
 				"corporate": {Name: "corporate", Cover: "<corp-cover/>", Signature: "<corp-sig/>"},
 			},
 		}
@@ -3651,11 +3652,11 @@ func TestResolveTemplateSet(t *testing.T) {
 		t.Parallel()
 
 		loader := &mockTemplateLoader{
-			templateSets: map[string]*assets.TemplateSet{},
+			templateSets: map[string]*md2pdf.TemplateSet{},
 		}
 
 		_, err := resolveTemplateSet("nonexistent", loader)
-		if !errors.Is(err, assets.ErrTemplateSetNotFound) {
+		if !errors.Is(err, md2pdf.ErrTemplateSetNotFound) {
 			t.Errorf("resolveTemplateSet() error = %v, want ErrTemplateSetNotFound", err)
 		}
 	})
