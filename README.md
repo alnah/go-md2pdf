@@ -71,14 +71,14 @@ func main() {
     }
     defer svc.Close()
 
-    pdf, err := svc.Convert(context.Background(), md2pdf.Input{
+    result, err := svc.Convert(context.Background(), md2pdf.Input{
         Markdown: "# Hello World\n\nGenerated with go-md2pdf.",
     })
     if err != nil {
         log.Fatal(err)
     }
 
-    os.WriteFile("output.pdf", pdf, 0644)
+    os.WriteFile("output.pdf", result.PDF, 0644)
 }
 ```
 
@@ -87,7 +87,7 @@ func main() {
 ### With Cover Page
 
 ```go
-pdf, err := svc.Convert(ctx, md2pdf.Input{
+result, err := svc.Convert(ctx, md2pdf.Input{
     Markdown: content,
     Cover: &md2pdf.Cover{
         Title:        "Project Report",
@@ -109,7 +109,7 @@ pdf, err := svc.Convert(ctx, md2pdf.Input{
 ### With Table of Contents
 
 ```go
-pdf, err := svc.Convert(ctx, md2pdf.Input{
+result, err := svc.Convert(ctx, md2pdf.Input{
     Markdown: content,
     TOC: &md2pdf.TOC{
         Title:    "Contents",
@@ -122,7 +122,7 @@ pdf, err := svc.Convert(ctx, md2pdf.Input{
 ### With Footer
 
 ```go
-pdf, err := svc.Convert(ctx, md2pdf.Input{
+result, err := svc.Convert(ctx, md2pdf.Input{
     Markdown: content,
     Footer: &md2pdf.Footer{
         ShowPageNumber: true,
@@ -136,7 +136,7 @@ pdf, err := svc.Convert(ctx, md2pdf.Input{
 ### With Signature
 
 ```go
-pdf, err := svc.Convert(ctx, md2pdf.Input{
+result, err := svc.Convert(ctx, md2pdf.Input{
     Markdown: content,
     Signature: &md2pdf.Signature{
         Name:         "John Doe",
@@ -152,7 +152,7 @@ pdf, err := svc.Convert(ctx, md2pdf.Input{
 ### With Watermark
 
 ```go
-pdf, err := svc.Convert(ctx, md2pdf.Input{
+result, err := svc.Convert(ctx, md2pdf.Input{
     Markdown: content,
     Watermark: &md2pdf.Watermark{
         Text:    "CONFIDENTIAL",
@@ -166,7 +166,7 @@ pdf, err := svc.Convert(ctx, md2pdf.Input{
 ### With Custom CSS
 
 ```go
-pdf, err := svc.Convert(ctx, md2pdf.Input{
+result, err := svc.Convert(ctx, md2pdf.Input{
     Markdown: content,
     CSS:      customCSS,
 })
@@ -175,7 +175,7 @@ pdf, err := svc.Convert(ctx, md2pdf.Input{
 ### With Page Settings
 
 ```go
-pdf, err := svc.Convert(ctx, md2pdf.Input{
+result, err := svc.Convert(ctx, md2pdf.Input{
     Markdown: content,
     Page: &md2pdf.PageSettings{
         Size:        md2pdf.PageSizeA4,
@@ -188,7 +188,7 @@ pdf, err := svc.Convert(ctx, md2pdf.Input{
 ### With Page Breaks
 
 ```go
-pdf, err := svc.Convert(ctx, md2pdf.Input{
+result, err := svc.Convert(ctx, md2pdf.Input{
     Markdown: content,
     PageBreaks: &md2pdf.PageBreaks{
         BeforeH1: true, // Page break before H1 headings
@@ -201,30 +201,34 @@ pdf, err := svc.Convert(ctx, md2pdf.Input{
 
 ### With Custom Assets
 
-Override embedded CSS styles and HTML templates by loading from a custom directory:
+Override embedded CSS styles and HTML templates:
 
 ```go
-import "github.com/alnah/go-md2pdf/internal/assets"
+// Option 1: Load from custom directory (with fallback to embedded)
+svc, err := md2pdf.New(md2pdf.WithAssetPath("/path/to/assets"))
 
-// Create asset resolver with custom directory (falls back to embedded)
-loader, err := assets.NewAssetResolver("/path/to/assets")
+// Option 2: Provide CSS content directly
+svc, err := md2pdf.New(md2pdf.WithStyle(customCSS))
+
+// Option 3: Provide template set directly
+ts := md2pdf.NewTemplateSet("custom", coverHTML, signatureHTML)
+svc, err := md2pdf.New(md2pdf.WithTemplateSet(ts))
+
+// Option 4: Full control with custom loader
+loader, err := md2pdf.NewAssetLoader("/path/to/assets")
 if err != nil {
     log.Fatal(err)
 }
-
 svc, err := md2pdf.New(md2pdf.WithAssetLoader(loader))
-if err != nil {
-    log.Fatal(err)
-}
 ```
 
-Expected directory structure:
+Expected directory structure for `WithAssetPath`:
 
 ```
 /path/to/assets/
 ├── styles/
 │   ├── default.css      # Override default style
-│   └── technical.css    # Override embedded style
+│   └── technical.css    # Add custom style
 └── templates/
     └── default/         # Template set directory
         ├── cover.html       # Cover page template
@@ -245,6 +249,7 @@ package main
 import (
     "context"
     "log"
+    "os"
     "sync"
 
     "github.com/alnah/go-md2pdf"
@@ -271,14 +276,14 @@ func main() {
             defer pool.Release(svc)
 
             content, _ := os.ReadFile(f)
-            pdf, err := svc.Convert(context.Background(), md2pdf.Input{
+            result, err := svc.Convert(context.Background(), md2pdf.Input{
                 Markdown: string(content),
             })
             if err != nil {
                 log.Printf("convert %s: %v", f, err)
                 return
             }
-            os.WriteFile(f+".pdf", pdf, 0644)
+            os.WriteFile(f+".pdf", result.PDF, 0644)
         }(file)
     }
     wg.Wait()
@@ -621,12 +626,20 @@ go-md2pdf/
 ├── service.go          # Public API: New(), Convert(), Close()
 ├── pool.go             # ServicePool for parallel processing
 ├── types.go            # Input, Footer, Signature, Watermark, Cover, TOC, PageBreaks
+├── assets.go           # AssetLoader interface, NewAssetLoader(), TemplateSet
+├── date.go             # ResolveDate() for auto date formatting
+├── errors.go           # Public error definitions
 ├── mdtransform.go      # Markdown preprocessing
 ├── md2html.go          # Markdown to HTML (Goldmark)
 ├── htmlinject.go       # CSS/signature/cover/TOC injection
 ├── html2pdf.go         # HTML to PDF (headless Chrome)
 ├── cmd/md2pdf/         # CLI binary
-└── internal/           # Assets, config, utilities
+└── internal/
+    ├── assets/         # Embedded styles and templates
+    ├── config/         # YAML config loading
+    ├── dateutil/       # Date format parsing
+    ├── fileutil/       # File path utilities
+    └── yamlutil/       # YAML helpers
 ```
 
 ## Documentation
