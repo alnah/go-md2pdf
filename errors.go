@@ -34,6 +34,9 @@ var (
 	ErrInvalidOrphans = errors.New("invalid orphans value")
 	ErrInvalidWidows  = errors.New("invalid widows value")
 
-	// Date format validation errors.
-	ErrInvalidDateFormat = errors.New("invalid date format")
+	// Asset loading errors.
+	ErrStyleNotFound         = errors.New("style not found")
+	ErrTemplateSetNotFound   = errors.New("template set not found")
+	ErrIncompleteTemplateSet = errors.New("template set missing required template")
+	ErrInvalidAssetPath      = errors.New("invalid asset path")
 )
