@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/alnah/go-md2pdf/internal/assets"
 )
 
 func TestSanitizeCSS(t *testing.T) {
@@ -181,7 +183,11 @@ func TestInjectCSS_ContextCancellation(t *testing.T) {
 func TestInjectSignature(t *testing.T) {
 	t.Parallel()
 
-	injector := newSignatureInjection()
+	loader := assets.NewEmbeddedLoader()
+	injector, err := newSignatureInjection(loader)
+	if err != nil {
+		t.Fatalf("failed to create signature injector: %v", err)
+	}
 
 	t.Run("nil data returns HTML unchanged", func(t *testing.T) {
 		t.Parallel()
@@ -327,13 +333,17 @@ func TestInjectSignature(t *testing.T) {
 func TestInjectSignature_ContextCancellation(t *testing.T) {
 	t.Parallel()
 
-	injector := newSignatureInjection()
+	loader := assets.NewEmbeddedLoader()
+	injector, err := newSignatureInjection(loader)
+	if err != nil {
+		t.Fatalf("failed to create signature injector: %v", err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
 
 	data := &signatureData{Name: "Test"}
-	_, err := injector.InjectSignature(ctx, "<body></body>", data)
+	_, err = injector.InjectSignature(ctx, "<body></body>", data)
 
 	if err == nil {
 		t.Fatal("expected error for cancelled context")
@@ -352,11 +362,15 @@ func TestInjectSignature_TemplateError(t *testing.T) {
 	// by using the mock in service_test.go
 
 	// For the real implementation, verify that error wrapping works
-	injector := newSignatureInjection()
+	loader := assets.NewEmbeddedLoader()
+	injector, err := newSignatureInjection(loader)
+	if err != nil {
+		t.Fatalf("failed to create signature injector: %v", err)
+	}
 	ctx := context.Background()
 	data := &signatureData{Name: "Test"}
 
-	_, err := injector.InjectSignature(ctx, "<body></body>", data)
+	_, err = injector.InjectSignature(ctx, "<body></body>", data)
 	if err != nil {
 		if !errors.Is(err, ErrSignatureRender) {
 			t.Errorf("error should wrap ErrSignatureRender, got: %v", err)
@@ -368,7 +382,11 @@ func TestInjectSignature_TemplateError(t *testing.T) {
 func TestInjectCover(t *testing.T) {
 	t.Parallel()
 
-	injector := newCoverInjection()
+	loader := assets.NewEmbeddedLoader()
+	injector, err := newCoverInjection(loader)
+	if err != nil {
+		t.Fatalf("failed to create cover injector: %v", err)
+	}
 
 	t.Run("nil data returns HTML unchanged", func(t *testing.T) {
 		t.Parallel()
@@ -552,13 +570,17 @@ func TestInjectCover(t *testing.T) {
 func TestInjectCover_ContextCancellation(t *testing.T) {
 	t.Parallel()
 
-	injector := newCoverInjection()
+	loader := assets.NewEmbeddedLoader()
+	injector, err := newCoverInjection(loader)
+	if err != nil {
+		t.Fatalf("failed to create cover injector: %v", err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
 
 	data := &coverData{Title: "Test"}
-	_, err := injector.InjectCover(ctx, "<body></body>", data)
+	_, err = injector.InjectCover(ctx, "<body></body>", data)
 
 	if err == nil {
 		t.Fatal("expected error for cancelled context")
@@ -1694,7 +1716,11 @@ func TestInjectTOC_AfterCover(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	coverInjector := newCoverInjection()
+	loader := assets.NewEmbeddedLoader()
+	coverInjector, err := newCoverInjection(loader)
+	if err != nil {
+		t.Fatalf("failed to create cover injector: %v", err)
+	}
 	tocInjector := newTOCInjection()
 
 	// Start with HTML that has a heading (needed for TOC generation)

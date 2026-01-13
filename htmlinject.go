@@ -101,20 +101,20 @@ type signatureInjection struct {
 	tmpl *template.Template
 }
 
-// newSignatureInjection creates a signatureInjection with the embedded template.
-// Panics if the template cannot be loaded or parsed (programmer error).
-func newSignatureInjection() *signatureInjection {
-	tmplContent, err := assets.LoadTemplate("signature")
+// newSignatureInjection creates a signatureInjection using the provided AssetLoader.
+// Returns error if the template cannot be loaded or parsed.
+func newSignatureInjection(loader assets.AssetLoader) (*signatureInjection, error) {
+	tmplContent, err := loader.LoadTemplate("signature")
 	if err != nil {
-		panic("failed to load signature template: " + err.Error())
+		return nil, fmt.Errorf("loading signature template: %w", err)
 	}
 
 	tmpl, err := template.New("signature").Parse(tmplContent)
 	if err != nil {
-		panic("failed to parse signature template: " + err.Error())
+		return nil, fmt.Errorf("parsing signature template: %w", err)
 	}
 
-	return &signatureInjection{tmpl: tmpl}
+	return &signatureInjection{tmpl: tmpl}, nil
 }
 
 // InjectSignature renders the signature template and injects it before </body>.
@@ -177,20 +177,20 @@ type coverInjection struct {
 	tmpl *template.Template
 }
 
-// newCoverInjection creates a coverInjection with the embedded template.
-// Panics if the template cannot be loaded or parsed (programmer error).
-func newCoverInjection() *coverInjection {
-	tmplContent, err := assets.LoadTemplate("cover")
+// newCoverInjection creates a coverInjection using the provided AssetLoader.
+// Returns error if the template cannot be loaded or parsed.
+func newCoverInjection(loader assets.AssetLoader) (*coverInjection, error) {
+	tmplContent, err := loader.LoadTemplate("cover")
 	if err != nil {
-		panic("failed to load cover template: " + err.Error())
+		return nil, fmt.Errorf("loading cover template: %w", err)
 	}
 
 	tmpl, err := template.New("cover").Parse(tmplContent)
 	if err != nil {
-		panic("failed to parse cover template: " + err.Error())
+		return nil, fmt.Errorf("parsing cover template: %w", err)
 	}
 
-	return &coverInjection{tmpl: tmpl}
+	return &coverInjection{tmpl: tmpl}, nil
 }
 
 // InjectCover renders the cover template and injects it after <body>.
