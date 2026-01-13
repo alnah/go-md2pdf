@@ -93,13 +93,13 @@ func TestPageSettings_Validate(t *testing.T) {
 			wantErr: ErrInvalidPageSize,
 		},
 		{
-			name: "empty page size",
+			name: "empty page size valid (uses default)",
 			ps: &PageSettings{
 				Size:        "",
 				Orientation: OrientationPortrait,
 				Margin:      DefaultMargin,
 			},
-			wantErr: ErrInvalidPageSize,
+			wantErr: nil,
 		},
 		{
 			name: "invalid orientation",
@@ -111,13 +111,13 @@ func TestPageSettings_Validate(t *testing.T) {
 			wantErr: ErrInvalidOrientation,
 		},
 		{
-			name: "empty orientation",
+			name: "empty orientation valid (uses default)",
 			ps: &PageSettings{
 				Size:        PageSizeLetter,
 				Orientation: "",
 				Margin:      DefaultMargin,
 			},
-			wantErr: ErrInvalidOrientation,
+			wantErr: nil,
 		},
 		{
 			name: "margin below minimum",
@@ -138,13 +138,13 @@ func TestPageSettings_Validate(t *testing.T) {
 			wantErr: ErrInvalidMargin,
 		},
 		{
-			name: "margin zero",
+			name: "margin zero valid (uses default)",
 			ps: &PageSettings{
 				Size:        PageSizeLetter,
 				Orientation: OrientationPortrait,
 				Margin:      0,
 			},
-			wantErr: ErrInvalidMargin,
+			wantErr: nil,
 		},
 		{
 			name: "margin negative",
@@ -154,6 +154,15 @@ func TestPageSettings_Validate(t *testing.T) {
 				Margin:      -1.0,
 			},
 			wantErr: ErrInvalidMargin,
+		},
+		{
+			name: "all empty values valid (all use defaults)",
+			ps: &PageSettings{
+				Size:        "",
+				Orientation: "",
+				Margin:      0,
+			},
+			wantErr: nil,
 		},
 	}
 
@@ -751,12 +760,12 @@ func TestTOC_Validate(t *testing.T) {
 		},
 		{
 			name:    "min depth boundary",
-			toc:     &TOC{MaxDepth: MinTOCDepth},
+			toc:     &TOC{MaxDepth: 1}, // minTOCDepth
 			wantErr: nil,
 		},
 		{
 			name:    "max depth boundary",
-			toc:     &TOC{MaxDepth: MaxTOCDepth},
+			toc:     &TOC{MaxDepth: 6}, // maxTOCDepth
 			wantErr: nil,
 		},
 		{

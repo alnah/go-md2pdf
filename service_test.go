@@ -5,8 +5,6 @@ import (
 	"errors"
 	"strings"
 	"testing"
-
-	"github.com/alnah/go-md2pdf/internal/assets"
 )
 
 // Mock implementations for testing.
@@ -159,7 +157,7 @@ func (p *panicPreprocessor) PreprocessMarkdown(ctx context.Context, content stri
 type mockAssetLoader struct {
 	styleContent   string
 	styleErr       error
-	templateSet    *assets.TemplateSet
+	templateSet    *TemplateSet
 	templateSetErr error
 }
 
@@ -170,7 +168,7 @@ func (m *mockAssetLoader) LoadStyle(name string) (string, error) {
 	return m.styleContent, nil
 }
 
-func (m *mockAssetLoader) LoadTemplateSet(name string) (*assets.TemplateSet, error) {
+func (m *mockAssetLoader) LoadTemplateSet(name string) (*TemplateSet, error) {
 	if m.templateSetErr != nil {
 		return nil, m.templateSetErr
 	}
@@ -178,7 +176,7 @@ func (m *mockAssetLoader) LoadTemplateSet(name string) (*assets.TemplateSet, err
 		return m.templateSet, nil
 	}
 	// Return a minimal valid template set
-	return &assets.TemplateSet{
+	return &TemplateSet{
 		Name:      name,
 		Cover:     "<div>cover</div>",
 		Signature: "<div>signature</div>",
@@ -533,7 +531,7 @@ func TestWithAssetLoader(t *testing.T) {
 
 	customLoader := &mockAssetLoader{
 		styleContent: "/* custom */",
-		templateSet: &assets.TemplateSet{
+		templateSet: &TemplateSet{
 			Name:      "custom",
 			Cover:     "<div>custom cover</div>",
 			Signature: "<div>custom signature</div>",
@@ -546,8 +544,8 @@ func TestWithAssetLoader(t *testing.T) {
 	}
 	defer service.Close()
 
-	if service.assetLoader != customLoader {
-		t.Error("assetLoader should be the custom loader")
+	if service.publicAssetLoader != customLoader {
+		t.Error("publicAssetLoader should be the custom loader")
 	}
 }
 
@@ -555,8 +553,10 @@ func TestWithAssetLoader_UsedByInjectors(t *testing.T) {
 	t.Parallel()
 
 	// Test that the asset loader is used when creating cover and signature injectors.
-	// We use the embedded loader which is the default.
-	loader := assets.NewEmbeddedLoader()
+	// We use a mock loader that returns valid templates.
+	loader := &mockAssetLoader{
+		templateSet: NewTemplateSet("test", "<div>cover</div>", "<div>sig</div>"),
+	}
 
 	service, err := New(WithAssetLoader(loader))
 	if err != nil {
@@ -1671,11 +1671,11 @@ func TestConvert_HTMLOnlyStillProcessesInjections(t *testing.T) {
 func TestWithTemplateSet(t *testing.T) {
 	t.Parallel()
 
-	customTemplateSet := &assets.TemplateSet{
-		Name:      "custom",
-		Cover:     "<div class=\"custom-cover\">{{.Title}}</div>",
-		Signature: "<div class=\"custom-sig\">{{.Name}}</div>",
-	}
+	customTemplateSet := NewTemplateSet(
+		"custom",
+		"<div class=\"custom-cover\">{{.Title}}</div>",
+		"<div class=\"custom-sig\">{{.Name}}</div>",
+	)
 
 	service, err := New(WithTemplateSet(customTemplateSet))
 	if err != nil {
@@ -1694,11 +1694,11 @@ func TestWithTemplateSet(t *testing.T) {
 func TestWithTemplateSet_UsedByInjectors(t *testing.T) {
 	t.Parallel()
 
-	customTemplateSet := &assets.TemplateSet{
-		Name:      "test-templates",
-		Cover:     "<section class=\"cover\"><div class=\"cover-page\"><p class=\"cover-title\">{{.Title}}</p></div></section><span data-cover-end></span>",
-		Signature: "<div class=\"signature-block\"><div class=\"sig-person\"><strong>{{.Name}}</strong></div></div>",
-	}
+	customTemplateSet := NewTemplateSet(
+		"test-templates",
+		"<section class=\"cover\"><div class=\"cover-page\"><p class=\"cover-title\">{{.Title}}</p></div></section><span data-cover-end></span>",
+		"<div class=\"signature-block\"><div class=\"sig-person\"><strong>{{.Name}}</strong></div></div>",
+	)
 
 	mockPDF := &mockPDFConverter{output: []byte("%PDF-1.4")}
 
@@ -1740,5 +1740,67 @@ func TestNew_WithoutTemplateSet_LoadsDefault(t *testing.T) {
 
 	if service == nil {
 		t.Fatal("New() returned nil service")
+	}
+}
+
+func TestWithAssetPath(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+
+	service, err := New(WithAssetPath(tmpDir))
+	if err != nil {
+		t.Fatalf("New(WithAssetPath) error = %v", err)
+	}
+	defer service.Close()
+
+	if service.cfg.assetPath != tmpDir {
+		t.Errorf("cfg.assetPath = %q, want %q", service.cfg.assetPath, tmpDir)
+	}
+}
+
+func TestWithAssetPath_InvalidPath(t *testing.T) {
+	t.Parallel()
+
+	_, err := New(WithAssetPath("/nonexistent/path/to/assets"))
+	if err == nil {
+		t.Fatal("New() expected error for invalid asset path, got nil")
+	}
+	if !errors.Is(err, ErrInvalidAssetPath) {
+		t.Errorf("New() error = %v, want ErrInvalidAssetPath", err)
+	}
+}
+
+func TestWithAssetPath_LoadsFromFilesystem(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+
+	// Service with custom path (even if empty dir) should still work via fallback
+	service, err := New(WithAssetPath(tmpDir))
+	if err != nil {
+		t.Fatalf("New(WithAssetPath) error = %v", err)
+	}
+	defer service.Close()
+
+	// Service should be usable - the test verifies no panic/error during creation
+	if service == nil {
+		t.Fatal("New() returned nil service")
+	}
+}
+
+func TestWithStyle(t *testing.T) {
+	t.Parallel()
+
+	customCSS := "body { font-family: monospace; }"
+
+	service, err := New(WithStyle(customCSS))
+	if err != nil {
+		t.Fatalf("New(WithStyle) error = %v", err)
+	}
+	defer service.Close()
+
+	if service.cfg.customStyle != customCSS {
+		t.Errorf("cfg.customStyle = %q, want %q", service.cfg.customStyle, customCSS)
 	}
 }

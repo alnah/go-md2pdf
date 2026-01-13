@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/alnah/go-md2pdf/internal/assets"
+	"github.com/alnah/go-md2pdf/internal/fileutil"
 )
 
 // Page size constants.
@@ -56,21 +57,24 @@ func DefaultPageSettings() *PageSettings {
 
 // Validate checks that page settings are valid.
 // Returns nil if p is nil (nil means use defaults).
+// Empty values are allowed and will use defaults at runtime.
 // Does not mutate - uses case-insensitive comparison.
 func (p *PageSettings) Validate() error {
 	if p == nil {
 		return nil
 	}
 
-	if !isValidPageSize(p.Size) {
+	// Empty means use default; only validate if explicitly set
+	if p.Size != "" && !isValidPageSize(p.Size) {
 		return fmt.Errorf("%w: %q", ErrInvalidPageSize, p.Size)
 	}
 
-	if !isValidOrientation(p.Orientation) {
+	if p.Orientation != "" && !isValidOrientation(p.Orientation) {
 		return fmt.Errorf("%w: %q", ErrInvalidOrientation, p.Orientation)
 	}
 
-	if p.Margin < MinMargin || p.Margin > MaxMargin {
+	// Margin: 0 means use default; only validate if explicitly set
+	if p.Margin != 0 && (p.Margin < MinMargin || p.Margin > MaxMargin) {
 		return fmt.Errorf("%w: %.2f (must be between %.2f and %.2f)", ErrInvalidMargin, p.Margin, MinMargin, MaxMargin)
 	}
 
@@ -205,7 +209,7 @@ func (c *Cover) Validate() error {
 		return nil
 	}
 	// Semantic validation: logo path exists if not URL
-	if c.Logo != "" && !IsURL(c.Logo) && !FileExists(c.Logo) {
+	if c.Logo != "" && !fileutil.IsURL(c.Logo) && !fileutil.FileExists(c.Logo) {
 		return fmt.Errorf("%w: %q", ErrCoverLogoNotFound, c.Logo)
 	}
 	return nil
@@ -213,8 +217,8 @@ func (c *Cover) Validate() error {
 
 // TOC depth bounds.
 const (
-	MinTOCDepth        = 1
-	MaxTOCDepth        = 6
+	minTOCDepth        = 1
+	maxTOCDepth        = 6
 	DefaultTOCMinDepth = 2 // Skip H1 by default (document title)
 	DefaultTOCMaxDepth = 3
 )
@@ -233,23 +237,18 @@ func (t *TOC) Validate() error {
 		return nil
 	}
 	// MinDepth: 0 means use default, otherwise must be in range
-	if t.MinDepth != 0 && (t.MinDepth < MinTOCDepth || t.MinDepth > MaxTOCDepth) {
-		return fmt.Errorf("%w: MinDepth %d (must be %d-%d)", ErrInvalidTOCDepth, t.MinDepth, MinTOCDepth, MaxTOCDepth)
+	if t.MinDepth != 0 && (t.MinDepth < minTOCDepth || t.MinDepth > maxTOCDepth) {
+		return fmt.Errorf("%w: MinDepth %d (must be %d-%d)", ErrInvalidTOCDepth, t.MinDepth, minTOCDepth, maxTOCDepth)
 	}
 	// MaxDepth: 0 means use default, otherwise must be in range
-	if t.MaxDepth != 0 && (t.MaxDepth < MinTOCDepth || t.MaxDepth > MaxTOCDepth) {
-		return fmt.Errorf("%w: MaxDepth %d (must be %d-%d)", ErrInvalidTOCDepth, t.MaxDepth, MinTOCDepth, MaxTOCDepth)
+	if t.MaxDepth != 0 && (t.MaxDepth < minTOCDepth || t.MaxDepth > maxTOCDepth) {
+		return fmt.Errorf("%w: MaxDepth %d (must be %d-%d)", ErrInvalidTOCDepth, t.MaxDepth, minTOCDepth, maxTOCDepth)
 	}
 	// MinDepth must be <= MaxDepth (when both are set)
 	if t.MinDepth != 0 && t.MaxDepth != 0 && t.MinDepth > t.MaxDepth {
 		return fmt.Errorf("%w: MinDepth %d > MaxDepth %d", ErrInvalidTOCDepth, t.MinDepth, t.MaxDepth)
 	}
 	return nil
-}
-
-// IsURL returns true if the string looks like a URL.
-func IsURL(s string) bool {
-	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
 }
 
 // isValidHexColor checks if color is a valid hex color (#RGB or #RRGGBB).
@@ -320,6 +319,8 @@ type Option func(*Service)
 type serviceConfig struct {
 	timeout     time.Duration
 	templateSet *assets.TemplateSet
+	assetPath   string // Path for WithAssetPath, resolved in New()
+	customStyle string // CSS content for WithStyle
 }
 
 // defaultTimeout is used when no timeout is specified.
@@ -337,18 +338,60 @@ func WithTimeout(d time.Duration) Option {
 }
 
 // WithAssetLoader sets a custom asset loader for CSS styles and HTML templates.
-// Use assets.NewAssetResolver(basePath) to load from a custom directory with
-// fallback to embedded assets, or implement assets.AssetLoader for custom backends.
-func WithAssetLoader(loader assets.AssetLoader) Option {
+// Use NewAssetLoader(basePath) to load from a custom directory with
+// fallback to embedded assets, or implement AssetLoader for custom backends.
+//
+// Example:
+//
+//	loader, err := md2pdf.NewAssetLoader("/path/to/assets")
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	svc, err := md2pdf.New(md2pdf.WithAssetLoader(loader))
+func WithAssetLoader(loader AssetLoader) Option {
 	return func(s *Service) {
-		s.assetLoader = loader
+		s.publicAssetLoader = loader
+	}
+}
+
+// WithAssetPath configures asset loading from a filesystem directory.
+// Custom assets take precedence; missing assets fall back to embedded defaults.
+//
+// The directory should contain:
+//   - styles/{name}.css for CSS styles
+//   - templates/{name}/cover.html and signature.html for template sets
+//
+// This is equivalent to calling NewAssetLoader(path) and WithAssetLoader().
+// Returns error from New() if the path is invalid.
+func WithAssetPath(path string) Option {
+	return func(s *Service) {
+		s.cfg.assetPath = path
+	}
+}
+
+// WithStyle sets custom CSS content directly, bypassing the asset loader.
+// This CSS is used instead of loading a style by name.
+func WithStyle(css string) Option {
+	return func(s *Service) {
+		s.cfg.customStyle = css
 	}
 }
 
 // WithTemplateSet sets a custom template set for cover and signature.
 // Use this to override the default templates loaded from embedded assets.
-func WithTemplateSet(ts *assets.TemplateSet) Option {
+//
+// Example:
+//
+//	ts := md2pdf.NewTemplateSet("custom", coverHTML, signatureHTML)
+//	svc, err := md2pdf.New(md2pdf.WithTemplateSet(ts))
+func WithTemplateSet(ts *TemplateSet) Option {
 	return func(s *Service) {
-		s.cfg.templateSet = ts
+		if ts != nil {
+			s.cfg.templateSet = &assets.TemplateSet{
+				Name:      ts.Name,
+				Cover:     ts.Cover,
+				Signature: ts.Signature,
+			}
+		}
 	}
 }

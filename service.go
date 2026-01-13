@@ -24,7 +24,8 @@ var (
 // Service orchestrates the markdown-to-PDF pipeline.
 type Service struct {
 	cfg               serviceConfig
-	assetLoader       assets.AssetLoader
+	assetLoader       assets.AssetLoader // internal loader (for backward compat)
+	publicAssetLoader AssetLoader        // public loader (from WithAssetLoader)
 	preprocessor      markdownPreprocessor
 	htmlConverter     htmlConverter
 	cssInjector       cssInjector
@@ -32,6 +33,27 @@ type Service struct {
 	tocInjector       tocInjector
 	signatureInjector signatureInjector
 	pdfConverter      pdfConverter
+}
+
+// publicToInternalAdapter wraps public AssetLoader to internal assets.AssetLoader.
+type publicToInternalAdapter struct {
+	pub AssetLoader
+}
+
+func (a *publicToInternalAdapter) LoadStyle(name string) (string, error) {
+	return a.pub.LoadStyle(name)
+}
+
+func (a *publicToInternalAdapter) LoadTemplateSet(name string) (*assets.TemplateSet, error) {
+	ts, err := a.pub.LoadTemplateSet(name)
+	if err != nil {
+		return nil, err
+	}
+	return &assets.TemplateSet{
+		Name:      ts.Name,
+		Cover:     ts.Cover,
+		Signature: ts.Signature,
+	}, nil
 }
 
 // New creates a Service with default configuration.
@@ -49,6 +71,20 @@ func New(opts ...Option) (*Service, error) {
 
 	for _, opt := range opts {
 		opt(s)
+	}
+
+	// Handle WithAssetPath: resolve to internal loader
+	if s.cfg.assetPath != "" {
+		resolver, err := assets.NewAssetResolver(s.cfg.assetPath)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrInvalidAssetPath, err)
+		}
+		s.assetLoader = resolver
+	}
+
+	// Handle WithAssetLoader (public interface): wrap to internal interface
+	if s.publicAssetLoader != nil {
+		s.assetLoader = &publicToInternalAdapter{pub: s.publicAssetLoader}
 	}
 
 	// Load template set if not already configured via WithTemplateSet
