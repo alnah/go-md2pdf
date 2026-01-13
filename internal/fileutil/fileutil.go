@@ -82,3 +82,16 @@ func IsFilePath(s string) bool {
 func IsURL(s string) bool {
 	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
 }
+
+// IsCSS returns true if the string looks like CSS content rather than a name or path.
+// Detection: contains '{' character which is required for any CSS rule.
+//
+// Examples:
+//
+//	"technical" -> false (style name)
+//	"./custom.css" -> false (file path)
+//	"body { color: red; }" -> true (CSS content)
+//	"h1 { font-size: 2em }" -> true (CSS content)
+func IsCSS(s string) bool {
+	return strings.Contains(s, "{")
+}

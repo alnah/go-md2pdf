@@ -362,6 +362,63 @@ func TestIsFilePath(t *testing.T) {
 	}
 }
 
+func TestIsCSS(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		input string
+		want  bool
+	}{
+		{
+			name:  "style name returns false",
+			input: "technical",
+			want:  false,
+		},
+		{
+			name:  "file path returns false",
+			input: "./custom.css",
+			want:  false,
+		},
+		{
+			name:  "CSS content with braces returns true",
+			input: "body { color: red; }",
+			want:  true,
+		},
+		{
+			name:  "CSS content with multiple rules returns true",
+			input: "h1 { font-size: 2em } p { margin: 1em }",
+			want:  true,
+		},
+		{
+			name:  "empty string returns false",
+			input: "",
+			want:  false,
+		},
+		{
+			name:  "hyphenated name returns false",
+			input: "my-style",
+			want:  false,
+		},
+		{
+			name:  "malformed CSS with only open brace returns true",
+			input: "body {",
+			want:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := IsCSS(tt.input)
+			if got != tt.want {
+				t.Errorf("IsCSS(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestIsURL(t *testing.T) {
 	t.Parallel()
 
