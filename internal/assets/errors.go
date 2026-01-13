@@ -10,6 +10,12 @@ var (
 	// ErrTemplateNotFound indicates the requested template does not exist.
 	ErrTemplateNotFound = errors.New("template not found")
 
+	// ErrTemplateSetNotFound indicates the requested template set does not exist.
+	ErrTemplateSetNotFound = errors.New("template set not found")
+
+	// ErrIncompleteTemplateSet indicates the template set is missing required templates.
+	ErrIncompleteTemplateSet = errors.New("template set missing required template")
+
 	// ErrInvalidAssetName indicates the asset name contains invalid characters
 	// such as path separators or traversal sequences.
 	ErrInvalidAssetName = errors.New("invalid asset name")
