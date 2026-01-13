@@ -223,13 +223,15 @@ Expected directory structure:
 ```
 /path/to/assets/
 ├── styles/
+│   ├── default.css      # Override default style
 │   └── technical.css    # Override embedded style
 └── templates/
-    ├── cover.html       # Override cover page template
-    └── signature.html   # Override signature block template
+    └── default/         # Template set directory
+        ├── cover.html       # Cover page template
+        └── signature.html   # Signature block template
 ```
 
-Available embedded styles: `technical`, `creative`, `academic`, `corporate`, `legal`, `invoice`, `manuscript`
+Available embedded styles: `default`, `technical`, `creative`, `academic`, `corporate`, `legal`, `invoice`, `manuscript`
 
 Missing files fall back to embedded defaults silently.
 
@@ -354,9 +356,17 @@ Page Breaks:
       --widows <n>          Min lines at page top (1-5)
       --no-page-breaks      Disable page break features
 
-Styling:
-      --css <path>          External CSS file
+Assets & Styling:
+      --style <name|path>   CSS style name or file path
+                            Name: uses embedded or custom asset (e.g., "technical")
+                            Path: reads file directly (contains / or \)
+      --template <name|path> Template set name or directory path
+      --asset-path <dir>    Custom asset directory (overrides config)
       --no-style            Disable CSS styling
+
+Debug Output:
+      --html                Output HTML alongside PDF
+      --html-only           Output HTML only, skip PDF generation
 
 Output Control:
   -q, --quiet               Only show errors
@@ -373,7 +383,7 @@ md2pdf convert -o report.pdf input.md
 md2pdf convert -c work ./docs/ -o ./pdfs/
 
 # Custom CSS, no footer
-md2pdf convert --css custom.css --no-footer document.md
+md2pdf convert --style ./custom.css --no-footer document.md
 
 # A4 landscape with 1-inch margins
 md2pdf convert -p a4 --orientation landscape --margin 1.0 document.md
@@ -386,6 +396,18 @@ md2pdf convert --doc-title "Final Report" document.md
 
 # Page breaks before H1 and H2 headings
 md2pdf convert --break-before h1,h2 document.md
+
+# Use embedded style by name
+md2pdf convert --style technical document.md
+
+# Debug: output HTML alongside PDF
+md2pdf convert --html document.md
+
+# Debug: output HTML only (no PDF)
+md2pdf convert --html-only document.md
+
+# Use custom assets directory
+md2pdf convert --asset-path ./my-assets document.md
 ```
 
 ### Docker
@@ -409,7 +431,7 @@ Supported formats: `.yaml`, `.yml`
 | Option                  | Type   | Default      | Description                              |
 | ----------------------- | ------ | ------------ | ---------------------------------------- |
 | `output.defaultDir`     | string | -            | Default output directory                 |
-| `css.style`             | string | -            | Embedded style name                      |
+| `style`                 | string | `"default"`  | CSS style name or path                   |
 | `assets.basePath`       | string | -            | Custom assets directory (styles, templates) |
 | `author.name`           | string | -            | Author name (used by cover, signature)   |
 | `author.title`          | string | -            | Author professional title                |
@@ -510,16 +532,17 @@ page:
   margin: 0.75         # inches, 0.25-3.0 (default: 0.5)
 
 # Styling
-css:
-  # Available styles:
-  #   - technical: system-ui, clean borders, GitHub syntax highlighting
-  #   - creative: colorful headings, badges, bullet points
-  #   - academic: Georgia/Times serif, 1.8 line height, academic tables
-  #   - corporate: Arial/Helvetica, blue accents, business style
-  #   - legal: Times New Roman, double line height, wide margins
-  #   - invoice: Arial, optimized tables, minimal cover
-  #   - manuscript: Courier New mono, scene breaks, simplified cover
-  style: 'technical'
+# Available styles:
+#   - default: minimal, neutral styling (applied when no style specified)
+#   - technical: system-ui, clean borders, GitHub syntax highlighting
+#   - creative: colorful headings, badges, bullet points
+#   - academic: Georgia/Times serif, 1.8 line height, academic tables
+#   - corporate: Arial/Helvetica, blue accents, business style
+#   - legal: Times New Roman, double line height, wide margins
+#   - invoice: Arial, optimized tables, minimal cover
+#   - manuscript: Courier New mono, scene breaks, simplified cover
+# Accepts name (e.g., "technical") or path (e.g., "./custom.css")
+style: 'technical'
 
 assets:
   basePath: '' # "" = use embedded assets
