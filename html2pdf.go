@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alnah/go-md2pdf/internal/fileutil"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
@@ -357,7 +358,7 @@ func newRodConverter(timeout time.Duration) *rodConverter {
 // ToPDF converts HTML content to PDF bytes using headless Chrome.
 // Page dimensions are configured via opts.Page (defaults to US Letter, portrait, 0.5in margins).
 func (c *rodConverter) ToPDF(ctx context.Context, htmlContent string, opts *pdfOptions) ([]byte, error) {
-	tmpPath, cleanup, err := writeTempFile(htmlContent, "html")
+	tmpPath, cleanup, err := fileutil.WriteTempFile(htmlContent, "html")
 	if err != nil {
 		return nil, err
 	}

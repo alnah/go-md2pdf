@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/alnah/go-md2pdf/internal/fileutil"
 )
 
 // Compile-time interface checks.
@@ -33,7 +35,7 @@ type testableRodConverter struct {
 }
 
 func (c *testableRodConverter) ToPDF(ctx context.Context, htmlContent string, opts *pdfOptions) ([]byte, error) {
-	tmpPath, cleanup, err := writeTempFile(htmlContent, "html")
+	tmpPath, cleanup, err := fileutil.WriteTempFile(htmlContent, "html")
 	if err != nil {
 		return nil, err
 	}

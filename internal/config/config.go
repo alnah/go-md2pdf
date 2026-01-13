@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	md2pdf "github.com/alnah/go-md2pdf"
+	"github.com/alnah/go-md2pdf/internal/dateutil"
+	"github.com/alnah/go-md2pdf/internal/fileutil"
 	"github.com/alnah/go-md2pdf/internal/yamlutil"
 )
 
@@ -164,7 +166,7 @@ func validateDateFormat(date string) error {
 	}
 	// Use ParseDateFormat to validate (ignore result, just check error)
 	formatPart := date[5:]
-	if _, err := md2pdf.ParseDateFormat(formatPart); err != nil {
+	if _, err := dateutil.ParseDateFormat(formatPart); err != nil {
 		return fmt.Errorf("document.date: %w", err)
 	}
 	return nil
@@ -502,10 +504,10 @@ func LoadConfig(nameOrPath string) (*Config, error) {
 	return &cfg, nil
 }
 
-// isFilePath delegates to md2pdf.IsFilePath for path detection.
-// See md2pdf.IsFilePath for documentation and examples.
+// isFilePath delegates to fileutil.IsFilePath for path detection.
+// See fileutil.IsFilePath for documentation and examples.
 func isFilePath(s string) bool {
-	return md2pdf.IsFilePath(s)
+	return fileutil.IsFilePath(s)
 }
 
 // resolveConfigPath searches for a config file by name in standard locations.
@@ -539,8 +541,8 @@ func resolveConfigPath(name string) (string, error) {
 	return "", fmt.Errorf("%w: tried %s", ErrConfigNotFound, strings.Join(triedPaths, ", "))
 }
 
-// fileExists delegates to md2pdf.FileExists for path existence check.
-// See md2pdf.FileExists for documentation.
+// fileExists delegates to fileutil.FileExists for path existence check.
+// See fileutil.FileExists for documentation.
 func fileExists(path string) bool {
-	return md2pdf.FileExists(path)
+	return fileutil.FileExists(path)
 }
