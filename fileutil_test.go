@@ -274,3 +274,90 @@ func TestWriteTempFile_LargeContent(t *testing.T) {
 		t.Errorf("file size = %d, want %d", len(data), len(largeContent))
 	}
 }
+
+func TestIsFilePath(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		input string
+		want  bool
+	}{
+		{
+			name:  "simple name returns false",
+			input: "professional",
+			want:  false,
+		},
+		{
+			name:  "relative path with dot-slash returns true",
+			input: "./custom.css",
+			want:  true,
+		},
+		{
+			name:  "parent path returns true",
+			input: "../shared/style.css",
+			want:  true,
+		},
+		{
+			name:  "absolute Unix path returns true",
+			input: "/absolute/path.css",
+			want:  true,
+		},
+		{
+			name:  "Windows path with backslash returns true",
+			input: "C:\\windows\\path.css",
+			want:  true,
+		},
+		{
+			name:  "hyphenated name returns false",
+			input: "my-style",
+			want:  false,
+		},
+		{
+			name:  "path with subdirectory returns true",
+			input: "sub/dir",
+			want:  true,
+		},
+		{
+			name:  "empty string returns false",
+			input: "",
+			want:  false,
+		},
+		{
+			name:  "name with dots but no slash returns false",
+			input: "name.with.dots",
+			want:  false,
+		},
+		{
+			name:  "underscore name returns false",
+			input: "my_style",
+			want:  false,
+		},
+		{
+			name:  "single forward slash returns true",
+			input: "/",
+			want:  true,
+		},
+		{
+			name:  "single backslash returns true",
+			input: "\\",
+			want:  true,
+		},
+		{
+			name:  "Windows drive letter path returns true",
+			input: "D:/Documents/style.css",
+			want:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := IsFilePath(tt.input)
+			if got != tt.want {
+				t.Errorf("IsFilePath(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}

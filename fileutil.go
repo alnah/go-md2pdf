@@ -61,3 +61,18 @@ func FileExists(path string) bool {
 	}
 	return !info.IsDir()
 }
+
+// IsFilePath returns true if the string looks like a file path rather than a name.
+// A string containing path separators (/, \) is treated as a path.
+//
+// Examples:
+//   - "professional" → false (name)
+//   - "./custom.css" → true (relative path)
+//   - "../shared/style.css" → true (parent path)
+//   - "/absolute/path.css" → true (absolute)
+//   - "C:\windows\path.css" → true (Windows)
+//   - "my-style" → false (hyphenated name)
+//   - "sub/dir" → true (contains separator)
+func IsFilePath(s string) bool {
+	return strings.ContainsAny(s, "/\\")
+}
