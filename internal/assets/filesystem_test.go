@@ -128,21 +128,25 @@ func TestFilesystemLoader_LoadStyle(t *testing.T) {
 	})
 }
 
-func TestFilesystemLoader_LoadTemplate(t *testing.T) {
+func TestFilesystemLoader_LoadTemplateSet(t *testing.T) {
 	t.Parallel()
 
-	t.Run("loads existing template", func(t *testing.T) {
+	t.Run("loads existing template set", func(t *testing.T) {
 		t.Parallel()
 
 		tmpDir := t.TempDir()
-		templatesDir := filepath.Join(tmpDir, "templates")
-		if err := os.MkdirAll(templatesDir, 0755); err != nil {
-			t.Fatalf("failed to create templates dir: %v", err)
+		setDir := filepath.Join(tmpDir, "templates", "custom")
+		if err := os.MkdirAll(setDir, 0755); err != nil {
+			t.Fatalf("failed to create template set dir: %v", err)
 		}
 
-		htmlContent := "<div>custom template</div>"
-		if err := os.WriteFile(filepath.Join(templatesDir, "mytemplate.html"), []byte(htmlContent), 0644); err != nil {
-			t.Fatalf("failed to write HTML file: %v", err)
+		coverContent := "<div>custom cover</div>"
+		sigContent := "<div>custom signature</div>"
+		if err := os.WriteFile(filepath.Join(setDir, "cover.html"), []byte(coverContent), 0644); err != nil {
+			t.Fatalf("failed to write cover file: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(setDir, "signature.html"), []byte(sigContent), 0644); err != nil {
+			t.Fatalf("failed to write signature file: %v", err)
 		}
 
 		loader, err := NewFilesystemLoader(tmpDir)
@@ -150,16 +154,19 @@ func TestFilesystemLoader_LoadTemplate(t *testing.T) {
 			t.Fatalf("NewFilesystemLoader() error = %v", err)
 		}
 
-		got, err := loader.LoadTemplate("mytemplate")
+		ts, err := loader.LoadTemplateSet("custom")
 		if err != nil {
-			t.Fatalf("LoadTemplate() error = %v", err)
+			t.Fatalf("LoadTemplateSet() error = %v", err)
 		}
-		if got != htmlContent {
-			t.Errorf("LoadTemplate() = %q, want %q", got, htmlContent)
+		if ts.Cover != coverContent {
+			t.Errorf("LoadTemplateSet() cover = %q, want %q", ts.Cover, coverContent)
+		}
+		if ts.Signature != sigContent {
+			t.Errorf("LoadTemplateSet() signature = %q, want %q", ts.Signature, sigContent)
 		}
 	})
 
-	t.Run("returns ErrTemplateNotFound for nonexistent", func(t *testing.T) {
+	t.Run("returns ErrTemplateSetNotFound for nonexistent", func(t *testing.T) {
 		t.Parallel()
 
 		tmpDir := t.TempDir()
@@ -173,9 +180,9 @@ func TestFilesystemLoader_LoadTemplate(t *testing.T) {
 			t.Fatalf("NewFilesystemLoader() error = %v", err)
 		}
 
-		_, err = loader.LoadTemplate("nonexistent")
-		if !errors.Is(err, ErrTemplateNotFound) {
-			t.Errorf("LoadTemplate() error = %v, want ErrTemplateNotFound", err)
+		_, err = loader.LoadTemplateSet("nonexistent")
+		if !errors.Is(err, ErrTemplateSetNotFound) {
+			t.Errorf("LoadTemplateSet() error = %v, want ErrTemplateSetNotFound", err)
 		}
 	})
 
@@ -190,10 +197,35 @@ func TestFilesystemLoader_LoadTemplate(t *testing.T) {
 
 		tests := []string{"", "../secret", "..\\secret", "template.evil"}
 		for _, name := range tests {
-			_, err := loader.LoadTemplate(name)
+			_, err := loader.LoadTemplateSet(name)
 			if !errors.Is(err, ErrInvalidAssetName) {
-				t.Errorf("LoadTemplate(%q) error = %v, want ErrInvalidAssetName", name, err)
+				t.Errorf("LoadTemplateSet(%q) error = %v, want ErrInvalidAssetName", name, err)
 			}
+		}
+	})
+
+	t.Run("returns ErrIncompleteTemplateSet for missing cover", func(t *testing.T) {
+		t.Parallel()
+
+		tmpDir := t.TempDir()
+		setDir := filepath.Join(tmpDir, "templates", "incomplete")
+		if err := os.MkdirAll(setDir, 0755); err != nil {
+			t.Fatalf("failed to create template set dir: %v", err)
+		}
+
+		// Only create signature, not cover
+		if err := os.WriteFile(filepath.Join(setDir, "signature.html"), []byte("<div>sig</div>"), 0644); err != nil {
+			t.Fatalf("failed to write signature file: %v", err)
+		}
+
+		loader, err := NewFilesystemLoader(tmpDir)
+		if err != nil {
+			t.Fatalf("NewFilesystemLoader() error = %v", err)
+		}
+
+		_, err = loader.LoadTemplateSet("incomplete")
+		if !errors.Is(err, ErrIncompleteTemplateSet) {
+			t.Errorf("LoadTemplateSet() error = %v, want ErrIncompleteTemplateSet", err)
 		}
 	})
 }

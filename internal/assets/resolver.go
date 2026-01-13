@@ -40,12 +40,26 @@ func (r *AssetResolver) LoadStyle(name string) (string, error) {
 	})
 }
 
-// LoadTemplate loads an HTML template, trying custom loader first if available.
-// Returns the template content and whether it came from the custom loader.
-func (r *AssetResolver) LoadTemplate(name string) (string, error) {
-	return r.loadWithFallback(name, func(loader AssetLoader) (string, error) {
-		return loader.LoadTemplate(name)
-	})
+// LoadTemplateSet loads a template set, trying custom loader first if available.
+func (r *AssetResolver) LoadTemplateSet(name string) (*TemplateSet, error) {
+	// If no custom loader, use embedded directly
+	if r.custom == nil {
+		return r.embedded.LoadTemplateSet(name)
+	}
+
+	// Try custom loader first
+	ts, err := r.custom.LoadTemplateSet(name)
+	if err == nil {
+		return ts, nil
+	}
+
+	// Only fall back for "not found" errors, not validation or I/O errors
+	if !isNotFoundError(err) {
+		return nil, err
+	}
+
+	// Fall back to embedded
+	return r.embedded.LoadTemplateSet(name)
 }
 
 // loadWithFallback implements the custom-first, fallback-to-embedded logic.
@@ -72,7 +86,9 @@ func (r *AssetResolver) loadWithFallback(name string, loadFn func(AssetLoader) (
 
 // isNotFoundError checks if the error indicates the asset was not found.
 func isNotFoundError(err error) bool {
-	return errors.Is(err, ErrStyleNotFound) || errors.Is(err, ErrTemplateNotFound)
+	return errors.Is(err, ErrStyleNotFound) ||
+		errors.Is(err, ErrTemplateNotFound) ||
+		errors.Is(err, ErrTemplateSetNotFound)
 }
 
 // HasCustomLoader returns true if a custom asset loader is configured.

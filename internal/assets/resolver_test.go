@@ -162,7 +162,7 @@ func TestAssetResolver_LoadStyle_CustomOverridesEmbedded(t *testing.T) {
 	}
 }
 
-func TestAssetResolver_LoadTemplate_EmbeddedOnly(t *testing.T) {
+func TestAssetResolver_LoadTemplateSet_EmbeddedOnly(t *testing.T) {
 	t.Parallel()
 
 	resolver, err := NewAssetResolver("")
@@ -170,41 +170,48 @@ func TestAssetResolver_LoadTemplate_EmbeddedOnly(t *testing.T) {
 		t.Fatalf("NewAssetResolver() error = %v", err)
 	}
 
-	t.Run("loads embedded template", func(t *testing.T) {
+	t.Run("loads embedded template set", func(t *testing.T) {
 		t.Parallel()
 
-		got, err := resolver.LoadTemplate("cover")
+		ts, err := resolver.LoadTemplateSet("default")
 		if err != nil {
-			t.Fatalf("LoadTemplate() error = %v", err)
+			t.Fatalf("LoadTemplateSet() error = %v", err)
 		}
-		if got == "" {
-			t.Error("LoadTemplate() returned empty content")
+		if ts.Cover == "" {
+			t.Error("LoadTemplateSet() returned empty cover")
+		}
+		if ts.Signature == "" {
+			t.Error("LoadTemplateSet() returned empty signature")
 		}
 	})
 
 	t.Run("returns error for nonexistent", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := resolver.LoadTemplate("nonexistent-xyz")
-		if !errors.Is(err, ErrTemplateNotFound) {
-			t.Errorf("LoadTemplate() error = %v, want ErrTemplateNotFound", err)
+		_, err := resolver.LoadTemplateSet("nonexistent-xyz")
+		if !errors.Is(err, ErrTemplateSetNotFound) {
+			t.Errorf("LoadTemplateSet() error = %v, want ErrTemplateSetNotFound", err)
 		}
 	})
 }
 
-func TestAssetResolver_LoadTemplate_CustomWithFallback(t *testing.T) {
+func TestAssetResolver_LoadTemplateSet_CustomWithFallback(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
-	templatesDir := filepath.Join(tmpDir, "templates")
-	if err := os.MkdirAll(templatesDir, 0755); err != nil {
-		t.Fatalf("failed to create templates dir: %v", err)
+	setDir := filepath.Join(tmpDir, "templates", "custom")
+	if err := os.MkdirAll(setDir, 0755); err != nil {
+		t.Fatalf("failed to create template set dir: %v", err)
 	}
 
-	// Create a custom template
-	customHTML := "<div>custom template</div>"
-	if err := os.WriteFile(filepath.Join(templatesDir, "mytemplate.html"), []byte(customHTML), 0644); err != nil {
-		t.Fatalf("failed to write HTML file: %v", err)
+	// Create a custom template set
+	customCover := "<div>custom cover</div>"
+	customSig := "<div>custom signature</div>"
+	if err := os.WriteFile(filepath.Join(setDir, "cover.html"), []byte(customCover), 0644); err != nil {
+		t.Fatalf("failed to write cover file: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(setDir, "signature.html"), []byte(customSig), 0644); err != nil {
+		t.Fatalf("failed to write signature file: %v", err)
 	}
 
 	resolver, err := NewAssetResolver(tmpDir)
@@ -212,44 +219,48 @@ func TestAssetResolver_LoadTemplate_CustomWithFallback(t *testing.T) {
 		t.Fatalf("NewAssetResolver() error = %v", err)
 	}
 
-	t.Run("loads custom template when available", func(t *testing.T) {
+	t.Run("loads custom template set when available", func(t *testing.T) {
 		t.Parallel()
 
-		got, err := resolver.LoadTemplate("mytemplate")
+		ts, err := resolver.LoadTemplateSet("custom")
 		if err != nil {
-			t.Fatalf("LoadTemplate() error = %v", err)
+			t.Fatalf("LoadTemplateSet() error = %v", err)
 		}
-		if got != customHTML {
-			t.Errorf("LoadTemplate() = %q, want %q", got, customHTML)
+		if ts.Cover != customCover {
+			t.Errorf("LoadTemplateSet() cover = %q, want %q", ts.Cover, customCover)
 		}
 	})
 
 	t.Run("falls back to embedded when custom not found", func(t *testing.T) {
 		t.Parallel()
 
-		got, err := resolver.LoadTemplate("cover")
+		ts, err := resolver.LoadTemplateSet("default")
 		if err != nil {
-			t.Fatalf("LoadTemplate() error = %v", err)
+			t.Fatalf("LoadTemplateSet() error = %v", err)
 		}
-		if got == "" {
-			t.Error("LoadTemplate() returned empty content from fallback")
+		if ts.Cover == "" {
+			t.Error("LoadTemplateSet() returned empty cover from fallback")
 		}
 	})
 }
 
-func TestAssetResolver_LoadTemplate_CustomOverridesEmbedded(t *testing.T) {
+func TestAssetResolver_LoadTemplateSet_CustomOverridesEmbedded(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
-	templatesDir := filepath.Join(tmpDir, "templates")
-	if err := os.MkdirAll(templatesDir, 0755); err != nil {
-		t.Fatalf("failed to create templates dir: %v", err)
+	setDir := filepath.Join(tmpDir, "templates", "default")
+	if err := os.MkdirAll(setDir, 0755); err != nil {
+		t.Fatalf("failed to create template set dir: %v", err)
 	}
 
-	// Create a custom template with the same name as an embedded one
-	customHTML := "<!-- CUSTOM OVERRIDE of cover --><div>my cover</div>"
-	if err := os.WriteFile(filepath.Join(templatesDir, "cover.html"), []byte(customHTML), 0644); err != nil {
-		t.Fatalf("failed to write HTML file: %v", err)
+	// Create a custom template set with the same name as the embedded one
+	customCover := "<!-- CUSTOM OVERRIDE --><div>my cover</div>"
+	customSig := "<!-- CUSTOM OVERRIDE --><div>my sig</div>"
+	if err := os.WriteFile(filepath.Join(setDir, "cover.html"), []byte(customCover), 0644); err != nil {
+		t.Fatalf("failed to write cover file: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(setDir, "signature.html"), []byte(customSig), 0644); err != nil {
+		t.Fatalf("failed to write signature file: %v", err)
 	}
 
 	resolver, err := NewAssetResolver(tmpDir)
@@ -257,12 +268,12 @@ func TestAssetResolver_LoadTemplate_CustomOverridesEmbedded(t *testing.T) {
 		t.Fatalf("NewAssetResolver() error = %v", err)
 	}
 
-	got, err := resolver.LoadTemplate("cover")
+	ts, err := resolver.LoadTemplateSet("default")
 	if err != nil {
-		t.Fatalf("LoadTemplate() error = %v", err)
+		t.Fatalf("LoadTemplateSet() error = %v", err)
 	}
-	if got != customHTML {
-		t.Errorf("LoadTemplate() = %q, want custom override %q", got, customHTML)
+	if ts.Cover != customCover {
+		t.Errorf("LoadTemplateSet() cover = %q, want custom override %q", ts.Cover, customCover)
 	}
 }
 
@@ -284,12 +295,12 @@ func TestAssetResolver_ValidationErrorsNotFallenBack(t *testing.T) {
 		}
 	})
 
-	t.Run("template validation error not fallen back", func(t *testing.T) {
+	t.Run("template set validation error not fallen back", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := resolver.LoadTemplate("../secret")
+		_, err := resolver.LoadTemplateSet("../secret")
 		if !errors.Is(err, ErrInvalidAssetName) {
-			t.Errorf("LoadTemplate() error = %v, want ErrInvalidAssetName (no fallback)", err)
+			t.Errorf("LoadTemplateSet() error = %v, want ErrInvalidAssetName (no fallback)", err)
 		}
 	})
 }
@@ -333,6 +344,7 @@ func TestIsNotFoundError(t *testing.T) {
 	}{
 		{"ErrStyleNotFound", ErrStyleNotFound, true},
 		{"ErrTemplateNotFound", ErrTemplateNotFound, true},
+		{"ErrTemplateSetNotFound", ErrTemplateSetNotFound, true},
 		{"wrapped ErrStyleNotFound", errors.New("wrap: " + ErrStyleNotFound.Error()), false},
 		{"ErrInvalidAssetName", ErrInvalidAssetName, false},
 		{"ErrAssetRead", ErrAssetRead, false},

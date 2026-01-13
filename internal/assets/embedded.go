@@ -8,7 +8,7 @@ import (
 //go:embed styles/*
 var styles embed.FS
 
-//go:embed templates/*
+//go:embed templates/*/*
 var templates embed.FS
 
 // EmbeddedLoader loads assets from embedded filesystem.
@@ -35,19 +35,36 @@ func (e *EmbeddedLoader) LoadStyle(name string) (string, error) {
 	return string(content), nil
 }
 
-// LoadTemplate loads an HTML template from embedded assets by name.
-// The name should not include the .html extension.
-func (e *EmbeddedLoader) LoadTemplate(name string) (string, error) {
+// LoadTemplateSet loads a set of HTML templates from embedded assets.
+// The name identifies a directory under templates/ containing cover.html and signature.html.
+func (e *EmbeddedLoader) LoadTemplateSet(name string) (*TemplateSet, error) {
 	if err := ValidateAssetName(name); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	content, err := templates.ReadFile("templates/" + name + ".html")
-	if err != nil {
-		return "", fmt.Errorf("%w: %q", ErrTemplateNotFound, name)
+	basePath := "templates/" + name + "/"
+
+	cover, coverErr := templates.ReadFile(basePath + "cover.html")
+	signature, sigErr := templates.ReadFile(basePath + "signature.html")
+
+	// If both files are missing, the template set doesn't exist
+	if coverErr != nil && sigErr != nil {
+		return nil, fmt.Errorf("%w: %q", ErrTemplateSetNotFound, name)
 	}
 
-	return string(content), nil
+	// If only one file is missing, the template set is incomplete
+	if coverErr != nil {
+		return nil, fmt.Errorf("%w: %q missing cover.html", ErrIncompleteTemplateSet, name)
+	}
+	if sigErr != nil {
+		return nil, fmt.Errorf("%w: %q missing signature.html", ErrIncompleteTemplateSet, name)
+	}
+
+	return &TemplateSet{
+		Name:      name,
+		Cover:     string(cover),
+		Signature: string(signature),
+	}, nil
 }
 
 // Compile-time interface check.

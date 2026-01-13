@@ -78,29 +78,52 @@ func (f *FilesystemLoader) LoadStyle(name string) (string, error) {
 	return string(content), nil
 }
 
-// LoadTemplate loads an HTML template from the filesystem.
-// Looks for {basePath}/templates/{name}.html
-func (f *FilesystemLoader) LoadTemplate(name string) (string, error) {
+// LoadTemplateSet loads a set of HTML templates from the filesystem.
+// Looks for {basePath}/templates/{name}/cover.html and signature.html
+func (f *FilesystemLoader) LoadTemplateSet(name string) (*TemplateSet, error) {
 	if err := ValidateAssetName(name); err != nil {
-		return "", err
+		return nil, err
 	}
 
-	filePath := filepath.Join(f.basePath, "templates", name+".html")
+	dirPath := filepath.Join(f.basePath, "templates", name)
 
-	// Path containment check: ensure resolved path is within basePath
-	if err := f.verifyPathContainment(filePath); err != nil {
-		return "", err
+	// Path containment check for the directory
+	if err := f.verifyPathContainment(dirPath + string(filepath.Separator)); err != nil {
+		return nil, err
 	}
 
-	content, err := os.ReadFile(filePath) // #nosec G304 -- path validated above
-	if err != nil {
-		if os.IsNotExist(err) {
-			return "", fmt.Errorf("%w: %q", ErrTemplateNotFound, name)
-		}
-		return "", fmt.Errorf("%w: %v", ErrAssetRead, err)
+	coverPath := filepath.Join(dirPath, "cover.html")
+	sigPath := filepath.Join(dirPath, "signature.html")
+
+	cover, coverErr := os.ReadFile(coverPath) // #nosec G304 -- path validated above
+	signature, sigErr := os.ReadFile(sigPath) // #nosec G304 -- path validated above
+
+	// If both files are missing, the template set doesn't exist
+	if os.IsNotExist(coverErr) && os.IsNotExist(sigErr) {
+		return nil, fmt.Errorf("%w: %q", ErrTemplateSetNotFound, name)
 	}
 
-	return string(content), nil
+	// Handle read errors (not just not-exist)
+	if coverErr != nil && !os.IsNotExist(coverErr) {
+		return nil, fmt.Errorf("%w: reading cover.html: %v", ErrAssetRead, coverErr)
+	}
+	if sigErr != nil && !os.IsNotExist(sigErr) {
+		return nil, fmt.Errorf("%w: reading signature.html: %v", ErrAssetRead, sigErr)
+	}
+
+	// If only one file is missing, the template set is incomplete
+	if os.IsNotExist(coverErr) {
+		return nil, fmt.Errorf("%w: %q missing cover.html", ErrIncompleteTemplateSet, name)
+	}
+	if os.IsNotExist(sigErr) {
+		return nil, fmt.Errorf("%w: %q missing signature.html", ErrIncompleteTemplateSet, name)
+	}
+
+	return &TemplateSet{
+		Name:      name,
+		Cover:     string(cover),
+		Signature: string(signature),
+	}, nil
 }
 
 // verifyPathContainment ensures the resolved file path is within basePath.

@@ -8,8 +8,10 @@ type AssetLoader interface {
 	// Returns ErrInvalidAssetName if the name contains invalid characters.
 	LoadStyle(name string) (string, error)
 
-	// LoadTemplate loads an HTML template by name (without .html extension).
-	// Returns ErrTemplateNotFound if the template doesn't exist.
+	// LoadTemplateSet loads a set of HTML templates by name.
+	// A template set contains cover.html and signature.html in a named directory.
+	// Returns ErrTemplateSetNotFound if the template set doesn't exist.
+	// Returns ErrIncompleteTemplateSet if required templates are missing.
 	// Returns ErrInvalidAssetName if the name contains invalid characters.
-	LoadTemplate(name string) (string, error)
+	LoadTemplateSet(name string) (*TemplateSet, error)
 }

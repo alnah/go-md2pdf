@@ -83,43 +83,35 @@ func TestEmbeddedLoader_LoadStyle(t *testing.T) {
 	}
 }
 
-func TestEmbeddedLoader_LoadTemplate(t *testing.T) {
+func TestEmbeddedLoader_LoadTemplateSet(t *testing.T) {
 	t.Parallel()
 
 	loader := NewEmbeddedLoader()
 
 	tests := []struct {
-		name         string
-		templateName string
-		wantErr      error
-		wantContain  string
+		name    string
+		setName string
+		wantErr error
 	}{
 		{
-			name:         "loads cover template",
-			templateName: "cover",
-			wantErr:      nil,
-			wantContain:  "cover",
+			name:    "loads default template set",
+			setName: "default",
+			wantErr: nil,
 		},
 		{
-			name:         "loads signature template",
-			templateName: "signature",
-			wantErr:      nil,
-			wantContain:  "signature",
+			name:    "returns ErrTemplateSetNotFound for nonexistent",
+			setName: "nonexistent-template-xyz",
+			wantErr: ErrTemplateSetNotFound,
 		},
 		{
-			name:         "returns ErrTemplateNotFound for nonexistent",
-			templateName: "nonexistent-template-xyz",
-			wantErr:      ErrTemplateNotFound,
+			name:    "returns ErrInvalidAssetName for empty name",
+			setName: "",
+			wantErr: ErrInvalidAssetName,
 		},
 		{
-			name:         "returns ErrInvalidAssetName for empty name",
-			templateName: "",
-			wantErr:      ErrInvalidAssetName,
-		},
-		{
-			name:         "returns ErrInvalidAssetName for path traversal",
-			templateName: "../secret",
-			wantErr:      ErrInvalidAssetName,
+			name:    "returns ErrInvalidAssetName for path traversal",
+			setName: "../secret",
+			wantErr: ErrInvalidAssetName,
 		},
 	}
 
@@ -127,21 +119,24 @@ func TestEmbeddedLoader_LoadTemplate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := loader.LoadTemplate(tt.templateName)
+			ts, err := loader.LoadTemplateSet(tt.setName)
 
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
-					t.Errorf("LoadTemplate(%q) error = %v, want %v", tt.templateName, err, tt.wantErr)
+					t.Errorf("LoadTemplateSet(%q) error = %v, want %v", tt.setName, err, tt.wantErr)
 				}
 				return
 			}
 
 			if err != nil {
-				t.Fatalf("LoadTemplate(%q) unexpected error: %v", tt.templateName, err)
+				t.Fatalf("LoadTemplateSet(%q) unexpected error: %v", tt.setName, err)
 			}
 
-			if tt.wantContain != "" && !strings.Contains(got, tt.wantContain) {
-				t.Errorf("LoadTemplate(%q) content should contain %q", tt.templateName, tt.wantContain)
+			if !strings.Contains(ts.Cover, "cover") {
+				t.Errorf("LoadTemplateSet(%q) cover should contain 'cover'", tt.setName)
+			}
+			if !strings.Contains(ts.Signature, "signature") {
+				t.Errorf("LoadTemplateSet(%q) signature should contain 'signature'", tt.setName)
 			}
 		})
 	}

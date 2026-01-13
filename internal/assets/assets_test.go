@@ -18,6 +18,11 @@ func TestLoadStyle(t *testing.T) {
 			wantErr:   nil,
 		},
 		{
+			name:      "default style returns content",
+			styleName: DefaultStyleName,
+			wantErr:   nil,
+		},
+		{
 			name:      "nonexistent style returns ErrStyleNotFound",
 			styleName: "nonexistent",
 			wantErr:   ErrStyleNotFound,
@@ -81,78 +86,81 @@ func TestLoadStyle(t *testing.T) {
 	}
 }
 
-func TestLoadTemplate(t *testing.T) {
+func TestLoadTemplateSet(t *testing.T) {
 	tests := []struct {
-		name         string
-		templateName string
-		wantErr      error
+		name    string
+		setName string
+		wantErr error
 	}{
 		{
-			name:         "valid template returns content",
-			templateName: "signature",
-			wantErr:      nil,
+			name:    "valid template set returns content",
+			setName: "default",
+			wantErr: nil,
 		},
 		{
-			name:         "nonexistent template returns ErrTemplateNotFound",
-			templateName: "nonexistent",
-			wantErr:      ErrTemplateNotFound,
+			name:    "nonexistent template set returns ErrTemplateSetNotFound",
+			setName: "nonexistent",
+			wantErr: ErrTemplateSetNotFound,
 		},
 		{
-			name:         "empty name returns ErrInvalidAssetName",
-			templateName: "",
-			wantErr:      ErrInvalidAssetName,
+			name:    "empty name returns ErrInvalidAssetName",
+			setName: "",
+			wantErr: ErrInvalidAssetName,
 		},
 		{
-			name:         "path traversal with slash returns ErrInvalidAssetName",
-			templateName: "../secret",
-			wantErr:      ErrInvalidAssetName,
+			name:    "path traversal with slash returns ErrInvalidAssetName",
+			setName: "../secret",
+			wantErr: ErrInvalidAssetName,
 		},
 		{
-			name:         "path traversal with backslash returns ErrInvalidAssetName",
-			templateName: "..\\secret",
-			wantErr:      ErrInvalidAssetName,
+			name:    "path traversal with backslash returns ErrInvalidAssetName",
+			setName: "..\\secret",
+			wantErr: ErrInvalidAssetName,
 		},
 		{
-			name:         "path with dot returns ErrInvalidAssetName",
-			templateName: "template.name",
-			wantErr:      ErrInvalidAssetName,
+			name:    "path with dot returns ErrInvalidAssetName",
+			setName: "template.name",
+			wantErr: ErrInvalidAssetName,
 		},
 		{
-			name:         "absolute path returns ErrInvalidAssetName",
-			templateName: "/etc/passwd",
-			wantErr:      ErrInvalidAssetName,
+			name:    "absolute path returns ErrInvalidAssetName",
+			setName: "/etc/passwd",
+			wantErr: ErrInvalidAssetName,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			content, err := LoadTemplate(tt.templateName)
+			ts, err := LoadTemplateSet(tt.setName)
 
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
-					t.Errorf("LoadTemplate(%q) error = %v, want %v", tt.templateName, err, tt.wantErr)
+					t.Errorf("LoadTemplateSet(%q) error = %v, want %v", tt.setName, err, tt.wantErr)
 				}
 				return
 			}
 
 			if err != nil {
-				t.Fatalf("LoadTemplate(%q) unexpected error: %v", tt.templateName, err)
+				t.Fatalf("LoadTemplateSet(%q) unexpected error: %v", tt.setName, err)
 			}
 
-			if content == "" {
-				t.Errorf("LoadTemplate(%q) returned empty content", tt.templateName)
+			if ts.Cover == "" {
+				t.Errorf("LoadTemplateSet(%q) returned empty cover", tt.setName)
+			}
+			if ts.Signature == "" {
+				t.Errorf("LoadTemplateSet(%q) returned empty signature", tt.setName)
 			}
 		})
 	}
 }
 
-func TestLoadTemplate_SignatureContent(t *testing.T) {
-	content, err := LoadTemplate("signature")
+func TestLoadTemplateSet_SignatureContent(t *testing.T) {
+	ts, err := LoadTemplateSet("default")
 	if err != nil {
-		t.Fatalf("LoadTemplate(signature) error: %v", err)
+		t.Fatalf("LoadTemplateSet(default) error: %v", err)
 	}
 
-	// Verify template contains expected Go template structure
+	// Verify signature template contains expected Go template structure
 	expectedParts := []string{
 		"signature-block",
 		"{{.Name}}",
@@ -160,7 +168,7 @@ func TestLoadTemplate_SignatureContent(t *testing.T) {
 	}
 
 	for _, part := range expectedParts {
-		if !strings.Contains(content, part) {
+		if !strings.Contains(ts.Signature, part) {
 			t.Errorf("signature template should contain %q", part)
 		}
 	}
