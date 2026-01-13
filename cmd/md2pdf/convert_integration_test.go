@@ -47,7 +47,7 @@ func runIntegration(args []string) error {
 	pool := newIntegrationPool(2)
 	defer pool.Close()
 
-	deps := DefaultDeps()
+	deps := DefaultEnv()
 	// Skip "md2pdf" in args if present (legacy behavior)
 	if len(args) > 0 && args[0] == "md2pdf" {
 		args = args[1:]

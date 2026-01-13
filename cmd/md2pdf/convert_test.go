@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	md2pdf "github.com/alnah/go-md2pdf"
+	"github.com/alnah/go-md2pdf/internal/assets"
 	"github.com/alnah/go-md2pdf/internal/config"
 )
 
@@ -24,12 +26,16 @@ type AuthorConfig = config.AuthorConfig
 type DocumentConfig = config.DocumentConfig
 type Link = config.Link
 
-// cliFlags is an alias for convertFlags (backward compatibility for tests)
+// cliFlags is an alias for convertFlags (backward compatibility for tests).
 type cliFlags = convertFlags
 
-// parseFlags is a compatibility wrapper for tests (maps to parseConvertFlags).
+// parseFlags is a compatibility wrapper that simulates CLI invocation.
+// Unlike parseConvertFlags, it expects args[0] to be the program name (e.g., "md2pdf")
+// and skips it before parsing. This matches how os.Args works in production.
+//
+// Example: parseFlags([]string{"md2pdf", "--verbose", "doc.md"})
+// is equivalent to: parseConvertFlags([]string{"--verbose", "doc.md"})
 func parseFlags(args []string) (*convertFlags, []string, error) {
-	// Skip program name if present (legacy behavior)
 	if len(args) > 0 {
 		return parseConvertFlags(args[1:])
 	}
@@ -38,8 +44,8 @@ func parseFlags(args []string) (*convertFlags, []string, error) {
 
 // printResults is a compatibility wrapper for tests.
 func printResults(results []ConversionResult, quiet, verbose bool) int {
-	deps := DefaultDeps()
-	return printResultsWithWriter(results, quiet, verbose, deps)
+	env := DefaultEnv()
+	return printResultsWithWriter(results, quiet, verbose, env)
 }
 
 func TestParseFlags(t *testing.T) {
@@ -592,9 +598,11 @@ func TestDiscoverFiles(t *testing.T) {
 func TestResolveCSSContent(t *testing.T) {
 	t.Parallel()
 
+	loader := assets.NewEmbeddedLoader()
+
 	t.Run("empty file and no config returns empty string", func(t *testing.T) {
 		t.Parallel()
-		got, err := resolveCSSContent("", nil, false)
+		got, err := resolveCSSContent("", nil, false, loader)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -613,7 +621,7 @@ func TestResolveCSSContent(t *testing.T) {
 			t.Fatalf("failed to write CSS file: %v", err)
 		}
 
-		got, err := resolveCSSContent(cssPath, nil, false)
+		got, err := resolveCSSContent(cssPath, nil, false, loader)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -625,7 +633,7 @@ func TestResolveCSSContent(t *testing.T) {
 	t.Run("nonexistent file returns error", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := resolveCSSContent("/nonexistent/style.css", nil, false)
+		_, err := resolveCSSContent("/nonexistent/style.css", nil, false, loader)
 		if err == nil {
 			t.Error("expected error for nonexistent file")
 		}
@@ -635,7 +643,7 @@ func TestResolveCSSContent(t *testing.T) {
 		t.Parallel()
 
 		cfg := &Config{CSS: CSSConfig{Style: "creative"}}
-		got, err := resolveCSSContent("", cfg, false)
+		got, err := resolveCSSContent("", cfg, false, loader)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -655,7 +663,7 @@ func TestResolveCSSContent(t *testing.T) {
 		}
 
 		cfg := &Config{CSS: CSSConfig{Style: "creative"}}
-		got, err := resolveCSSContent(cssPath, cfg, false)
+		got, err := resolveCSSContent(cssPath, cfg, false, loader)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -668,7 +676,7 @@ func TestResolveCSSContent(t *testing.T) {
 		t.Parallel()
 
 		cfg := &Config{CSS: CSSConfig{Style: "nonexistent"}}
-		_, err := resolveCSSContent("", cfg, false)
+		_, err := resolveCSSContent("", cfg, false, loader)
 		if err == nil {
 			t.Error("expected error for unknown style")
 		}
@@ -678,7 +686,7 @@ func TestResolveCSSContent(t *testing.T) {
 		t.Parallel()
 
 		cfg := &Config{CSS: CSSConfig{Style: "creative"}}
-		got, err := resolveCSSContent("", cfg, true)
+		got, err := resolveCSSContent("", cfg, true, loader)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -696,7 +704,7 @@ func TestResolveCSSContent(t *testing.T) {
 			t.Fatalf("failed to write CSS file: %v", err)
 		}
 
-		got, err := resolveCSSContent(cssPath, nil, true)
+		got, err := resolveCSSContent(cssPath, nil, true, loader)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -814,8 +822,11 @@ func TestBuildSignatureData(t *testing.T) {
 		if len(got.Links) != 1 {
 			t.Fatalf("Links count = %d, want 1", len(got.Links))
 		}
-		if got.Links[0].Label != "GitHub" || got.Links[0].URL != "https://github.com/johndoe" {
-			t.Errorf("Links[0] = %+v, want {GitHub, https://github.com/johndoe}", got.Links[0])
+		if got.Links[0].Label != "GitHub" {
+			t.Errorf("Links[0].Label = %q, want %q", got.Links[0].Label, "GitHub")
+		}
+		if got.Links[0].URL != "https://github.com/johndoe" {
+			t.Errorf("Links[0].URL = %q, want %q", got.Links[0].URL, "https://github.com/johndoe")
 		}
 	})
 
@@ -1412,13 +1423,13 @@ func TestValidateWorkers(t *testing.T) {
 			name:    "above max returns error",
 			n:       md2pdf.MaxPoolSize + 1,
 			wantErr: true,
-			errMsg:  "maximum is 8",
+			errMsg:  fmt.Sprintf("maximum is %d", md2pdf.MaxPoolSize),
 		},
 		{
 			name:    "large number returns error",
 			n:       100,
 			wantErr: true,
-			errMsg:  "maximum is 8",
+			errMsg:  fmt.Sprintf("maximum is %d", md2pdf.MaxPoolSize),
 		},
 	}
 

@@ -103,25 +103,25 @@ func printConvertUsage(w io.Writer) {
 }
 
 // runHelp prints help for a specific command.
-func runHelp(args []string, deps *Dependencies) {
+func runHelp(args []string, env *Environment) {
 	if len(args) == 0 {
-		printUsage(deps.Stdout)
+		printUsage(env.Stdout)
 		return
 	}
 
 	switch args[0] {
 	case "convert":
-		printConvertUsage(deps.Stdout)
+		printConvertUsage(env.Stdout)
 	case "version":
-		fmt.Fprintln(deps.Stdout, "Usage: md2pdf version")
-		fmt.Fprintln(deps.Stdout)
-		fmt.Fprintln(deps.Stdout, "Show version information.")
+		fmt.Fprintln(env.Stdout, "Usage: md2pdf version")
+		fmt.Fprintln(env.Stdout)
+		fmt.Fprintln(env.Stdout, "Show version information.")
 	case "help":
-		fmt.Fprintln(deps.Stdout, "Usage: md2pdf help [command]")
-		fmt.Fprintln(deps.Stdout)
-		fmt.Fprintln(deps.Stdout, "Show help for a command.")
+		fmt.Fprintln(env.Stdout, "Usage: md2pdf help [command]")
+		fmt.Fprintln(env.Stdout)
+		fmt.Fprintln(env.Stdout, "Show help for a command.")
 	default:
-		fmt.Fprintf(deps.Stderr, "Unknown command: %s\n", args[0])
-		printUsage(deps.Stderr)
+		fmt.Fprintf(env.Stderr, "Unknown command: %s\n", args[0])
+		printUsage(env.Stderr)
 	}
 }

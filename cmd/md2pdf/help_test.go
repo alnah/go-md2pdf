@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/alnah/go-md2pdf/internal/assets"
 )
 
 func TestPrintUsage(t *testing.T) {
@@ -139,12 +141,13 @@ func TestRunHelp(t *testing.T) {
 			t.Parallel()
 
 			var stdout, stderr bytes.Buffer
-			deps := &Dependencies{
-				Stdout: &stdout,
-				Stderr: &stderr,
+			env := &Environment{
+				Stdout:      &stdout,
+				Stderr:      &stderr,
+				AssetLoader: assets.NewEmbeddedLoader(),
 			}
 
-			runHelp(tt.args, deps)
+			runHelp(tt.args, env)
 
 			stdoutStr := stdout.String()
 			stderrStr := stderr.String()

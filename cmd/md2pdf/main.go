@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	md2pdf "github.com/alnah/go-md2pdf"
+	"github.com/alnah/go-md2pdf/internal/assets"
+	"github.com/alnah/go-md2pdf/internal/config"
 	"go.uber.org/automaxprocs/maxprocs"
 )
 
@@ -14,14 +16,14 @@ import (
 var Version = "dev"
 
 func main() {
-	deps := DefaultDeps()
-	os.Exit(runMain(os.Args, deps))
+	env := DefaultEnv()
+	os.Exit(runMain(os.Args, env))
 }
 
 // runMain is the main entry point, testable via dependency injection.
-func runMain(args []string, deps *Dependencies) int {
+func runMain(args []string, env *Environment) int {
 	if len(args) < 2 {
-		printUsage(deps.Stderr)
+		printUsage(env.Stderr)
 		return 1
 	}
 
@@ -30,24 +32,24 @@ func runMain(args []string, deps *Dependencies) int {
 
 	// Legacy detection: if first arg looks like a markdown file, warn and run convert
 	if !isCommand(cmd) && looksLikeMarkdown(cmd) {
-		fmt.Fprintln(deps.Stderr, "DEPRECATED: use 'md2pdf convert' instead")
+		fmt.Fprintln(env.Stderr, "DEPRECATED: use 'md2pdf convert' instead")
 		cmd = "convert"
 		cmdArgs = args[1:]
 	}
 
 	switch cmd {
 	case "convert":
-		if err := runConvertCmd(cmdArgs, deps); err != nil {
-			fmt.Fprintln(deps.Stderr, err)
+		if err := runConvertCmd(cmdArgs, env); err != nil {
+			fmt.Fprintln(env.Stderr, err)
 			return 1
 		}
 	case "version":
-		fmt.Fprintf(deps.Stdout, "md2pdf %s\n", Version)
+		fmt.Fprintf(env.Stdout, "md2pdf %s\n", Version)
 	case "help":
-		runHelp(cmdArgs, deps)
+		runHelp(cmdArgs, env)
 	default:
-		fmt.Fprintf(deps.Stderr, "unknown command: %s\n", cmd)
-		printUsage(deps.Stderr)
+		fmt.Fprintf(env.Stderr, "unknown command: %s\n", cmd)
+		printUsage(env.Stderr)
 		return 1
 	}
 
@@ -69,7 +71,7 @@ func looksLikeMarkdown(s string) bool {
 }
 
 // runConvertCmd handles the convert command.
-func runConvertCmd(args []string, deps *Dependencies) error {
+func runConvertCmd(args []string, env *Environment) error {
 	// Parse flags first to get workers count and verbose
 	flags, positionalArgs, err := parseConvertFlags(args)
 	if err != nil {
@@ -78,25 +80,46 @@ func runConvertCmd(args []string, deps *Dependencies) error {
 
 	// Handle --version before any other initialization
 	if flags.version {
-		fmt.Fprintf(deps.Stdout, "md2pdf %s\n", Version)
+		fmt.Fprintf(env.Stdout, "md2pdf %s\n", Version)
 		return nil
 	}
 
 	// Configure GOMAXPROCS with conditional logging
 	if flags.common.verbose {
 		_, _ = maxprocs.Set(maxprocs.Logger(func(format string, args ...interface{}) {
-			fmt.Fprintf(deps.Stderr, format+"\n", args...)
+			fmt.Fprintf(env.Stderr, format+"\n", args...)
 		}))
 	} else {
 		_, _ = maxprocs.Set(maxprocs.Logger(func(string, ...interface{}) {}))
 	}
 
-	// Create pool with resolved size
+	// Load config early to get assets.basePath for the pool
+	cfg := config.DefaultConfig()
+	if flags.common.config != "" {
+		cfg, err = config.LoadConfig(flags.common.config)
+		if err != nil {
+			return fmt.Errorf("loading config: %w", err)
+		}
+	}
+
+	// Configure asset loader from config (custom path overrides default)
+	if cfg.Assets.BasePath != "" {
+		resolver, err := assets.NewAssetResolver(cfg.Assets.BasePath)
+		if err != nil {
+			return fmt.Errorf("initializing assets: %w", err)
+		}
+		env.AssetLoader = resolver
+		if flags.common.verbose {
+			fmt.Fprintf(env.Stderr, "Using custom assets from: %s\n", cfg.Assets.BasePath)
+		}
+	}
+
+	// Create pool with resolved size and asset loader
 	poolSize := md2pdf.ResolvePoolSize(flags.workers)
 	if flags.common.verbose {
-		fmt.Fprintf(deps.Stderr, "Pool size: %d\n", poolSize)
+		fmt.Fprintf(env.Stderr, "Pool size: %d\n", poolSize)
 	}
-	servicePool := md2pdf.NewServicePool(poolSize)
+	servicePool := md2pdf.NewServicePool(poolSize, md2pdf.WithAssetLoader(env.AssetLoader))
 	defer servicePool.Close()
 
 	// Wrap in adapter for local Pool interface
@@ -107,10 +130,10 @@ func runConvertCmd(args []string, deps *Dependencies) error {
 	defer stop()
 
 	if flags.common.verbose {
-		fmt.Fprintln(deps.Stderr, "Starting conversion...")
+		fmt.Fprintln(env.Stderr, "Starting conversion...")
 	}
 
-	return runConvert(ctx, positionalArgs, flags, pool, deps)
+	return runConvert(ctx, positionalArgs, flags, pool, env)
 }
 
 // poolAdapter adapts md2pdf.ServicePool to the local Pool interface.
@@ -125,8 +148,7 @@ func (a *poolAdapter) Acquire() Converter {
 func (a *poolAdapter) Release(c Converter) {
 	svc, ok := c.(*md2pdf.Service)
 	if !ok {
-		fmt.Fprintf(os.Stderr, "poolAdapter.Release: unexpected type %T, expected *md2pdf.Service\n", c)
-		return
+		panic(fmt.Sprintf("poolAdapter.Release: unexpected type %T, expected *md2pdf.Service", c))
 	}
 	a.pool.Release(svc)
 }

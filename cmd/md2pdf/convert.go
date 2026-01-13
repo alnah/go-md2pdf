@@ -76,7 +76,7 @@ type conversionParams struct {
 }
 
 // runConvert orchestrates the conversion process.
-func runConvert(ctx context.Context, positionalArgs []string, flags *convertFlags, pool Pool, deps *Dependencies) error {
+func runConvert(ctx context.Context, positionalArgs []string, flags *convertFlags, pool Pool, env *Environment) error {
 	// Validate worker count early
 	if err := validateWorkers(flags.workers); err != nil {
 		return err
@@ -96,7 +96,7 @@ func runConvert(ctx context.Context, positionalArgs []string, flags *convertFlag
 	mergeFlags(flags, cfg)
 
 	// Resolve "auto" date once for entire batch
-	resolvedDate, err := resolveDateWithTime(cfg.Document.Date, deps.Now)
+	resolvedDate, err := resolveDateWithTime(cfg.Document.Date, env.Now)
 	if err != nil {
 		return fmt.Errorf("invalid date format: %w", err)
 	}
@@ -121,8 +121,8 @@ func runConvert(ctx context.Context, positionalArgs []string, flags *convertFlag
 		return fmt.Errorf("no markdown files found in %s", inputPath)
 	}
 
-	// Resolve CSS content
-	cssContent, err := resolveCSSContent(flags.style.css, cfg, flags.style.disabled)
+	// Resolve CSS content using the asset loader
+	cssContent, err := resolveCSSContent(flags.style.css, cfg, flags.style.disabled, env.AssetLoader)
 	if err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func runConvert(ctx context.Context, positionalArgs []string, flags *convertFlag
 	results := convertBatch(ctx, pool, files, params)
 
 	// Print results
-	failedCount := printResultsWithWriter(results, flags.common.quiet, flags.common.verbose, deps)
+	failedCount := printResultsWithWriter(results, flags.common.quiet, flags.common.verbose, env)
 	if failedCount > 0 {
 		return fmt.Errorf("%d conversion(s) failed", failedCount)
 	}
@@ -308,8 +308,9 @@ func resolveOutputDir(flagOutput string, cfg *config.Config) string {
 	return cfg.Output.DefaultDir
 }
 
-// resolveCSSContent resolves CSS content from CLI flag or config.
-func resolveCSSContent(cssFile string, cfg *config.Config, noStyle bool) (string, error) {
+// resolveCSSContent resolves CSS content from CLI flag, config, or asset loader.
+// Priority: CLI flag (direct file) > config style name (via loader).
+func resolveCSSContent(cssFile string, cfg *config.Config, noStyle bool, loader assets.AssetLoader) (string, error) {
 	if noStyle {
 		return "", nil
 	}
@@ -323,7 +324,7 @@ func resolveCSSContent(cssFile string, cfg *config.Config, noStyle bool) (string
 	}
 
 	if cfg != nil && cfg.CSS.Style != "" {
-		return assets.LoadStyle(cfg.CSS.Style)
+		return loader.LoadStyle(cfg.CSS.Style)
 	}
 
 	return "", nil
@@ -814,13 +815,13 @@ func convertFile(ctx context.Context, service Converter, f FileToConvert, params
 }
 
 // printResultsWithWriter outputs conversion results using the provided writers.
-func printResultsWithWriter(results []ConversionResult, quiet, verbose bool, deps *Dependencies) int {
+func printResultsWithWriter(results []ConversionResult, quiet, verbose bool, env *Environment) int {
 	var succeeded, failed int
 
 	for _, r := range results {
 		if r.Err != nil {
 			failed++
-			fmt.Fprintf(deps.Stderr, "FAILED %s: %v\n", r.InputPath, r.Err)
+			fmt.Fprintf(env.Stderr, "FAILED %s: %v\n", r.InputPath, r.Err)
 			continue
 		}
 
@@ -830,14 +831,14 @@ func printResultsWithWriter(results []ConversionResult, quiet, verbose bool, dep
 		}
 
 		if verbose {
-			fmt.Fprintf(deps.Stdout, "%s -> %s (%v)\n", r.InputPath, r.OutputPath, r.Duration.Round(time.Millisecond))
+			fmt.Fprintf(env.Stdout, "%s -> %s (%v)\n", r.InputPath, r.OutputPath, r.Duration.Round(time.Millisecond))
 		} else {
-			fmt.Fprintf(deps.Stdout, "Created %s\n", r.OutputPath)
+			fmt.Fprintf(env.Stdout, "Created %s\n", r.OutputPath)
 		}
 	}
 
 	if !quiet && len(results) > 1 {
-		fmt.Fprintf(deps.Stdout, "\n%d succeeded, %d failed\n", succeeded, failed)
+		fmt.Fprintf(env.Stdout, "\n%d succeeded, %d failed\n", succeeded, failed)
 	}
 
 	return failed

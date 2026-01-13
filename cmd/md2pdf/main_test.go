@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
+	"strings"
 	"testing"
 	"time"
 
 	md2pdf "github.com/alnah/go-md2pdf"
+	"github.com/alnah/go-md2pdf/internal/assets"
 )
 
 // wrongTypeConverter is a Converter that is NOT *md2pdf.Service.
@@ -19,7 +20,7 @@ func (w *wrongTypeConverter) Convert(_ context.Context, _ md2pdf.Input) ([]byte,
 }
 
 func TestPoolAdapter_Release_WrongType(t *testing.T) {
-	// Note: Do not use t.Parallel() - this test modifies global os.Stderr
+	t.Parallel()
 
 	// Create a real pool with size 1
 	pool := md2pdf.NewServicePool(1)
@@ -27,32 +28,23 @@ func TestPoolAdapter_Release_WrongType(t *testing.T) {
 
 	adapter := &poolAdapter{pool: pool}
 
-	// Capture stderr to verify error message
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("os.Pipe failed: %v", err)
-	}
+	// Release with wrong type should panic (programmer error)
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for wrong type, got none")
+		}
+		msg, ok := r.(string)
+		if !ok {
+			t.Fatalf("expected string panic, got %T", r)
+		}
+		if !strings.Contains(msg, "unexpected type") {
+			t.Errorf("panic message should contain 'unexpected type', got %q", msg)
+		}
+	}()
 
-	oldStderr := os.Stderr
-	os.Stderr = w
-	defer func() { os.Stderr = oldStderr }()
-
-	// Release with wrong type - should log error, not panic
 	wrongType := &wrongTypeConverter{}
-	adapter.Release(wrongType) // Should not panic
-
-	// Close write end and read captured output
-	w.Close()
-
-	var buf bytes.Buffer
-	buf.ReadFrom(r)
-	output := buf.String()
-
-	// Verify error was logged
-	expectedMsg := "poolAdapter.Release: unexpected type"
-	if output == "" || !bytes.Contains([]byte(output), []byte(expectedMsg)) {
-		t.Errorf("expected error message containing %q, got %q", expectedMsg, output)
-	}
+	adapter.Release(wrongType)
 }
 
 func TestPoolAdapter_Size(t *testing.T) {
@@ -213,13 +205,14 @@ func TestRunMain(t *testing.T) {
 			t.Parallel()
 
 			var stdout, stderr bytes.Buffer
-			deps := &Dependencies{
-				Now:    func() time.Time { return time.Now() },
-				Stdout: &stdout,
-				Stderr: &stderr,
+			env := &Environment{
+				Now:         func() time.Time { return time.Now() },
+				Stdout:      &stdout,
+				Stderr:      &stderr,
+				AssetLoader: assets.NewEmbeddedLoader(),
 			}
 
-			code := runMain(tt.args, deps)
+			code := runMain(tt.args, env)
 
 			if code != tt.wantCode {
 				t.Errorf("runMain() = %d, want %d", code, tt.wantCode)
