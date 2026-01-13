@@ -678,29 +678,6 @@ The `document.date` field supports auto-generation with customizable formats:
 
 **Escaping:** Use brackets for literal text: `auto:[Date:] YYYY-MM-DD` → "Date: 2026-01-09"
 
-## Project Structure
-
-```
-go-md2pdf/
-├── service.go          # Public API: New(), Convert(), Close()
-├── pool.go             # ServicePool for parallel processing
-├── types.go            # Input, Footer, Signature, Watermark, Cover, TOC, PageBreaks
-├── assets.go           # AssetLoader interface, NewAssetLoader(), TemplateSet
-├── date.go             # ResolveDate() for auto date formatting
-├── errors.go           # Public error definitions
-├── mdtransform.go      # Markdown preprocessing
-├── md2html.go          # Markdown to HTML (Goldmark)
-├── htmlinject.go       # CSS/signature/cover/TOC injection
-├── html2pdf.go         # HTML to PDF (headless Chrome)
-├── cmd/md2pdf/         # CLI binary
-└── internal/
-    ├── assets/         # Embedded styles and templates
-    ├── config/         # YAML config loading
-    ├── dateutil/       # Date format parsing
-    ├── fileutil/       # File path utilities
-    └── yamlutil/       # YAML helpers
-```
-
 ## Documentation
 
 Full API documentation: [pkg.go.dev/github.com/alnah/go-md2pdf](https://pkg.go.dev/github.com/alnah/go-md2pdf)
