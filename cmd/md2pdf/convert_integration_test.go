@@ -5,11 +5,13 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
 	md2pdf "github.com/alnah/go-md2pdf"
+	"github.com/alnah/go-md2pdf/internal/config"
 )
 
 // concurrentTestFiles is the number of files to create for concurrent conversion tests.
@@ -47,7 +49,7 @@ func runIntegration(args []string) error {
 	pool := newIntegrationPool(2)
 	defer pool.Close()
 
-	deps := DefaultEnv()
+	env := DefaultEnv()
 	// Skip "md2pdf" in args if present (legacy behavior)
 	if len(args) > 0 && args[0] == "md2pdf" {
 		args = args[1:]
@@ -56,7 +58,16 @@ func runIntegration(args []string) error {
 	if err != nil {
 		return err
 	}
-	return runConvert(context.Background(), positional, flags, pool, deps)
+
+	// Load config if specified (mirrors runConvertCmd behavior)
+	if flags.common.config != "" {
+		env.Config, err = config.LoadConfig(flags.common.config)
+		if err != nil {
+			return fmt.Errorf("loading config: %w", err)
+		}
+	}
+
+	return runConvert(context.Background(), positional, flags, pool, env)
 }
 
 // setupTestDir creates a temp directory with the given file structure.
@@ -287,7 +298,7 @@ func TestBatchConversion_CSSPassedToConverter(t *testing.T) {
 	cssPath := filepath.Join(tempDir, "style.css")
 	expectedOutput := filepath.Join(tempDir, "doc.pdf")
 
-	err := runIntegration([]string{"md2pdf", "--css", cssPath, inputPath})
+	err := runIntegration([]string{"md2pdf", "--style", cssPath, inputPath})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

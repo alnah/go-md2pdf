@@ -36,7 +36,7 @@ const (
 
 // Converter is the interface for the conversion service.
 type Converter interface {
-	Convert(ctx context.Context, input md2pdf.Input) ([]byte, error)
+	Convert(ctx context.Context, input md2pdf.Input) (*md2pdf.ConvertResult, error)
 }
 
 // Compile-time interface implementation check.
@@ -73,24 +73,14 @@ type conversionParams struct {
 	toc        *md2pdf.TOC
 	pageBreaks *md2pdf.PageBreaks
 	cfg        *config.Config
+	htmlOnly   bool // Output HTML only, skip PDF
+	htmlOutput bool // Output HTML alongside PDF
 }
 
 // runConvert orchestrates the conversion process.
+// Config is accessed via env.Config (loaded once in runConvertCmd).
 func runConvert(ctx context.Context, positionalArgs []string, flags *convertFlags, pool Pool, env *Environment) error {
-	// Validate worker count early
-	if err := validateWorkers(flags.workers); err != nil {
-		return err
-	}
-
-	// Load configuration
-	cfg := config.DefaultConfig()
-	var err error
-	if flags.common.config != "" {
-		cfg, err = config.LoadConfig(flags.common.config)
-		if err != nil {
-			return fmt.Errorf("loading config: %w", err)
-		}
-	}
+	cfg := env.Config
 
 	// Merge CLI flags into config (CLI wins)
 	mergeFlags(flags, cfg)
@@ -122,7 +112,7 @@ func runConvert(ctx context.Context, positionalArgs []string, flags *convertFlag
 	}
 
 	// Resolve CSS content using the asset loader
-	cssContent, err := resolveCSSContent(flags.style.css, cfg, flags.style.disabled, env.AssetLoader)
+	cssContent, err := resolveCSSContent(flags.assets.style, cfg, flags.assets.noStyle, env.AssetLoader)
 	if err != nil {
 		return err
 	}
@@ -164,6 +154,8 @@ func runConvert(ctx context.Context, positionalArgs []string, flags *convertFlag
 		toc:        tocData,
 		pageBreaks: pageBreaksData,
 		cfg:        cfg,
+		htmlOnly:   flags.outputMode.htmlOnly,
+		htmlOutput: flags.outputMode.html,
 	}
 
 	// Convert files
@@ -232,12 +224,14 @@ func mergeFlags(flags *convertFlags, cfg *config.Config) {
 		cfg.Document.Description = flags.document.description
 	}
 
-	// Footer flags
+	// Footer flags - auto-enable when flags are provided
 	if flags.footer.position != "" {
 		cfg.Footer.Position = flags.footer.position
+		cfg.Footer.Enabled = true
 	}
 	if flags.footer.text != "" {
 		cfg.Footer.Text = flags.footer.text
+		cfg.Footer.Enabled = true
 	}
 	if flags.footer.pageNumber {
 		cfg.Footer.ShowPageNumber = true
@@ -248,25 +242,30 @@ func mergeFlags(flags *convertFlags, cfg *config.Config) {
 		cfg.Footer.Enabled = true
 	}
 
-	// Cover flags
+	// Cover flags - auto-enable when flags are provided
 	if flags.cover.logo != "" {
 		cfg.Cover.Logo = flags.cover.logo
+		cfg.Cover.Enabled = true
 	}
 	if flags.cover.showDepartment {
 		cfg.Cover.ShowDepartment = true
+		cfg.Cover.Enabled = true
 	}
 
-	// Signature flags
+	// Signature flags - auto-enable when flags are provided
 	if flags.signature.image != "" {
 		cfg.Signature.ImagePath = flags.signature.image
+		cfg.Signature.Enabled = true
 	}
 
-	// TOC flags
+	// TOC flags - auto-enable when flags are provided
 	if flags.toc.title != "" {
 		cfg.TOC.Title = flags.toc.title
+		cfg.TOC.Enabled = true
 	}
 	if flags.toc.depth > 0 {
 		cfg.TOC.MaxDepth = flags.toc.depth
+		cfg.TOC.Enabled = true
 	}
 
 	// Disable flags
@@ -308,26 +307,90 @@ func resolveOutputDir(flagOutput string, cfg *config.Config) string {
 	return cfg.Output.DefaultDir
 }
 
+// resolveTemplateSet resolves a template set from a name or path.
+// If templateFlag is empty, loads the default template set.
+// If templateFlag looks like a path, loads from the filesystem directory.
+// Otherwise, treats it as a template set name and uses the loader.
+func resolveTemplateSet(templateFlag string, loader assets.AssetLoader) (*assets.TemplateSet, error) {
+	// Use default if not specified
+	if templateFlag == "" {
+		return loader.LoadTemplateSet(assets.DefaultTemplateSetName)
+	}
+
+	// If it looks like a path, load from filesystem directory
+	if md2pdf.IsFilePath(templateFlag) {
+		return loadTemplateSetFromDir(templateFlag)
+	}
+
+	// Otherwise, treat as a template set name and use the loader
+	return loader.LoadTemplateSet(templateFlag)
+}
+
+// loadTemplateSetFromDir loads cover.html and signature.html from a directory.
+func loadTemplateSetFromDir(dirPath string) (*assets.TemplateSet, error) {
+	coverPath := filepath.Join(dirPath, "cover.html")
+	sigPath := filepath.Join(dirPath, "signature.html")
+
+	cover, coverErr := os.ReadFile(coverPath) // #nosec G304 -- user-provided path
+	signature, sigErr := os.ReadFile(sigPath) // #nosec G304 -- user-provided path
+
+	// If both files are missing, the directory is not a valid template set
+	if os.IsNotExist(coverErr) && os.IsNotExist(sigErr) {
+		return nil, fmt.Errorf("%w: %q (directory has no templates)", assets.ErrTemplateSetNotFound, dirPath)
+	}
+
+	// Handle read errors (not just not-exist)
+	if coverErr != nil && !os.IsNotExist(coverErr) {
+		return nil, fmt.Errorf("reading cover.html: %w", coverErr)
+	}
+	if sigErr != nil && !os.IsNotExist(sigErr) {
+		return nil, fmt.Errorf("reading signature.html: %w", sigErr)
+	}
+
+	// If only one file is missing, the template set is incomplete
+	if os.IsNotExist(coverErr) {
+		return nil, fmt.Errorf("%w: %q missing cover.html", assets.ErrIncompleteTemplateSet, dirPath)
+	}
+	if os.IsNotExist(sigErr) {
+		return nil, fmt.Errorf("%w: %q missing signature.html", assets.ErrIncompleteTemplateSet, dirPath)
+	}
+
+	return &assets.TemplateSet{
+		Name:      dirPath,
+		Cover:     string(cover),
+		Signature: string(signature),
+	}, nil
+}
+
 // resolveCSSContent resolves CSS content from CLI flag, config, or asset loader.
-// Priority: CLI flag (direct file) > config style name (via loader).
-func resolveCSSContent(cssFile string, cfg *config.Config, noStyle bool, loader assets.AssetLoader) (string, error) {
+// Priority: CLI flag > config style > default style.
+// If the style value looks like a path (contains / or \), read it directly.
+// Otherwise, treat it as a style name and use the asset loader.
+func resolveCSSContent(styleFlag string, cfg *config.Config, noStyle bool, loader assets.AssetLoader) (string, error) {
 	if noStyle {
 		return "", nil
 	}
 
-	if cssFile != "" {
-		content, err := os.ReadFile(cssFile) // #nosec G304 -- user-provided path
+	// Determine which style to use: CLI flag > config > default
+	style := styleFlag
+	if style == "" && cfg != nil {
+		style = cfg.Style
+	}
+	if style == "" {
+		style = assets.DefaultStyleName
+	}
+
+	// If it looks like a path, read the file directly
+	if md2pdf.IsFilePath(style) {
+		content, err := os.ReadFile(style) // #nosec G304 -- user-provided path
 		if err != nil {
 			return "", fmt.Errorf("%w: %v", ErrReadCSS, err)
 		}
 		return string(content), nil
 	}
 
-	if cfg != nil && cfg.CSS.Style != "" {
-		return loader.LoadStyle(cfg.CSS.Style)
-	}
-
-	return "", nil
+	// Otherwise, treat as a style name and use the loader
+	return loader.LoadStyle(style)
 }
 
 // discoverFiles finds all markdown files to convert.
@@ -711,6 +774,9 @@ func buildPageBreaksData(flags *convertFlags, cfg *config.Config) *md2pdf.PageBr
 	return pb
 }
 
+// ErrServiceInit indicates the conversion service failed to initialize.
+var ErrServiceInit = errors.New("failed to initialize conversion service")
+
 // convertBatch processes files concurrently using the service pool.
 func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, params *conversionParams) []ConversionResult {
 	if len(files) == 0 {
@@ -732,6 +798,16 @@ func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, params 
 			defer wg.Done()
 
 			svc := pool.Acquire()
+			if svc == nil {
+				// Service creation failed, mark remaining jobs as failed
+				for idx := range jobs {
+					results[idx] = ConversionResult{
+						InputPath: files[idx].InputPath,
+						Err:       ErrServiceInit,
+					}
+				}
+				return
+			}
 			defer pool.Release(svc)
 
 			for idx := range jobs {
@@ -786,7 +862,7 @@ func convertFile(ctx context.Context, service Converter, f FileToConvert, params
 		return result
 	}
 
-	pdfBytes, err := service.Convert(ctx, md2pdf.Input{
+	convResult, err := service.Convert(ctx, md2pdf.Input{
 		Markdown:   string(content),
 		CSS:        params.css,
 		Footer:     params.footer,
@@ -796,6 +872,7 @@ func convertFile(ctx context.Context, service Converter, f FileToConvert, params
 		Cover:      coverData,
 		TOC:        params.toc,
 		PageBreaks: params.pageBreaks,
+		HTMLOnly:   params.htmlOnly,
 	})
 	if err != nil {
 		result.Err = err
@@ -803,8 +880,26 @@ func convertFile(ctx context.Context, service Converter, f FileToConvert, params
 		return result
 	}
 
+	// Write HTML output if requested (--html or --html-only)
+	if params.htmlOnly || params.htmlOutput {
+		htmlPath := htmlOutputPath(f.OutputPath)
+		// #nosec G306 -- HTML files are meant to be readable
+		if err := os.WriteFile(htmlPath, convResult.HTML, filePermissions); err != nil {
+			result.Err = fmt.Errorf("failed to write HTML file: %w", err)
+			result.Duration = time.Since(start)
+			return result
+		}
+		// For --html-only, update output path to HTML file
+		if params.htmlOnly {
+			result.OutputPath = htmlPath
+			result.Duration = time.Since(start)
+			return result
+		}
+	}
+
+	// Write PDF (unless --html-only)
 	// #nosec G306 -- PDFs are meant to be readable
-	if err := os.WriteFile(f.OutputPath, pdfBytes, filePermissions); err != nil {
+	if err := os.WriteFile(f.OutputPath, convResult.PDF, filePermissions); err != nil {
 		result.Err = fmt.Errorf("%w: %v", ErrWritePDF, err)
 		result.Duration = time.Since(start)
 		return result
@@ -814,18 +909,40 @@ func convertFile(ctx context.Context, service Converter, f FileToConvert, params
 	return result
 }
 
+// htmlOutputPath returns the HTML path corresponding to a PDF path.
+func htmlOutputPath(pdfPath string) string {
+	return strings.TrimSuffix(pdfPath, ".pdf") + ".html"
+}
+
+// ResultSummary holds the count of succeeded and failed conversions.
+type ResultSummary struct {
+	Succeeded int
+	Failed    int
+}
+
+// countResults tallies succeeded and failed conversions.
+func countResults(results []ConversionResult) ResultSummary {
+	var summary ResultSummary
+	for _, r := range results {
+		if r.Err != nil {
+			summary.Failed++
+		} else {
+			summary.Succeeded++
+		}
+	}
+	return summary
+}
+
 // printResultsWithWriter outputs conversion results using the provided writers.
 func printResultsWithWriter(results []ConversionResult, quiet, verbose bool, env *Environment) int {
-	var succeeded, failed int
+	summary := countResults(results)
 
 	for _, r := range results {
 		if r.Err != nil {
-			failed++
 			fmt.Fprintf(env.Stderr, "FAILED %s: %v\n", r.InputPath, r.Err)
 			continue
 		}
 
-		succeeded++
 		if quiet {
 			continue
 		}
@@ -838,8 +955,8 @@ func printResultsWithWriter(results []ConversionResult, quiet, verbose bool, env
 	}
 
 	if !quiet && len(results) > 1 {
-		fmt.Fprintf(env.Stdout, "\n%d succeeded, %d failed\n", succeeded, failed)
+		fmt.Fprintf(env.Stdout, "\n%d succeeded, %d failed\n", summary.Succeeded, summary.Failed)
 	}
 
-	return failed
+	return summary.Failed
 }

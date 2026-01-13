@@ -19,7 +19,6 @@ import (
 type Config = config.Config
 type InputConfig = config.InputConfig
 type OutputConfig = config.OutputConfig
-type CSSConfig = config.CSSConfig
 type SignatureConfig = config.SignatureConfig
 type FooterConfig = config.FooterConfig
 type AuthorConfig = config.AuthorConfig
@@ -93,7 +92,7 @@ func TestParseFlags(t *testing.T) {
 		},
 		{
 			name:           "css flag",
-			args:           []string{"md2pdf", "--css", "style.css"},
+			args:           []string{"md2pdf", "--style", "style.css"},
 			wantCSS:        "style.css",
 			wantPositional: []string{},
 		},
@@ -111,7 +110,7 @@ func TestParseFlags(t *testing.T) {
 		},
 		{
 			name:           "all flags with file",
-			args:           []string{"md2pdf", "--config", "work", "-o", "out.pdf", "--css", "style.css", "--verbose", "doc.md"},
+			args:           []string{"md2pdf", "--config", "work", "-o", "out.pdf", "--style", "style.css", "--verbose", "doc.md"},
 			wantConfig:     "work",
 			wantOutput:     "out.pdf",
 			wantCSS:        "style.css",
@@ -204,18 +203,7 @@ func TestParseFlags(t *testing.T) {
 			wantMargin:      1.0,
 			wantPositional:  []string{"doc.md"},
 		},
-		{
-			name:           "version flag",
-			args:           []string{"md2pdf", "--version"},
-			wantVersion:    true,
-			wantPositional: []string{},
-		},
-		{
-			name:           "version flag with other args ignored",
-			args:           []string{"md2pdf", "--version", "doc.md"},
-			wantVersion:    true,
-			wantPositional: []string{"doc.md"},
-		},
+		// Note: --version flag was removed from convert command (use 'md2pdf version' instead)
 	}
 
 	for _, tt := range tests {
@@ -241,8 +229,8 @@ func TestParseFlags(t *testing.T) {
 			if flags.output != tt.wantOutput {
 				t.Errorf("outputPath = %q, want %q", flags.output, tt.wantOutput)
 			}
-			if flags.style.css != tt.wantCSS {
-				t.Errorf("cssFile = %q, want %q", flags.style.css, tt.wantCSS)
+			if flags.assets.style != tt.wantCSS {
+				t.Errorf("style = %q, want %q", flags.assets.style, tt.wantCSS)
 			}
 			if flags.common.quiet != tt.wantQuiet {
 				t.Errorf("quiet = %v, want %v", flags.common.quiet, tt.wantQuiet)
@@ -253,15 +241,14 @@ func TestParseFlags(t *testing.T) {
 			if flags.signature.disabled != tt.wantNoSignature {
 				t.Errorf("noSignature = %v, want %v", flags.signature.disabled, tt.wantNoSignature)
 			}
-			if flags.style.disabled != tt.wantNoStyle {
-				t.Errorf("noStyle = %v, want %v", flags.style.disabled, tt.wantNoStyle)
+			if flags.assets.noStyle != tt.wantNoStyle {
+				t.Errorf("noStyle = %v, want %v", flags.assets.noStyle, tt.wantNoStyle)
 			}
 			if flags.footer.disabled != tt.wantNoFooter {
 				t.Errorf("noFooter = %v, want %v", flags.footer.disabled, tt.wantNoFooter)
 			}
-			if flags.version != tt.wantVersion {
-				t.Errorf("version = %v, want %v", flags.version, tt.wantVersion)
-			}
+			// Note: --version flag removed from convert command
+			_ = tt.wantVersion // Unused, kept for test struct compatibility
 			if flags.page.size != tt.wantPageSize {
 				t.Errorf("pageSize = %q, want %q", flags.page.size, tt.wantPageSize)
 			}
@@ -600,14 +587,18 @@ func TestResolveCSSContent(t *testing.T) {
 
 	loader := assets.NewEmbeddedLoader()
 
-	t.Run("empty file and no config returns empty string", func(t *testing.T) {
+	t.Run("empty style flag and no config returns default style", func(t *testing.T) {
 		t.Parallel()
 		got, err := resolveCSSContent("", nil, false, loader)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if got != "" {
-			t.Errorf("got %q, want empty string", got)
+		if got == "" {
+			t.Error("expected default CSS content, got empty string")
+		}
+		// Verify it's the default style (contains our default.css markers)
+		if !strings.Contains(got, "Default theme") {
+			t.Error("expected default style content")
 		}
 	})
 
@@ -642,7 +633,7 @@ func TestResolveCSSContent(t *testing.T) {
 	t.Run("config style loads from embedded assets", func(t *testing.T) {
 		t.Parallel()
 
-		cfg := &Config{CSS: CSSConfig{Style: "creative"}}
+		cfg := &Config{Style: "creative"}
 		got, err := resolveCSSContent("", cfg, false, loader)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -662,7 +653,7 @@ func TestResolveCSSContent(t *testing.T) {
 			t.Fatalf("failed to write CSS file: %v", err)
 		}
 
-		cfg := &Config{CSS: CSSConfig{Style: "creative"}}
+		cfg := &Config{Style: "creative"}
 		got, err := resolveCSSContent(cssPath, cfg, false, loader)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -675,7 +666,7 @@ func TestResolveCSSContent(t *testing.T) {
 	t.Run("unknown config style returns error", func(t *testing.T) {
 		t.Parallel()
 
-		cfg := &Config{CSS: CSSConfig{Style: "nonexistent"}}
+		cfg := &Config{Style: "nonexistent"}
 		_, err := resolveCSSContent("", cfg, false, loader)
 		if err == nil {
 			t.Error("expected error for unknown style")
@@ -685,7 +676,7 @@ func TestResolveCSSContent(t *testing.T) {
 	t.Run("noStyle flag returns empty even with config style", func(t *testing.T) {
 		t.Parallel()
 
-		cfg := &Config{CSS: CSSConfig{Style: "creative"}}
+		cfg := &Config{Style: "creative"}
 		got, err := resolveCSSContent("", cfg, true, loader)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -1213,8 +1204,11 @@ type staticMockConverter struct {
 	err    error
 }
 
-func (m *staticMockConverter) Convert(_ context.Context, _ md2pdf.Input) ([]byte, error) {
-	return m.result, m.err
+func (m *staticMockConverter) Convert(_ context.Context, _ md2pdf.Input) (*md2pdf.ConvertResult, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return &md2pdf.ConvertResult{PDF: m.result}, nil
 }
 
 func TestBuildPageSettings(t *testing.T) {
@@ -3432,5 +3426,353 @@ func TestParseConvertFlags_PositionalArgs(t *testing.T) {
 	}
 	if positional[1] != "doc2.md" {
 		t.Errorf("positional[1] = %q, want %q", positional[1], "doc2.md")
+	}
+}
+
+func TestHtmlOutputPath(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		pdfPath string
+		want    string
+	}{
+		{
+			name:    "simple pdf extension",
+			pdfPath: "output.pdf",
+			want:    "output.html",
+		},
+		{
+			name:    "absolute path with pdf extension",
+			pdfPath: "/path/to/doc.pdf",
+			want:    "/path/to/doc.html",
+		},
+		{
+			name:    "no pdf extension",
+			pdfPath: "file",
+			want:    "file.html",
+		},
+		{
+			name:    "uppercase PDF not replaced (case-sensitive)",
+			pdfPath: "doc.PDF",
+			want:    "doc.PDF.html",
+		},
+		{
+			name:    "multiple dots in filename",
+			pdfPath: "my.report.v2.pdf",
+			want:    "my.report.v2.html",
+		},
+		{
+			name:    "Windows path",
+			pdfPath: "C:\\Documents\\report.pdf",
+			want:    "C:\\Documents\\report.html",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := htmlOutputPath(tt.pdfPath)
+			if got != tt.want {
+				t.Errorf("htmlOutputPath(%q) = %q, want %q", tt.pdfPath, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLoadTemplateSetFromDir(t *testing.T) {
+	t.Parallel()
+
+	t.Run("valid directory with both templates", func(t *testing.T) {
+		t.Parallel()
+
+		tmpDir := t.TempDir()
+		coverContent := "<div class=\"cover\">Cover Page</div>"
+		sigContent := "<div class=\"signature\">Signature Block</div>"
+
+		if err := os.WriteFile(filepath.Join(tmpDir, "cover.html"), []byte(coverContent), 0644); err != nil {
+			t.Fatalf("failed to write cover.html: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(tmpDir, "signature.html"), []byte(sigContent), 0644); err != nil {
+			t.Fatalf("failed to write signature.html: %v", err)
+		}
+
+		ts, err := loadTemplateSetFromDir(tmpDir)
+		if err != nil {
+			t.Fatalf("loadTemplateSetFromDir() error = %v", err)
+		}
+
+		if ts.Cover != coverContent {
+			t.Errorf("Cover = %q, want %q", ts.Cover, coverContent)
+		}
+		if ts.Signature != sigContent {
+			t.Errorf("Signature = %q, want %q", ts.Signature, sigContent)
+		}
+		if ts.Name != tmpDir {
+			t.Errorf("Name = %q, want %q", ts.Name, tmpDir)
+		}
+	})
+
+	t.Run("missing cover returns ErrIncompleteTemplateSet", func(t *testing.T) {
+		t.Parallel()
+
+		tmpDir := t.TempDir()
+		if err := os.WriteFile(filepath.Join(tmpDir, "signature.html"), []byte("<sig/>"), 0644); err != nil {
+			t.Fatalf("failed to write signature.html: %v", err)
+		}
+
+		_, err := loadTemplateSetFromDir(tmpDir)
+		if !errors.Is(err, assets.ErrIncompleteTemplateSet) {
+			t.Errorf("loadTemplateSetFromDir() error = %v, want ErrIncompleteTemplateSet", err)
+		}
+	})
+
+	t.Run("missing signature returns ErrIncompleteTemplateSet", func(t *testing.T) {
+		t.Parallel()
+
+		tmpDir := t.TempDir()
+		if err := os.WriteFile(filepath.Join(tmpDir, "cover.html"), []byte("<cover/>"), 0644); err != nil {
+			t.Fatalf("failed to write cover.html: %v", err)
+		}
+
+		_, err := loadTemplateSetFromDir(tmpDir)
+		if !errors.Is(err, assets.ErrIncompleteTemplateSet) {
+			t.Errorf("loadTemplateSetFromDir() error = %v, want ErrIncompleteTemplateSet", err)
+		}
+	})
+
+	t.Run("empty directory returns ErrTemplateSetNotFound", func(t *testing.T) {
+		t.Parallel()
+
+		tmpDir := t.TempDir()
+
+		_, err := loadTemplateSetFromDir(tmpDir)
+		if !errors.Is(err, assets.ErrTemplateSetNotFound) {
+			t.Errorf("loadTemplateSetFromDir() error = %v, want ErrTemplateSetNotFound", err)
+		}
+	})
+
+	t.Run("nonexistent directory returns ErrTemplateSetNotFound", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := loadTemplateSetFromDir("/nonexistent/path/to/templates")
+		if !errors.Is(err, assets.ErrTemplateSetNotFound) {
+			t.Errorf("loadTemplateSetFromDir() error = %v, want ErrTemplateSetNotFound", err)
+		}
+	})
+}
+
+// mockTemplateLoader implements assets.AssetLoader for testing resolveTemplateSet.
+type mockTemplateLoader struct {
+	templateSets map[string]*assets.TemplateSet
+	err          error
+}
+
+func (m *mockTemplateLoader) LoadStyle(name string) (string, error) {
+	return "", nil
+}
+
+func (m *mockTemplateLoader) LoadTemplateSet(name string) (*assets.TemplateSet, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	if ts, ok := m.templateSets[name]; ok {
+		return ts, nil
+	}
+	return nil, fmt.Errorf("%w: %q", assets.ErrTemplateSetNotFound, name)
+}
+
+func TestResolveTemplateSet(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty value loads default template set", func(t *testing.T) {
+		t.Parallel()
+
+		loader := &mockTemplateLoader{
+			templateSets: map[string]*assets.TemplateSet{
+				"default": {Name: "default", Cover: "<cover/>", Signature: "<sig/>"},
+			},
+		}
+
+		ts, err := resolveTemplateSet("", loader)
+		if err != nil {
+			t.Fatalf("resolveTemplateSet() error = %v", err)
+		}
+		if ts.Name != "default" {
+			t.Errorf("Name = %q, want %q", ts.Name, "default")
+		}
+	})
+
+	t.Run("name loads from loader", func(t *testing.T) {
+		t.Parallel()
+
+		loader := &mockTemplateLoader{
+			templateSets: map[string]*assets.TemplateSet{
+				"corporate": {Name: "corporate", Cover: "<corp-cover/>", Signature: "<corp-sig/>"},
+			},
+		}
+
+		ts, err := resolveTemplateSet("corporate", loader)
+		if err != nil {
+			t.Fatalf("resolveTemplateSet() error = %v", err)
+		}
+		if ts.Name != "corporate" {
+			t.Errorf("Name = %q, want %q", ts.Name, "corporate")
+		}
+	})
+
+	t.Run("path loads from filesystem", func(t *testing.T) {
+		t.Parallel()
+
+		tmpDir := t.TempDir()
+		if err := os.WriteFile(filepath.Join(tmpDir, "cover.html"), []byte("<cover/>"), 0644); err != nil {
+			t.Fatalf("failed to write cover.html: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(tmpDir, "signature.html"), []byte("<sig/>"), 0644); err != nil {
+			t.Fatalf("failed to write signature.html: %v", err)
+		}
+
+		// Use path-like value (contains /)
+		pathValue := tmpDir + "/"
+
+		loader := &mockTemplateLoader{} // Should not be called for paths
+
+		ts, err := resolveTemplateSet(pathValue, loader)
+		if err != nil {
+			t.Fatalf("resolveTemplateSet() error = %v", err)
+		}
+		if ts.Cover != "<cover/>" {
+			t.Errorf("Cover = %q, want %q", ts.Cover, "<cover/>")
+		}
+	})
+
+	t.Run("nonexistent name returns error", func(t *testing.T) {
+		t.Parallel()
+
+		loader := &mockTemplateLoader{
+			templateSets: map[string]*assets.TemplateSet{},
+		}
+
+		_, err := resolveTemplateSet("nonexistent", loader)
+		if !errors.Is(err, assets.ErrTemplateSetNotFound) {
+			t.Errorf("resolveTemplateSet() error = %v, want ErrTemplateSetNotFound", err)
+		}
+	})
+}
+
+func TestMergeFlags_AutoEnable(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		flags *convertFlags
+		cfg   *Config
+		check func(t *testing.T, cfg *Config)
+	}{
+		{
+			name:  "footer.text auto-enables footer",
+			flags: &convertFlags{footer: footerFlags{text: "My Footer"}},
+			cfg:   &Config{Footer: FooterConfig{Enabled: false}},
+			check: func(t *testing.T, cfg *Config) {
+				if !cfg.Footer.Enabled {
+					t.Error("Footer.Enabled should be true when footer.text is set")
+				}
+				if cfg.Footer.Text != "My Footer" {
+					t.Errorf("Footer.Text = %q, want %q", cfg.Footer.Text, "My Footer")
+				}
+			},
+		},
+		{
+			name:  "footer.position auto-enables footer",
+			flags: &convertFlags{footer: footerFlags{position: "left"}},
+			cfg:   &Config{Footer: FooterConfig{Enabled: false}},
+			check: func(t *testing.T, cfg *Config) {
+				if !cfg.Footer.Enabled {
+					t.Error("Footer.Enabled should be true when footer.position is set")
+				}
+			},
+		},
+		{
+			name:  "cover.logo auto-enables cover",
+			flags: &convertFlags{cover: coverFlags{logo: "/path/to/logo.png"}},
+			cfg:   &Config{Cover: CoverConfig{Enabled: false}},
+			check: func(t *testing.T, cfg *Config) {
+				if !cfg.Cover.Enabled {
+					t.Error("Cover.Enabled should be true when cover.logo is set")
+				}
+				if cfg.Cover.Logo != "/path/to/logo.png" {
+					t.Errorf("Cover.Logo = %q, want %q", cfg.Cover.Logo, "/path/to/logo.png")
+				}
+			},
+		},
+		{
+			name:  "cover.showDepartment auto-enables cover",
+			flags: &convertFlags{cover: coverFlags{showDepartment: true}},
+			cfg:   &Config{Cover: CoverConfig{Enabled: false}},
+			check: func(t *testing.T, cfg *Config) {
+				if !cfg.Cover.Enabled {
+					t.Error("Cover.Enabled should be true when cover.showDepartment is set")
+				}
+			},
+		},
+		{
+			name:  "signature.image auto-enables signature",
+			flags: &convertFlags{signature: signatureFlags{image: "/path/to/sig.png"}},
+			cfg:   &Config{Signature: SignatureConfig{Enabled: false}},
+			check: func(t *testing.T, cfg *Config) {
+				if !cfg.Signature.Enabled {
+					t.Error("Signature.Enabled should be true when signature.image is set")
+				}
+				if cfg.Signature.ImagePath != "/path/to/sig.png" {
+					t.Errorf("Signature.ImagePath = %q, want %q", cfg.Signature.ImagePath, "/path/to/sig.png")
+				}
+			},
+		},
+		{
+			name:  "toc.title auto-enables TOC",
+			flags: &convertFlags{toc: tocFlags{title: "Contents"}},
+			cfg:   &Config{TOC: TOCConfig{Enabled: false}},
+			check: func(t *testing.T, cfg *Config) {
+				if !cfg.TOC.Enabled {
+					t.Error("TOC.Enabled should be true when toc.title is set")
+				}
+				if cfg.TOC.Title != "Contents" {
+					t.Errorf("TOC.Title = %q, want %q", cfg.TOC.Title, "Contents")
+				}
+			},
+		},
+		{
+			name:  "toc.depth auto-enables TOC",
+			flags: &convertFlags{toc: tocFlags{depth: 3}},
+			cfg:   &Config{TOC: TOCConfig{Enabled: false}},
+			check: func(t *testing.T, cfg *Config) {
+				if !cfg.TOC.Enabled {
+					t.Error("TOC.Enabled should be true when toc.depth is set")
+				}
+				if cfg.TOC.MaxDepth != 3 {
+					t.Errorf("TOC.MaxDepth = %d, want %d", cfg.TOC.MaxDepth, 3)
+				}
+			},
+		},
+		{
+			name:  "disabled flags take precedence over auto-enable",
+			flags: &convertFlags{footer: footerFlags{text: "Footer", disabled: true}},
+			cfg:   &Config{Footer: FooterConfig{Enabled: true}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.Footer.Enabled {
+					t.Error("Footer.Enabled should be false when disabled flag is set")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			mergeFlags(tt.flags, tt.cfg)
+			tt.check(t, tt.cfg)
+		})
 	}
 }
