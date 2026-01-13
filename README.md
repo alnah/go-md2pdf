@@ -3,7 +3,7 @@
 [![Go Reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/alnah/go-md2pdf)
 [![Go Report Card](https://img.shields.io/badge/go%20report-A+-brightgreen)](https://goreportcard.com/report/github.com/alnah/go-md2pdf)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/alnah/go-md2pdf/ci.yml?branch=main)](https://github.com/alnah/go-md2pdf/actions)
-[![Coverage](https://codecov.io/gh/alnah/go-md2pdf/branch/main/graph/badge.svg)](https://codecov.io/gh/alnah/go-md2pdf)
+[![Coverage](https://img.shields.io/codecov/c/github/alnah/go-md2pdf)](https://codecov.io/gh/alnah/go-md2pdf)
 [![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](LICENSE.txt)
 
 > Markdown to print-ready PDF via CLI or Go library - cover pages, TOC, signatures, footers, watermarks, custom CSS, and parallel batch processing.
@@ -65,7 +65,10 @@ import (
 )
 
 func main() {
-    svc := md2pdf.New()
+    svc, err := md2pdf.New()
+    if err != nil {
+        log.Fatal(err)
+    }
     defer svc.Close()
 
     pdf, err := svc.Convert(context.Background(), md2pdf.Input{
@@ -196,6 +199,92 @@ pdf, err := svc.Convert(ctx, md2pdf.Input{
 })
 ```
 
+### With Custom Assets
+
+Override embedded CSS styles and HTML templates by loading from a custom directory:
+
+```go
+import "github.com/alnah/go-md2pdf/internal/assets"
+
+// Create asset resolver with custom directory (falls back to embedded)
+loader, err := assets.NewAssetResolver("/path/to/assets")
+if err != nil {
+    log.Fatal(err)
+}
+
+svc, err := md2pdf.New(md2pdf.WithAssetLoader(loader))
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+Expected directory structure:
+
+```
+/path/to/assets/
+├── styles/
+│   └── technical.css    # Override embedded style
+└── templates/
+    ├── cover.html       # Override cover page template
+    └── signature.html   # Override signature block template
+```
+
+Available embedded styles: `technical`, `creative`, `academic`, `corporate`, `legal`, `invoice`, `manuscript`
+
+Missing files fall back to embedded defaults silently.
+
+### With Service Pool (Parallel Processing)
+
+For batch conversion, use `ServicePool` to process multiple files in parallel:
+
+```go
+package main
+
+import (
+    "context"
+    "log"
+    "sync"
+
+    "github.com/alnah/go-md2pdf"
+)
+
+func main() {
+    // Create pool with 4 workers (each has its own browser instance)
+    pool := md2pdf.NewServicePool(4)
+    defer pool.Close()
+
+    files := []string{"doc1.md", "doc2.md", "doc3.md", "doc4.md"}
+    var wg sync.WaitGroup
+
+    for _, file := range files {
+        wg.Add(1)
+        go func(f string) {
+            defer wg.Done()
+
+            svc := pool.Acquire()
+            if svc == nil {
+                log.Printf("failed to acquire service: %v", pool.InitError())
+                return
+            }
+            defer pool.Release(svc)
+
+            content, _ := os.ReadFile(f)
+            pdf, err := svc.Convert(context.Background(), md2pdf.Input{
+                Markdown: string(content),
+            })
+            if err != nil {
+                log.Printf("convert %s: %v", f, err)
+                return
+            }
+            os.WriteFile(f+".pdf", pdf, 0644)
+        }(file)
+    }
+    wg.Wait()
+}
+```
+
+Use `md2pdf.ResolvePoolSize(0)` to auto-calculate optimal pool size based on CPU cores.
+
 ## CLI Reference
 
 ```
@@ -321,6 +410,7 @@ Supported formats: `.yaml`, `.yml`
 | ----------------------- | ------ | ------------ | ---------------------------------------- |
 | `output.defaultDir`     | string | -            | Default output directory                 |
 | `css.style`             | string | -            | Embedded style name                      |
+| `assets.basePath`       | string | -            | Custom assets directory (styles, templates) |
 | `author.name`           | string | -            | Author name (used by cover, signature)   |
 | `author.title`          | string | -            | Author professional title                |
 | `author.email`          | string | -            | Author email                             |
