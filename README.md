@@ -82,6 +82,12 @@ func main() {
 }
 ```
 
+The `Convert()` method returns a `ConvertResult` containing:
+- `result.PDF` - the generated PDF bytes
+- `result.HTML` - the intermediate HTML (useful for debugging)
+
+Use `Input.HTMLOnly: true` to skip PDF generation and only produce HTML.
+
 ## Library Usage
 
 ### With Cover Page
@@ -163,15 +169,6 @@ result, err := svc.Convert(ctx, md2pdf.Input{
 })
 ```
 
-### With Custom CSS
-
-```go
-result, err := svc.Convert(ctx, md2pdf.Input{
-    Markdown: content,
-    CSS:      customCSS,
-})
-```
-
 ### With Page Settings
 
 ```go
@@ -199,28 +196,62 @@ result, err := svc.Convert(ctx, md2pdf.Input{
 })
 ```
 
+### With Custom CSS
+
+The `CSS` field in `Input` accepts a CSS string that is injected into the HTML for this specific conversion:
+
+```go
+// CSS string injected into this document only
+result, err := svc.Convert(ctx, md2pdf.Input{
+    Markdown: content,
+    CSS: `
+        body { font-family: Georgia, serif; }
+        h1 { color: #2c3e50; }
+        code { background: #f8f9fa; }
+    `,
+})
+```
+
+This is useful for:
+- Document-specific styling that differs from the base theme
+- Dynamically generated CSS (e.g., user-selected colors)
+- Quick overrides without changing service configuration
+
+For reusable styles across all conversions, see [With Custom Assets](#with-custom-assets).
+
 ### With Custom Assets
 
 Override embedded CSS styles and HTML templates:
 
 ```go
-// Option 1: Load from custom directory (with fallback to embedded)
+// Option 1: Use embedded style by name
+svc, err := md2pdf.New(md2pdf.WithStyle("technical"))
+
+// Option 2: Load CSS from file path
+svc, err := md2pdf.New(md2pdf.WithStyle("./custom.css"))
+
+// Option 3: Provide CSS content directly
+svc, err := md2pdf.New(md2pdf.WithStyle("body { font-family: Georgia; }"))
+
+// Option 4: Load from custom directory (with fallback to embedded)
 svc, err := md2pdf.New(md2pdf.WithAssetPath("/path/to/assets"))
 
-// Option 2: Provide CSS content directly
-svc, err := md2pdf.New(md2pdf.WithStyle(customCSS))
-
-// Option 3: Provide template set directly
+// Option 5: Provide template set directly
 ts := md2pdf.NewTemplateSet("custom", coverHTML, signatureHTML)
 svc, err := md2pdf.New(md2pdf.WithTemplateSet(ts))
 
-// Option 4: Full control with custom loader
+// Option 6: Full control with custom loader
 loader, err := md2pdf.NewAssetLoader("/path/to/assets")
 if err != nil {
     log.Fatal(err)
 }
 svc, err := md2pdf.New(md2pdf.WithAssetLoader(loader))
 ```
+
+`WithStyle` accepts a style name, file path, or CSS content:
+- **Name**: `"technical"` loads the embedded style
+- **Path**: `"./custom.css"` reads from file (detected by `/` or `\`)
+- **CSS**: `"body { ... }"` uses content directly (detected by `{`)
 
 Expected directory structure for `WithAssetPath`:
 
@@ -238,6 +269,8 @@ Expected directory structure for `WithAssetPath`:
 Available embedded styles: `default`, `technical`, `creative`, `academic`, `corporate`, `legal`, `invoice`, `manuscript`
 
 Missing files fall back to embedded defaults silently.
+
+> **Note:** Service-level options (`WithAssetPath`, `WithStyle`, `WithAssetLoader`) configure the base theme for all conversions. To add document-specific CSS on top of the base theme, use `Input.CSS` in the `Convert()` call.
 
 ### With Service Pool (Parallel Processing)
 
