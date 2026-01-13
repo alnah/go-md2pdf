@@ -1,4 +1,5 @@
-package md2pdf
+// Package fileutil provides file and path utility functions.
+package fileutil
 
 import (
 	"errors"
@@ -13,10 +14,10 @@ var (
 	ErrExtensionPathTraversal = errors.New("extension contains path separator or null byte")
 )
 
-// writeTempFile creates a temporary file with the given content and extension.
+// WriteTempFile creates a temporary file with the given content and extension.
 // Returns the file path and a cleanup function to remove the file.
-func writeTempFile(content, extension string) (path string, cleanup func(), err error) {
-	if err := validateExtension(extension); err != nil {
+func WriteTempFile(content, extension string) (path string, cleanup func(), err error) {
+	if err := ValidateExtension(extension); err != nil {
 		return "", nil, err
 	}
 
@@ -42,8 +43,8 @@ func writeTempFile(content, extension string) (path string, cleanup func(), err 
 	return path, cleanup, nil
 }
 
-// validateExtension checks that the extension is safe for use in temp file names.
-func validateExtension(extension string) error {
+// ValidateExtension checks that the extension is safe for use in temp file names.
+func ValidateExtension(extension string) error {
 	if extension == "" {
 		return ErrExtensionEmpty
 	}
@@ -66,13 +67,18 @@ func FileExists(path string) bool {
 // A string containing path separators (/, \) is treated as a path.
 //
 // Examples:
-//   - "professional" → false (name)
-//   - "./custom.css" → true (relative path)
-//   - "../shared/style.css" → true (parent path)
-//   - "/absolute/path.css" → true (absolute)
-//   - "C:\windows\path.css" → true (Windows)
-//   - "my-style" → false (hyphenated name)
-//   - "sub/dir" → true (contains separator)
+//   - "professional" -> false (name)
+//   - "./custom.css" -> true (relative path)
+//   - "../shared/style.css" -> true (parent path)
+//   - "/absolute/path.css" -> true (absolute)
+//   - "C:\windows\path.css" -> true (Windows)
+//   - "my-style" -> false (hyphenated name)
+//   - "sub/dir" -> true (contains separator)
 func IsFilePath(s string) bool {
 	return strings.ContainsAny(s, "/\\")
+}
+
+// IsURL returns true if the string looks like a URL.
+func IsURL(s string) bool {
+	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
 }

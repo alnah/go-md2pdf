@@ -1,4 +1,4 @@
-package md2pdf
+package fileutil
 
 import (
 	"errors"
@@ -48,9 +48,9 @@ func TestValidateExtension(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateExtension(tt.extension)
+			err := ValidateExtension(tt.extension)
 			if !errors.Is(err, tt.wantErr) {
-				t.Errorf("validateExtension(%q) = %v, want %v", tt.extension, err, tt.wantErr)
+				t.Errorf("ValidateExtension(%q) = %v, want %v", tt.extension, err, tt.wantErr)
 			}
 		})
 	}
@@ -91,9 +91,9 @@ func TestWriteTempFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			path, cleanup, err := writeTempFile(tt.content, tt.extension)
+			path, cleanup, err := WriteTempFile(tt.content, tt.extension)
 			if err != nil {
-				t.Fatalf("writeTempFile() error = %v", err)
+				t.Fatalf("WriteTempFile() error = %v", err)
 			}
 			defer cleanup()
 
@@ -123,9 +123,9 @@ func TestWriteTempFile(t *testing.T) {
 }
 
 func TestWriteTempFile_Cleanup(t *testing.T) {
-	path, cleanup, err := writeTempFile("test content", "md")
+	path, cleanup, err := WriteTempFile("test content", "md")
 	if err != nil {
-		t.Fatalf("writeTempFile() error = %v", err)
+		t.Fatalf("WriteTempFile() error = %v", err)
 	}
 
 	// Verify file exists before cleanup
@@ -162,12 +162,12 @@ func TestWriteTempFile_InvalidExtension(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, cleanup, err := writeTempFile("content", tt.extension)
+			_, cleanup, err := WriteTempFile("content", tt.extension)
 			if cleanup != nil {
 				defer cleanup()
 			}
 			if !errors.Is(err, tt.wantErr) {
-				t.Errorf("writeTempFile() error = %v, want %v", err, tt.wantErr)
+				t.Errorf("WriteTempFile() error = %v, want %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -187,17 +187,17 @@ func TestWriteTempFile_CreateTempError(t *testing.T) {
 	// Set TMPDIR to a non-existent directory to trigger CreateTemp failure
 	os.Setenv("TMPDIR", "/nonexistent/path/that/does/not/exist")
 
-	_, cleanup, err := writeTempFile("content", "md")
+	_, cleanup, err := WriteTempFile("content", "md")
 	if cleanup != nil {
 		defer cleanup()
 	}
 
 	if err == nil {
-		t.Fatal("writeTempFile() expected error when TMPDIR is invalid, got nil")
+		t.Fatal("WriteTempFile() expected error when TMPDIR is invalid, got nil")
 	}
 
 	if !strings.Contains(err.Error(), "creating temp file") {
-		t.Errorf("writeTempFile() error = %q, want error containing 'creating temp file'", err.Error())
+		t.Errorf("WriteTempFile() error = %q, want error containing 'creating temp file'", err.Error())
 	}
 }
 
@@ -259,9 +259,9 @@ func TestWriteTempFile_LargeContent(t *testing.T) {
 	// Test with large content to verify WriteString handles it correctly
 	largeContent := strings.Repeat("x", 1024*1024) // 1MB
 
-	path, cleanup, err := writeTempFile(largeContent, "txt")
+	path, cleanup, err := WriteTempFile(largeContent, "txt")
 	if err != nil {
-		t.Fatalf("writeTempFile() error = %v", err)
+		t.Fatalf("WriteTempFile() error = %v", err)
 	}
 	defer cleanup()
 
@@ -357,6 +357,63 @@ func TestIsFilePath(t *testing.T) {
 			got := IsFilePath(tt.input)
 			if got != tt.want {
 				t.Errorf("IsFilePath(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsURL(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		input string
+		want  bool
+	}{
+		{
+			name:  "http URL returns true",
+			input: "http://example.com",
+			want:  true,
+		},
+		{
+			name:  "https URL returns true",
+			input: "https://example.com",
+			want:  true,
+		},
+		{
+			name:  "file path returns false",
+			input: "/path/to/file",
+			want:  false,
+		},
+		{
+			name:  "relative path returns false",
+			input: "./file.txt",
+			want:  false,
+		},
+		{
+			name:  "empty string returns false",
+			input: "",
+			want:  false,
+		},
+		{
+			name:  "ftp URL returns false",
+			input: "ftp://example.com",
+			want:  false,
+		},
+		{
+			name:  "HTTP uppercase returns false",
+			input: "HTTP://example.com",
+			want:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := IsURL(tt.input)
+			if got != tt.want {
+				t.Errorf("IsURL(%q) = %v, want %v", tt.input, got, tt.want)
 			}
 		})
 	}
