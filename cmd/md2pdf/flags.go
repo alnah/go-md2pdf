@@ -95,10 +95,18 @@ type pageBreakFlags struct {
 	disabled    bool
 }
 
-// styleFlags holds CSS styling flags.
-type styleFlags struct {
-	css      string
-	disabled bool
+// assetFlags holds asset-related flags (CSS, templates, custom asset path).
+type assetFlags struct {
+	style     string // Name or path for CSS (replaces --css)
+	template  string // Name or path for template (future use)
+	assetPath string // Override asset directory
+	noStyle   bool   // Disable CSS styling
+}
+
+// outputFlags holds output mode flags for debugging.
+type outputFlags struct {
+	html     bool // Output HTML alongside PDF
+	htmlOnly bool // Output HTML only, skip PDF
 }
 
 // convertFlags holds all flags for the convert command.
@@ -106,7 +114,6 @@ type convertFlags struct {
 	common     commonFlags
 	output     string
 	workers    int
-	version    bool
 	author     authorFlags
 	document   documentFlags
 	page       pageFlags
@@ -116,7 +123,8 @@ type convertFlags struct {
 	toc        tocFlags
 	watermark  watermarkFlags
 	pageBreaks pageBreakFlags
-	style      styleFlags
+	assets     assetFlags
+	outputMode outputFlags
 }
 
 // addCommonFlags adds common flags to a FlagSet.
@@ -203,10 +211,18 @@ func addPageBreakFlags(fs *flag.FlagSet, f *pageBreakFlags) {
 	fs.BoolVar(&f.disabled, "no-page-breaks", false, "disable page break features")
 }
 
-// addStyleFlags adds CSS styling flags to a FlagSet.
-func addStyleFlags(fs *flag.FlagSet, f *styleFlags) {
-	fs.StringVar(&f.css, "css", "", "external CSS file")
-	fs.BoolVar(&f.disabled, "no-style", false, "disable CSS styling")
+// addAssetFlags adds asset-related flags to a FlagSet.
+func addAssetFlags(fs *flag.FlagSet, f *assetFlags) {
+	fs.StringVar(&f.style, "style", "", "CSS style name or file path")
+	fs.StringVar(&f.template, "template", "", "template name or directory path")
+	fs.StringVar(&f.assetPath, "asset-path", "", "custom asset directory")
+	fs.BoolVar(&f.noStyle, "no-style", false, "disable CSS styling")
+}
+
+// addOutputFlags adds output mode flags to a FlagSet.
+func addOutputFlags(fs *flag.FlagSet, f *outputFlags) {
+	fs.BoolVar(&f.html, "html", false, "output HTML alongside PDF")
+	fs.BoolVar(&f.htmlOnly, "html-only", false, "output HTML only, skip PDF")
 }
 
 // parseConvertFlags parses convert command flags and returns positional args.
@@ -217,7 +233,6 @@ func parseConvertFlags(args []string) (*convertFlags, []string, error) {
 	// I/O flags
 	fs.StringVarP(&f.output, "output", "o", "", "output file or directory")
 	fs.IntVarP(&f.workers, "workers", "w", 0, "parallel workers (0 = auto)")
-	fs.BoolVar(&f.version, "version", false, "show version and exit")
 
 	// Flag groups
 	addCommonFlags(fs, &f.common)
@@ -230,7 +245,8 @@ func parseConvertFlags(args []string) (*convertFlags, []string, error) {
 	addTOCFlags(fs, &f.toc)
 	addWatermarkFlags(fs, &f.watermark)
 	addPageBreakFlags(fs, &f.pageBreaks)
-	addStyleFlags(fs, &f.style)
+	addAssetFlags(fs, &f.assets)
+	addOutputFlags(fs, &f.outputMode)
 
 	fs.Usage = func() { printConvertUsage(os.Stderr) }
 
