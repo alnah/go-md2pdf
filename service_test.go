@@ -3,6 +3,8 @@ package md2pdf
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -1792,15 +1794,159 @@ func TestWithAssetPath_LoadsFromFilesystem(t *testing.T) {
 func TestWithStyle(t *testing.T) {
 	t.Parallel()
 
-	customCSS := "body { font-family: monospace; }"
+	t.Run("CSS content", func(t *testing.T) {
+		t.Parallel()
+		customCSS := "body { font-family: monospace; }"
 
-	service, err := New(WithStyle(customCSS))
-	if err != nil {
-		t.Fatalf("New(WithStyle) error = %v", err)
-	}
-	defer service.Close()
+		service, err := New(WithStyle(customCSS))
+		if err != nil {
+			t.Fatalf("New(WithStyle) error = %v", err)
+		}
+		defer service.Close()
 
-	if service.cfg.customStyle != customCSS {
-		t.Errorf("cfg.customStyle = %q, want %q", service.cfg.customStyle, customCSS)
-	}
+		// CSS content is detected by presence of '{' and stored in resolvedStyle
+		if service.cfg.resolvedStyle != customCSS {
+			t.Errorf("cfg.resolvedStyle = %q, want %q", service.cfg.resolvedStyle, customCSS)
+		}
+	})
+
+	t.Run("style name", func(t *testing.T) {
+		t.Parallel()
+		service, err := New(WithStyle("technical"))
+		if err != nil {
+			t.Fatalf("New(WithStyle) error = %v", err)
+		}
+		defer service.Close()
+
+		// Should have loaded the technical style from embedded assets
+		if service.cfg.resolvedStyle == "" {
+			t.Error("cfg.resolvedStyle is empty, expected technical.css content")
+		}
+		// Verify it contains something from technical.css (system-ui is distinctive)
+		if !strings.Contains(service.cfg.resolvedStyle, "system-ui") {
+			t.Error("cfg.resolvedStyle doesn't contain expected 'system-ui' from technical.css")
+		}
+	})
+
+	t.Run("file path", func(t *testing.T) {
+		t.Parallel()
+		// Create a temp CSS file
+		tmpDir := t.TempDir()
+		cssPath := filepath.Join(tmpDir, "custom.css")
+		cssContent := "h1 { color: red; }"
+		if err := os.WriteFile(cssPath, []byte(cssContent), 0644); err != nil {
+			t.Fatalf("WriteFile error = %v", err)
+		}
+
+		service, err := New(WithStyle(cssPath))
+		if err != nil {
+			t.Fatalf("New(WithStyle) error = %v", err)
+		}
+		defer service.Close()
+
+		if service.cfg.resolvedStyle != cssContent {
+			t.Errorf("cfg.resolvedStyle = %q, want %q", service.cfg.resolvedStyle, cssContent)
+		}
+	})
+
+	t.Run("unknown style name", func(t *testing.T) {
+		t.Parallel()
+		_, err := New(WithStyle("nonexistent"))
+		if err == nil {
+			t.Error("expected error for unknown style name, got nil")
+		}
+	})
+
+	t.Run("missing file", func(t *testing.T) {
+		t.Parallel()
+		_, err := New(WithStyle("./nonexistent.css"))
+		if err == nil {
+			t.Error("expected error for missing file, got nil")
+		}
+	})
+
+	t.Run("empty string", func(t *testing.T) {
+		t.Parallel()
+		service, err := New(WithStyle(""))
+		if err != nil {
+			t.Fatalf("New(WithStyle) error = %v", err)
+		}
+		defer service.Close()
+
+		// Empty string should leave resolvedStyle empty
+		if service.cfg.resolvedStyle != "" {
+			t.Errorf("cfg.resolvedStyle = %q, want empty", service.cfg.resolvedStyle)
+		}
+	})
+
+	t.Run("CSS injected into HTML", func(t *testing.T) {
+		t.Parallel()
+		customCSS := "body { background-color: #ff0000; }"
+
+		service := &Service{
+			cfg:               serviceConfig{resolvedStyle: customCSS},
+			preprocessor:      &mockPreprocessor{},
+			htmlConverter:     &mockHTMLConverter{output: "<html><body>test</body></html>"},
+			cssInjector:       &cssInjection{},
+			coverInjector:     &mockCoverInjector{},
+			tocInjector:       &mockTOCInjector{},
+			signatureInjector: &mockSignatureInjector{},
+			pdfConverter:      &mockPDFConverter{},
+		}
+
+		result, err := service.Convert(context.Background(), Input{
+			Markdown: "# Test",
+			HTMLOnly: true,
+		})
+		if err != nil {
+			t.Fatalf("Convert error = %v", err)
+		}
+
+		// Verify CSS is injected into the HTML output
+		html := string(result.HTML)
+		if !strings.Contains(html, "background-color: #ff0000") {
+			t.Errorf("HTML does not contain injected CSS.\nHTML: %s", html)
+		}
+	})
+
+	t.Run("Input.CSS overrides service style", func(t *testing.T) {
+		t.Parallel()
+		serviceCSS := "body { color: blue; }"
+		inputCSS := "body { color: red; }"
+
+		service := &Service{
+			cfg:               serviceConfig{resolvedStyle: serviceCSS},
+			preprocessor:      &mockPreprocessor{},
+			htmlConverter:     &mockHTMLConverter{output: "<html><body>test</body></html>"},
+			cssInjector:       &cssInjection{},
+			coverInjector:     &mockCoverInjector{},
+			tocInjector:       &mockTOCInjector{},
+			signatureInjector: &mockSignatureInjector{},
+			pdfConverter:      &mockPDFConverter{},
+		}
+
+		result, err := service.Convert(context.Background(), Input{
+			Markdown: "# Test",
+			CSS:      inputCSS,
+			HTMLOnly: true,
+		})
+		if err != nil {
+			t.Fatalf("Convert error = %v", err)
+		}
+
+		// Both CSS should be present, with Input.CSS appearing after service CSS
+		html := string(result.HTML)
+		if !strings.Contains(html, "color: blue") {
+			t.Error("HTML does not contain service CSS")
+		}
+		if !strings.Contains(html, "color: red") {
+			t.Error("HTML does not contain Input.CSS")
+		}
+		// Input.CSS should come after service CSS (so it overrides in cascade)
+		blueIdx := strings.Index(html, "color: blue")
+		redIdx := strings.Index(html, "color: red")
+		if blueIdx > redIdx {
+			t.Error("Input.CSS should appear after service CSS for proper cascade override")
+		}
+	})
 }

@@ -317,10 +317,11 @@ type Option func(*Service)
 
 // serviceConfig holds internal configuration for Service.
 type serviceConfig struct {
-	timeout     time.Duration
-	templateSet *assets.TemplateSet
-	assetPath   string // Path for WithAssetPath, resolved in New()
-	customStyle string // CSS content for WithStyle
+	timeout       time.Duration
+	templateSet   *assets.TemplateSet
+	assetPath     string // Path for WithAssetPath, resolved in New()
+	styleInput    string // Raw input for WithStyle (name, path, or CSS content)
+	resolvedStyle string // CSS content after resolution in New()
 }
 
 // defaultTimeout is used when no timeout is specified.
@@ -369,11 +370,17 @@ func WithAssetPath(path string) Option {
 	}
 }
 
-// WithStyle sets custom CSS content directly, bypassing the asset loader.
-// This CSS is used instead of loading a style by name.
-func WithStyle(css string) Option {
+// WithStyle sets the CSS style for all conversions.
+// Accepts:
+//   - Style name: "technical", "default", "corporate"
+//   - File path: "./custom.css", "/path/to/style.css"
+//   - CSS content: "body { font-size: 14px; }"
+//
+// Detection: paths contain / or \, CSS content contains {,
+// otherwise treated as a style name.
+func WithStyle(style string) Option {
 	return func(s *Service) {
-		s.cfg.customStyle = css
+		s.cfg.styleInput = style
 	}
 }
 

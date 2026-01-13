@@ -3,8 +3,10 @@ package md2pdf
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/alnah/go-md2pdf/internal/assets"
+	"github.com/alnah/go-md2pdf/internal/fileutil"
 )
 
 // Compile-time interface implementation checks.
@@ -87,6 +89,11 @@ func New(opts ...Option) (*Service, error) {
 		s.assetLoader = &publicToInternalAdapter{pub: s.publicAssetLoader}
 	}
 
+	// Resolve style input (name, path, or CSS content) to CSS content
+	if err := s.resolveStyle(); err != nil {
+		return nil, err
+	}
+
 	// Load template set if not already configured via WithTemplateSet
 	var templateSet *assets.TemplateSet
 	if s.cfg.templateSet != nil {
@@ -156,9 +163,12 @@ func (s *Service) Convert(ctx context.Context, input Input) (result *ConvertResu
 	// Done after Goldmark to avoid needing html.WithUnsafe().
 	htmlContent = convertMarkPlaceholders(htmlContent)
 
-	// Build combined CSS (page breaks + watermark + user CSS)
-	// Order matters: page breaks first (lowest priority), user CSS last (can override)
-	cssContent := input.CSS
+	// Build combined CSS (service style + page breaks + watermark + user CSS)
+	// Order matters: service style first (base), user CSS last (can override)
+	cssContent := s.cfg.resolvedStyle
+	if input.CSS != "" {
+		cssContent += "\n" + input.CSS
+	}
 	if input.Watermark != nil {
 		watermarkCSS := buildWatermarkCSS(input.Watermark)
 		cssContent = watermarkCSS + cssContent
@@ -238,6 +248,39 @@ func (s *Service) Close() error {
 	if s.pdfConverter != nil {
 		return s.pdfConverter.Close()
 	}
+	return nil
+}
+
+// resolveStyle resolves the style input (name, path, or CSS content) to CSS content.
+// Called during New() after options are applied and asset loader is configured.
+func (s *Service) resolveStyle() error {
+	input := s.cfg.styleInput
+	if input == "" {
+		return nil // no style specified, use default from loader if needed
+	}
+
+	// File path? (contains / or \)
+	if fileutil.IsFilePath(input) {
+		content, err := os.ReadFile(input) // #nosec G304 -- user-provided path
+		if err != nil {
+			return fmt.Errorf("loading style file %q: %w", input, err)
+		}
+		s.cfg.resolvedStyle = string(content)
+		return nil
+	}
+
+	// CSS content? (contains {)
+	if fileutil.IsCSS(input) {
+		s.cfg.resolvedStyle = input
+		return nil
+	}
+
+	// Style name -> use asset loader
+	css, err := s.assetLoader.LoadStyle(input)
+	if err != nil {
+		return fmt.Errorf("loading style %q: %w", input, err)
+	}
+	s.cfg.resolvedStyle = css
 	return nil
 }
 
