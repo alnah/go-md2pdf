@@ -246,6 +246,27 @@ type AssetsConfig struct {
 	BasePath string `yaml:"basePath"` // Empty = use embedded assets
 }
 
+// Validate checks assets configuration.
+// If BasePath is set, validates that it's a readable directory.
+func (a *AssetsConfig) Validate() error {
+	if a.BasePath == "" {
+		return nil
+	}
+
+	info, err := os.Stat(a.BasePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("assets.basePath: directory does not exist: %s", a.BasePath)
+		}
+		return fmt.Errorf("assets.basePath: %w", err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("assets.basePath: not a directory: %s", a.BasePath)
+	}
+
+	return nil
+}
+
 // PageConfig defines PDF page settings.
 type PageConfig struct {
 	Size        string  `yaml:"size"`        // "letter", "a4", "legal" (default: "letter")
@@ -260,6 +281,23 @@ func (p *PageConfig) Validate() error {
 	}
 	if err := validateFieldLength("page.orientation", p.Orientation, MaxOrientationLength); err != nil {
 		return err
+	}
+	// Validate allowed values (empty means use default)
+	if p.Size != "" {
+		switch strings.ToLower(p.Size) {
+		case md2pdf.PageSizeLetter, md2pdf.PageSizeA4, md2pdf.PageSizeLegal:
+			// valid
+		default:
+			return fmt.Errorf("page.size: invalid value %q (must be letter, a4, or legal)", p.Size)
+		}
+	}
+	if p.Orientation != "" {
+		switch strings.ToLower(p.Orientation) {
+		case md2pdf.OrientationPortrait, md2pdf.OrientationLandscape:
+			// valid
+		default:
+			return fmt.Errorf("page.orientation: invalid value %q (must be portrait or landscape)", p.Orientation)
+		}
 	}
 	return nil
 }
@@ -380,6 +418,9 @@ func (c *Config) Validate() error {
 	if err := c.Signature.Validate(); err != nil {
 		return err
 	}
+	if err := c.Assets.Validate(); err != nil {
+		return err
+	}
 	if err := c.Page.Validate(); err != nil {
 		return err
 	}
@@ -467,6 +508,13 @@ func LoadConfig(nameOrPath string) (*Config, error) {
 }
 
 // isFilePath returns true if the string looks like a file path.
+// A string containing path separators (/ or \) is treated as a path.
+// This means:
+//   - "myconfig" -> name (searched in standard locations)
+//   - "./myconfig.yaml" -> path (used directly)
+//   - "/path/to/config.yaml" -> path
+//
+// Edge case: a config literally named "my/config" would be treated as a path.
 func isFilePath(s string) bool {
 	return strings.ContainsAny(s, "/\\")
 }

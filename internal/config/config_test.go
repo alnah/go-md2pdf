@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -316,7 +317,10 @@ unknownField: "should fail"
 			t.Fatalf("setup: %v", err)
 		}
 
-		originalWd, _ := os.Getwd()
+		originalWd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("failed to get working directory: %v", err)
+		}
 		defer os.Chdir(originalWd)
 		if err := os.Chdir(dir); err != nil {
 			t.Fatalf("chdir: %v", err)
@@ -338,7 +342,10 @@ unknownField: "should fail"
 			t.Fatalf("setup: %v", err)
 		}
 
-		originalWd, _ := os.Getwd()
+		originalWd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("failed to get working directory: %v", err)
+		}
 		defer os.Chdir(originalWd)
 		if err := os.Chdir(dir); err != nil {
 			t.Fatalf("chdir: %v", err)
@@ -362,7 +369,10 @@ unknownField: "should fail"
 			t.Fatalf("setup yml: %v", err)
 		}
 
-		originalWd, _ := os.Getwd()
+		originalWd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("failed to get working directory: %v", err)
+		}
 		defer os.Chdir(originalWd)
 		if err := os.Chdir(dir); err != nil {
 			t.Fatalf("chdir: %v", err)
@@ -396,7 +406,10 @@ unknownField: "should fail"
 
 		// Change to empty dir so local file isn't found
 		dir := t.TempDir()
-		originalWd, _ := os.Getwd()
+		originalWd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("failed to get working directory: %v", err)
+		}
 		defer os.Chdir(originalWd)
 		if err := os.Chdir(dir); err != nil {
 			t.Fatalf("chdir: %v", err)
@@ -413,13 +426,16 @@ unknownField: "should fail"
 
 	t.Run("config name not found returns ErrConfigNotFound", func(t *testing.T) {
 		dir := t.TempDir()
-		originalWd, _ := os.Getwd()
+		originalWd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("failed to get working directory: %v", err)
+		}
 		defer os.Chdir(originalWd)
 		if err := os.Chdir(dir); err != nil {
 			t.Fatalf("chdir: %v", err)
 		}
 
-		_, err := LoadConfig("nonexistent")
+		_, err = LoadConfig("nonexistent")
 		if !errors.Is(err, ErrConfigNotFound) {
 			t.Errorf("error = %v, want ErrConfigNotFound", err)
 		}
@@ -594,6 +610,115 @@ document:
 		}
 		if cfg.Document.Date != "auto" {
 			t.Errorf("Document.Date = %q, want %q", cfg.Document.Date, "auto")
+		}
+	})
+}
+
+func TestConfig_Validate_Page(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty size and orientation passes (uses defaults)", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Page: PageConfig{}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("valid size letter passes", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Page: PageConfig{Size: "letter"}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("valid size a4 passes", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Page: PageConfig{Size: "a4"}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("valid size legal passes", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Page: PageConfig{Size: "legal"}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("size case insensitive", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Page: PageConfig{Size: "A4"}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("invalid size returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Page: PageConfig{Size: "tabloid"}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("expected error for invalid size")
+		}
+		if !strings.Contains(err.Error(), "page.size") {
+			t.Errorf("error should mention page.size, got: %v", err)
+		}
+	})
+
+	t.Run("valid orientation portrait passes", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Page: PageConfig{Orientation: "portrait"}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("valid orientation landscape passes", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Page: PageConfig{Orientation: "landscape"}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("orientation case insensitive", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Page: PageConfig{Orientation: "LANDSCAPE"}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("invalid orientation returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Page: PageConfig{Orientation: "diagonal"}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("expected error for invalid orientation")
+		}
+		if !strings.Contains(err.Error(), "page.orientation") {
+			t.Errorf("error should mention page.orientation, got: %v", err)
+		}
+	})
+
+	t.Run("valid size and orientation together passes", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Page: PageConfig{Size: "a4", Orientation: "landscape", Margin: 1.0}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
 		}
 	})
 }
@@ -1354,6 +1479,59 @@ func TestConfig_Validate_Cover(t *testing.T) {
 		err := cfg.Validate()
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestConfig_Validate_Assets(t *testing.T) {
+	t.Parallel()
+
+	t.Run("empty basePath is valid", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Assets: AssetsConfig{BasePath: ""}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("valid directory basePath is valid", func(t *testing.T) {
+		t.Parallel()
+		tmpDir := t.TempDir()
+		cfg := &Config{Assets: AssetsConfig{BasePath: tmpDir}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("nonexistent basePath returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Assets: AssetsConfig{BasePath: "/nonexistent/path/xyz123"}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Error("expected error for nonexistent path")
+		}
+		if !strings.Contains(err.Error(), "does not exist") {
+			t.Errorf("error should mention 'does not exist', got: %v", err)
+		}
+	})
+
+	t.Run("file instead of directory returns error", func(t *testing.T) {
+		t.Parallel()
+		tmpDir := t.TempDir()
+		filePath := filepath.Join(tmpDir, "notadir.txt")
+		if err := os.WriteFile(filePath, []byte("test"), 0644); err != nil {
+			t.Fatalf("failed to create test file: %v", err)
+		}
+
+		cfg := &Config{Assets: AssetsConfig{BasePath: filePath}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Error("expected error for file path")
+		}
+		if !strings.Contains(err.Error(), "not a directory") {
+			t.Errorf("error should mention 'not a directory', got: %v", err)
 		}
 	})
 }
