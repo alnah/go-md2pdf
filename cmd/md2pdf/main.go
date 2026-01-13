@@ -78,10 +78,9 @@ func runConvertCmd(args []string, env *Environment) error {
 		return err
 	}
 
-	// Handle --version before any other initialization
-	if flags.version {
-		fmt.Fprintf(env.Stdout, "md2pdf %s\n", Version)
-		return nil
+	// Validate worker count early
+	if err := validateWorkers(flags.workers); err != nil {
+		return err
 	}
 
 	// Configure GOMAXPROCS with conditional logging
@@ -93,33 +92,53 @@ func runConvertCmd(args []string, env *Environment) error {
 		_, _ = maxprocs.Set(maxprocs.Logger(func(string, ...interface{}) {}))
 	}
 
-	// Load config early to get assets.basePath for the pool
-	cfg := config.DefaultConfig()
+	// Load config once into env (shared across pipeline)
+	if env.Config == nil {
+		env.Config = config.DefaultConfig()
+	}
 	if flags.common.config != "" {
-		cfg, err = config.LoadConfig(flags.common.config)
+		env.Config, err = config.LoadConfig(flags.common.config)
 		if err != nil {
 			return fmt.Errorf("loading config: %w", err)
 		}
 	}
 
-	// Configure asset loader from config (custom path overrides default)
-	if cfg.Assets.BasePath != "" {
-		resolver, err := assets.NewAssetResolver(cfg.Assets.BasePath)
+	// Resolve asset path: CLI flag > config > embedded (default)
+	assetBasePath := env.Config.Assets.BasePath
+	if flags.assets.assetPath != "" {
+		assetBasePath = flags.assets.assetPath
+	}
+
+	// Configure asset loader from resolved path
+	if assetBasePath != "" {
+		resolver, err := assets.NewAssetResolver(assetBasePath)
 		if err != nil {
 			return fmt.Errorf("initializing assets: %w", err)
 		}
 		env.AssetLoader = resolver
 		if flags.common.verbose {
-			fmt.Fprintf(env.Stderr, "Using custom assets from: %s\n", cfg.Assets.BasePath)
+			fmt.Fprintf(env.Stderr, "Using custom assets from: %s\n", assetBasePath)
 		}
 	}
 
-	// Create pool with resolved size and asset loader
+	// Resolve template set: CLI flag > default
+	templateSet, err := resolveTemplateSet(flags.assets.template, env.AssetLoader)
+	if err != nil {
+		return fmt.Errorf("loading template set: %w", err)
+	}
+	if flags.common.verbose && flags.assets.template != "" {
+		fmt.Fprintf(env.Stderr, "Using template set: %s\n", templateSet.Name)
+	}
+
+	// Create pool with resolved size, asset loader, and template set
 	poolSize := md2pdf.ResolvePoolSize(flags.workers)
 	if flags.common.verbose {
 		fmt.Fprintf(env.Stderr, "Pool size: %d\n", poolSize)
 	}
-	servicePool := md2pdf.NewServicePool(poolSize, md2pdf.WithAssetLoader(env.AssetLoader))
+	servicePool := md2pdf.NewServicePool(poolSize,
+		md2pdf.WithAssetLoader(env.AssetLoader),
+		md2pdf.WithTemplateSet(templateSet),
+	)
 	defer servicePool.Close()
 
 	// Wrap in adapter for local Pool interface
