@@ -10,9 +10,10 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage: md2pdf <command> [flags] [args]")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Commands:")
-	fmt.Fprintln(w, "  convert    Convert markdown files to PDF")
-	fmt.Fprintln(w, "  version    Show version information")
-	fmt.Fprintln(w, "  help       Show help for a command")
+	fmt.Fprintln(w, "  convert      Convert markdown files to PDF")
+	fmt.Fprintln(w, "  completion   Generate shell completion script")
+	fmt.Fprintln(w, "  version      Show version information")
+	fmt.Fprintln(w, "  help         Show help for a command")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Run 'md2pdf help <command>' for details on a specific command.")
 }
@@ -123,6 +124,8 @@ func runHelp(args []string, env *Environment) {
 	switch args[0] {
 	case "convert":
 		printConvertUsage(env.Stdout)
+	case "completion":
+		printCompletionUsage(env.Stdout)
 	case "version":
 		fmt.Fprintln(env.Stdout, "Usage: md2pdf version")
 		fmt.Fprintln(env.Stdout)
