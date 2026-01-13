@@ -157,10 +157,10 @@ func (p *panicPreprocessor) PreprocessMarkdown(ctx context.Context, content stri
 }
 
 type mockAssetLoader struct {
-	styleContent    string
-	styleErr        error
-	templateContent string
-	templateErr     error
+	styleContent   string
+	styleErr       error
+	templateSet    *assets.TemplateSet
+	templateSetErr error
 }
 
 func (m *mockAssetLoader) LoadStyle(name string) (string, error) {
@@ -170,11 +170,19 @@ func (m *mockAssetLoader) LoadStyle(name string) (string, error) {
 	return m.styleContent, nil
 }
 
-func (m *mockAssetLoader) LoadTemplate(name string) (string, error) {
-	if m.templateErr != nil {
-		return "", m.templateErr
+func (m *mockAssetLoader) LoadTemplateSet(name string) (*assets.TemplateSet, error) {
+	if m.templateSetErr != nil {
+		return nil, m.templateSetErr
 	}
-	return m.templateContent, nil
+	if m.templateSet != nil {
+		return m.templateSet, nil
+	}
+	// Return a minimal valid template set
+	return &assets.TemplateSet{
+		Name:      name,
+		Cover:     "<div>cover</div>",
+		Signature: "<div>signature</div>",
+	}, nil
 }
 
 // Test options for dependency injection (not exported).
@@ -296,8 +304,8 @@ func TestConvert_Success(t *testing.T) {
 		t.Fatalf("Convert() unexpected error: %v", err)
 	}
 
-	if string(result) != "%PDF-1.4 test" {
-		t.Errorf("Convert() result = %q, want %q", result, "%PDF-1.4 test")
+	if string(result.PDF) != "%PDF-1.4 test" {
+		t.Errorf("Convert() result.PDF = %q, want %q", result.PDF, "%PDF-1.4 test")
 	}
 
 	// Verify pipeline was called in order with correct inputs
@@ -524,8 +532,12 @@ func TestWithAssetLoader(t *testing.T) {
 	t.Parallel()
 
 	customLoader := &mockAssetLoader{
-		styleContent:    "/* custom */",
-		templateContent: "<div>custom</div>",
+		styleContent: "/* custom */",
+		templateSet: &assets.TemplateSet{
+			Name:      "custom",
+			Cover:     "<div>custom cover</div>",
+			Signature: "<div>custom signature</div>",
+		},
 	}
 
 	service, err := New(WithAssetLoader(customLoader))
@@ -1547,5 +1559,186 @@ func TestValidateInput_InvalidWatermarkColor(t *testing.T) {
 	err = service.validateInput(input)
 	if !errors.Is(err, ErrInvalidWatermarkColor) {
 		t.Errorf("validateInput() error = %v, want ErrInvalidWatermarkColor", err)
+	}
+}
+
+func TestConvert_ReturnsConvertResult(t *testing.T) {
+	t.Parallel()
+
+	mockPDF := &mockPDFConverter{output: []byte("%PDF-1.4 test")}
+	mockHTML := &mockHTMLConverter{output: "<html><body>Test</body></html>"}
+
+	service, err := New(
+		withHTMLConverter(mockHTML),
+		withPDFConverter(mockPDF),
+	)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	result, err := service.Convert(context.Background(), Input{Markdown: "# Test"})
+	if err != nil {
+		t.Fatalf("Convert() error = %v", err)
+	}
+
+	// Verify ConvertResult contains both HTML and PDF
+	if result == nil {
+		t.Fatal("Convert() returned nil result")
+	}
+	if len(result.HTML) == 0 {
+		t.Error("Convert() result.HTML is empty")
+	}
+	if len(result.PDF) == 0 {
+		t.Error("Convert() result.PDF is empty")
+	}
+	if string(result.PDF) != "%PDF-1.4 test" {
+		t.Errorf("Convert() result.PDF = %q, want %q", result.PDF, "%PDF-1.4 test")
+	}
+}
+
+func TestConvert_HTMLOnlySkipsPDF(t *testing.T) {
+	t.Parallel()
+
+	mockPDF := &mockPDFConverter{output: []byte("%PDF-1.4 test")}
+	mockHTML := &mockHTMLConverter{output: "<html><body>HTMLOnly Test</body></html>"}
+
+	service, err := New(
+		withHTMLConverter(mockHTML),
+		withPDFConverter(mockPDF),
+	)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	result, err := service.Convert(context.Background(), Input{
+		Markdown: "# Test",
+		HTMLOnly: true,
+	})
+	if err != nil {
+		t.Fatalf("Convert() error = %v", err)
+	}
+
+	// Verify HTML is populated but PDF is empty
+	if len(result.HTML) == 0 {
+		t.Error("Convert() result.HTML should not be empty in HTMLOnly mode")
+	}
+	if len(result.PDF) != 0 {
+		t.Errorf("Convert() result.PDF should be empty in HTMLOnly mode, got %d bytes", len(result.PDF))
+	}
+
+	// Verify PDF converter was NOT called
+	if mockPDF.called {
+		t.Error("PDF converter should not be called in HTMLOnly mode")
+	}
+}
+
+func TestConvert_HTMLOnlyStillProcessesInjections(t *testing.T) {
+	t.Parallel()
+
+	mockPDF := &mockPDFConverter{}
+	mockHTML := &mockHTMLConverter{output: "<html><body>Content</body></html>"}
+	mockCSS := &mockCSSInjector{output: "<html><style>css</style><body>Content</body></html>"}
+
+	service, err := New(
+		withHTMLConverter(mockHTML),
+		withPDFConverter(mockPDF),
+		withCSSInjector(mockCSS),
+	)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	result, err := service.Convert(context.Background(), Input{
+		Markdown: "# Test",
+		CSS:      "body { color: red; }",
+		HTMLOnly: true,
+	})
+	if err != nil {
+		t.Fatalf("Convert() error = %v", err)
+	}
+
+	// Verify CSS injection was called
+	if !mockCSS.called {
+		t.Error("CSS injector should still be called in HTMLOnly mode")
+	}
+
+	// Verify HTML contains injected CSS
+	if !strings.Contains(string(result.HTML), "css") {
+		t.Error("result.HTML should contain injected CSS")
+	}
+}
+
+func TestWithTemplateSet(t *testing.T) {
+	t.Parallel()
+
+	customTemplateSet := &assets.TemplateSet{
+		Name:      "custom",
+		Cover:     "<div class=\"custom-cover\">{{.Title}}</div>",
+		Signature: "<div class=\"custom-sig\">{{.Name}}</div>",
+	}
+
+	service, err := New(WithTemplateSet(customTemplateSet))
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	defer service.Close()
+
+	// Verify service was created with custom template set
+	// The template set is used internally by injectors, so we verify
+	// the service was created successfully
+	if service == nil {
+		t.Fatal("New(WithTemplateSet()) returned nil service")
+	}
+}
+
+func TestWithTemplateSet_UsedByInjectors(t *testing.T) {
+	t.Parallel()
+
+	customTemplateSet := &assets.TemplateSet{
+		Name:      "test-templates",
+		Cover:     "<section class=\"cover\"><div class=\"cover-page\"><p class=\"cover-title\">{{.Title}}</p></div></section><span data-cover-end></span>",
+		Signature: "<div class=\"signature-block\"><div class=\"sig-person\"><strong>{{.Name}}</strong></div></div>",
+	}
+
+	mockPDF := &mockPDFConverter{output: []byte("%PDF-1.4")}
+
+	service, err := New(
+		WithTemplateSet(customTemplateSet),
+		withPDFConverter(mockPDF),
+	)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	// Test that cover injection uses the custom template
+	result, err := service.Convert(context.Background(), Input{
+		Markdown: "# Test",
+		Cover: &Cover{
+			Title: "Test Cover",
+		},
+	})
+	if err != nil {
+		t.Fatalf("Convert() error = %v", err)
+	}
+
+	// Verify the HTML contains content from our custom template
+	htmlStr := string(result.HTML)
+	if !strings.Contains(htmlStr, "Test Cover") {
+		t.Error("result.HTML should contain cover title from custom template")
+	}
+}
+
+func TestNew_WithoutTemplateSet_LoadsDefault(t *testing.T) {
+	t.Parallel()
+
+	// When no WithTemplateSet is provided, Service should load the default template set
+	service, err := New()
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	defer service.Close()
+
+	if service == nil {
+		t.Fatal("New() returned nil service")
 	}
 }

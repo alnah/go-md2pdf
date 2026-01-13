@@ -125,7 +125,7 @@ func TestService_Integration(t *testing.T) {
 			t.Fatalf("Convert() error = %v", err)
 		}
 
-		assertValidPDF(t, data)
+		assertValidPDF(t, data.PDF)
 	})
 
 	t.Run("markdown with CSS", func(t *testing.T) {
@@ -142,7 +142,7 @@ func TestService_Integration(t *testing.T) {
 			t.Fatalf("Convert() error = %v", err)
 		}
 
-		assertValidPDF(t, data)
+		assertValidPDF(t, data.PDF)
 	})
 
 	t.Run("markdown with footer", func(t *testing.T) {
@@ -164,7 +164,7 @@ func TestService_Integration(t *testing.T) {
 			t.Fatalf("Convert() error = %v", err)
 		}
 
-		assertValidPDF(t, data)
+		assertValidPDF(t, data.PDF)
 	})
 
 	t.Run("markdown with signature", func(t *testing.T) {
@@ -188,7 +188,7 @@ func TestService_Integration(t *testing.T) {
 			t.Fatalf("Convert() error = %v", err)
 		}
 
-		assertValidPDF(t, data)
+		assertValidPDF(t, data.PDF)
 	})
 
 	t.Run("write to file", func(t *testing.T) {
@@ -207,7 +207,7 @@ func TestService_Integration(t *testing.T) {
 			t.Fatalf("Convert() error = %v", err)
 		}
 
-		err = os.WriteFile(outputPath, data, 0644)
+		err = os.WriteFile(outputPath, data.PDF, 0644)
 		if err != nil {
 			t.Fatalf("WriteFile() error = %v", err)
 		}

@@ -35,7 +35,7 @@ type Service struct {
 }
 
 // New creates a Service with default configuration.
-// Use options to customize behavior (e.g., WithTimeout, WithAssetLoader).
+// Use options to customize behavior (e.g., WithTimeout, WithAssetLoader, WithTemplateSet).
 // Returns error if asset loading or template parsing fails.
 func New(opts ...Option) (*Service, error) {
 	s := &Service{
@@ -51,17 +51,30 @@ func New(opts ...Option) (*Service, error) {
 		opt(s)
 	}
 
-	// Create injectors using the configured asset loader (if not injected by tests)
+	// Load template set if not already configured via WithTemplateSet
+	var templateSet *assets.TemplateSet
+	if s.cfg.templateSet != nil {
+		templateSet = s.cfg.templateSet
+	} else {
+		// Load default template set
+		var err error
+		templateSet, err = s.assetLoader.LoadTemplateSet(assets.DefaultTemplateSetName)
+		if err != nil {
+			return nil, fmt.Errorf("loading default template set: %w", err)
+		}
+	}
+
+	// Create injectors using template content (if not injected by tests)
 	var err error
 	if s.coverInjector == nil {
-		s.coverInjector, err = newCoverInjection(s.assetLoader)
+		s.coverInjector, err = newCoverInjection(templateSet.Cover)
 		if err != nil {
 			return nil, fmt.Errorf("initializing cover injector: %w", err)
 		}
 	}
 
 	if s.signatureInjector == nil {
-		s.signatureInjector, err = newSignatureInjection(s.assetLoader)
+		s.signatureInjector, err = newSignatureInjection(templateSet.Signature)
 		if err != nil {
 			return nil, fmt.Errorf("initializing signature injector: %w", err)
 		}
@@ -75,10 +88,11 @@ func New(opts ...Option) (*Service, error) {
 	return s, nil
 }
 
-// Convert runs the full pipeline and returns the PDF as bytes.
+// Convert runs the full pipeline and returns the result containing HTML and PDF.
 // The context is used for cancellation and timeout.
+// If input.HTMLOnly is true, PDF generation is skipped (for debugging).
 // Recovers from internal panics to prevent crashes from propagating to callers.
-func (s *Service) Convert(ctx context.Context, input Input) (result []byte, err error) {
+func (s *Service) Convert(ctx context.Context, input Input) (result *ConvertResult, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("internal error: %v", r)
@@ -153,6 +167,16 @@ func (s *Service) Convert(ctx context.Context, input Input) (result []byte, err 
 		return nil, fmt.Errorf("injecting signature: %w", err)
 	}
 
+	// Prepare result with HTML
+	res := &ConvertResult{
+		HTML: []byte(htmlContent),
+	}
+
+	// Skip PDF generation if HTMLOnly mode
+	if input.HTMLOnly {
+		return res, nil
+	}
+
 	// Build PDF options with footer and page settings
 	var footData *footerData
 	if input.Footer != nil {
@@ -169,7 +193,8 @@ func (s *Service) Convert(ctx context.Context, input Input) (result []byte, err 
 		return nil, fmt.Errorf("converting to PDF: %w", err)
 	}
 
-	return pdfBytes, nil
+	res.PDF = pdfBytes
+	return res, nil
 }
 
 // Close releases resources (headless Chrome browser).

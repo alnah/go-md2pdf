@@ -58,11 +58,11 @@ func TestConversionService_Convert_Integration(t *testing.T) {
 	}
 
 	// Verify PDF bytes
-	if !bytes.HasPrefix(data, []byte("%PDF-")) {
+	if !bytes.HasPrefix(data.PDF, []byte("%PDF-")) {
 		t.Error("output does not have PDF magic bytes")
 	}
 
-	if len(data) < 100 {
+	if len(data.PDF) < 100 {
 		t.Error("PDF data suspiciously small")
 	}
 }
@@ -83,7 +83,7 @@ func TestConversionService_WriteToFile_Integration(t *testing.T) {
 	}
 
 	outputPath := filepath.Join(t.TempDir(), "out.pdf")
-	err = os.WriteFile(outputPath, data, 0644)
+	err = os.WriteFile(outputPath, data.PDF, 0644)
 	if err != nil {
 		t.Fatalf("WriteFile failed: %v", err)
 	}
@@ -161,13 +161,13 @@ func TestConversionService_PageSettings_Integration(t *testing.T) {
 			}
 
 			// Verify PDF magic bytes
-			if !bytes.HasPrefix(data, []byte("%PDF-")) {
+			if !bytes.HasPrefix(data.PDF, []byte("%PDF-")) {
 				t.Error("output does not have PDF magic bytes")
 			}
 
 			// Ensure PDF is not suspiciously small
-			if len(data) < 100 {
-				t.Errorf("PDF data suspiciously small: %d bytes", len(data))
+			if len(data.PDF) < 100 {
+				t.Errorf("PDF data suspiciously small: %d bytes", len(data.PDF))
 			}
 		})
 	}
@@ -194,7 +194,7 @@ func TestConversionService_PageSettingsWithFooter_Integration(t *testing.T) {
 		t.Fatalf("Convert() failed: %v", err)
 	}
 
-	if !bytes.HasPrefix(data, []byte("%PDF-")) {
+	if !bytes.HasPrefix(data.PDF, []byte("%PDF-")) {
 		t.Error("output does not have PDF magic bytes")
 	}
 }
@@ -288,13 +288,13 @@ More content here.
 			}
 
 			// Verify PDF magic bytes
-			if !bytes.HasPrefix(data, []byte("%PDF-")) {
+			if !bytes.HasPrefix(data.PDF, []byte("%PDF-")) {
 				t.Error("output does not have PDF magic bytes")
 			}
 
 			// Ensure PDF is not suspiciously small
-			if len(data) < 100 {
-				t.Errorf("PDF data suspiciously small: %d bytes", len(data))
+			if len(data.PDF) < 100 {
+				t.Errorf("PDF data suspiciously small: %d bytes", len(data.PDF))
 			}
 		})
 	}
@@ -327,11 +327,11 @@ func TestConversionService_PageBreaksWithOtherFeatures_Integration(t *testing.T)
 		t.Fatalf("Convert() failed: %v", err)
 	}
 
-	if !bytes.HasPrefix(data, []byte("%PDF-")) {
+	if !bytes.HasPrefix(data.PDF, []byte("%PDF-")) {
 		t.Error("output does not have PDF magic bytes")
 	}
 
-	if len(data) < 100 {
-		t.Errorf("PDF data suspiciously small: %d bytes", len(data))
+	if len(data.PDF) < 100 {
+		t.Errorf("PDF data suspiciously small: %d bytes", len(data.PDF))
 	}
 }

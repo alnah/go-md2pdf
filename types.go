@@ -132,6 +132,14 @@ type Input struct {
 	Cover      *Cover        // Cover page config (optional)
 	TOC        *TOC          // Table of contents config (optional)
 	PageBreaks *PageBreaks   // Page break config (optional)
+	HTMLOnly   bool          // If true, skip PDF generation (for debugging)
+}
+
+// ConvertResult holds both HTML and PDF output from conversion.
+// HTML is always populated; PDF is empty when Input.HTMLOnly is true.
+type ConvertResult struct {
+	HTML []byte // Final HTML after all injections
+	PDF  []byte // Generated PDF (empty if HTMLOnly)
 }
 
 // Watermark bounds.
@@ -310,7 +318,8 @@ type Option func(*Service)
 
 // serviceConfig holds internal configuration for Service.
 type serviceConfig struct {
-	timeout time.Duration
+	timeout     time.Duration
+	templateSet *assets.TemplateSet
 }
 
 // defaultTimeout is used when no timeout is specified.
@@ -333,5 +342,13 @@ func WithTimeout(d time.Duration) Option {
 func WithAssetLoader(loader assets.AssetLoader) Option {
 	return func(s *Service) {
 		s.assetLoader = loader
+	}
+}
+
+// WithTemplateSet sets a custom template set for cover and signature.
+// Use this to override the default templates loaded from embedded assets.
+func WithTemplateSet(ts *assets.TemplateSet) Option {
+	return func(s *Service) {
+		s.cfg.templateSet = ts
 	}
 }
