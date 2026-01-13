@@ -31,7 +31,7 @@ Download pre-built binaries from [GitHub Releases](https://github.com/alnah/go-m
 
 ## Features
 
-- **CLI + Library** - Use as `md2pdf` command or import in Go
+- **CLI + Library** - Use as `md2pdf` command or import in Go, with shell completion
 - **Batch conversion** - Process directories with parallel workers
 - **Cover pages** - Title, subtitle, logo, author, organization, date, version
 - **Table of contents** - Auto-generated from headings with configurable depth
@@ -328,6 +328,14 @@ Use `md2pdf.ResolvePoolSize(0)` to auto-calculate optimal pool size based on CPU
 ## CLI Reference
 
 ```
+md2pdf <command> [flags] [args]
+
+Commands:
+  convert      Convert markdown files to PDF
+  completion   Generate shell completion script
+  version      Show version information
+  help         Show help for a command
+
 md2pdf convert <input> [flags]
 
 Input/Output:
@@ -446,6 +454,24 @@ md2pdf convert --html-only document.md
 
 # Use custom assets directory
 md2pdf convert --asset-path ./my-assets document.md
+```
+
+### Shell Completion
+
+Generate shell completion scripts for tab-completion of commands, flags, and file arguments:
+
+```bash
+# Bash - add to ~/.bashrc
+eval "$(md2pdf completion bash)"
+
+# Zsh - add to ~/.zshrc
+eval "$(md2pdf completion zsh)"
+
+# Fish - save to completions directory
+md2pdf completion fish > ~/.config/fish/completions/md2pdf.fish
+
+# PowerShell - add to $PROFILE
+md2pdf completion powershell | Out-String | Invoke-Expression
 ```
 
 ### Docker
