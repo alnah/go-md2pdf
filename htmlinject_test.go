@@ -184,7 +184,11 @@ func TestInjectSignature(t *testing.T) {
 	t.Parallel()
 
 	loader := assets.NewEmbeddedLoader()
-	injector, err := newSignatureInjection(loader)
+	ts, err := loader.LoadTemplateSet(assets.DefaultTemplateSetName)
+	if err != nil {
+		t.Fatalf("failed to load template set: %v", err)
+	}
+	injector, err := newSignatureInjection(ts.Signature)
 	if err != nil {
 		t.Fatalf("failed to create signature injector: %v", err)
 	}
@@ -334,7 +338,11 @@ func TestInjectSignature_ContextCancellation(t *testing.T) {
 	t.Parallel()
 
 	loader := assets.NewEmbeddedLoader()
-	injector, err := newSignatureInjection(loader)
+	ts, err := loader.LoadTemplateSet(assets.DefaultTemplateSetName)
+	if err != nil {
+		t.Fatalf("failed to load template set: %v", err)
+	}
+	injector, err := newSignatureInjection(ts.Signature)
 	if err != nil {
 		t.Fatalf("failed to create signature injector: %v", err)
 	}
@@ -363,7 +371,11 @@ func TestInjectSignature_TemplateError(t *testing.T) {
 
 	// For the real implementation, verify that error wrapping works
 	loader := assets.NewEmbeddedLoader()
-	injector, err := newSignatureInjection(loader)
+	ts, err := loader.LoadTemplateSet(assets.DefaultTemplateSetName)
+	if err != nil {
+		t.Fatalf("failed to load template set: %v", err)
+	}
+	injector, err := newSignatureInjection(ts.Signature)
 	if err != nil {
 		t.Fatalf("failed to create signature injector: %v", err)
 	}
@@ -383,7 +395,11 @@ func TestInjectCover(t *testing.T) {
 	t.Parallel()
 
 	loader := assets.NewEmbeddedLoader()
-	injector, err := newCoverInjection(loader)
+	ts, err := loader.LoadTemplateSet(assets.DefaultTemplateSetName)
+	if err != nil {
+		t.Fatalf("failed to load template set: %v", err)
+	}
+	injector, err := newCoverInjection(ts.Cover)
 	if err != nil {
 		t.Fatalf("failed to create cover injector: %v", err)
 	}
@@ -571,7 +587,11 @@ func TestInjectCover_ContextCancellation(t *testing.T) {
 	t.Parallel()
 
 	loader := assets.NewEmbeddedLoader()
-	injector, err := newCoverInjection(loader)
+	ts, err := loader.LoadTemplateSet(assets.DefaultTemplateSetName)
+	if err != nil {
+		t.Fatalf("failed to load template set: %v", err)
+	}
+	injector, err := newCoverInjection(ts.Cover)
 	if err != nil {
 		t.Fatalf("failed to create cover injector: %v", err)
 	}
@@ -1717,7 +1737,11 @@ func TestInjectTOC_AfterCover(t *testing.T) {
 
 	ctx := context.Background()
 	loader := assets.NewEmbeddedLoader()
-	coverInjector, err := newCoverInjection(loader)
+	ts, err := loader.LoadTemplateSet(assets.DefaultTemplateSetName)
+	if err != nil {
+		t.Fatalf("failed to load template set: %v", err)
+	}
+	coverInjector, err := newCoverInjection(ts.Cover)
 	if err != nil {
 		t.Fatalf("failed to create cover injector: %v", err)
 	}

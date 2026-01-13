@@ -9,8 +9,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/alnah/go-md2pdf/internal/assets"
 )
 
 // defaultFontFamily is the standard font stack for PDF footers and generated content.
@@ -101,14 +99,9 @@ type signatureInjection struct {
 	tmpl *template.Template
 }
 
-// newSignatureInjection creates a signatureInjection using the provided AssetLoader.
-// Returns error if the template cannot be loaded or parsed.
-func newSignatureInjection(loader assets.AssetLoader) (*signatureInjection, error) {
-	tmplContent, err := loader.LoadTemplate("signature")
-	if err != nil {
-		return nil, fmt.Errorf("loading signature template: %w", err)
-	}
-
+// newSignatureInjection creates a signatureInjection from template content.
+// Returns error if the template cannot be parsed.
+func newSignatureInjection(tmplContent string) (*signatureInjection, error) {
 	tmpl, err := template.New("signature").Parse(tmplContent)
 	if err != nil {
 		return nil, fmt.Errorf("parsing signature template: %w", err)
@@ -177,14 +170,9 @@ type coverInjection struct {
 	tmpl *template.Template
 }
 
-// newCoverInjection creates a coverInjection using the provided AssetLoader.
-// Returns error if the template cannot be loaded or parsed.
-func newCoverInjection(loader assets.AssetLoader) (*coverInjection, error) {
-	tmplContent, err := loader.LoadTemplate("cover")
-	if err != nil {
-		return nil, fmt.Errorf("loading cover template: %w", err)
-	}
-
+// newCoverInjection creates a coverInjection from template content.
+// Returns error if the template cannot be parsed.
+func newCoverInjection(tmplContent string) (*coverInjection, error) {
 	tmpl, err := template.New("cover").Parse(tmplContent)
 	if err != nil {
 		return nil, fmt.Errorf("parsing cover template: %w", err)
