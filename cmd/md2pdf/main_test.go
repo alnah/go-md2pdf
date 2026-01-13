@@ -15,8 +15,8 @@ import (
 // wrongTypeConverter is a Converter that is NOT *md2pdf.Service.
 type wrongTypeConverter struct{}
 
-func (w *wrongTypeConverter) Convert(_ context.Context, _ md2pdf.Input) ([]byte, error) {
-	return []byte("%PDF-1.4 mock"), nil
+func (w *wrongTypeConverter) Convert(_ context.Context, _ md2pdf.Input) (*md2pdf.ConvertResult, error) {
+	return &md2pdf.ConvertResult{PDF: []byte("%PDF-1.4 mock")}, nil
 }
 
 func TestPoolAdapter_Release_WrongType(t *testing.T) {
