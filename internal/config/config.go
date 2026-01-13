@@ -54,7 +54,7 @@ type Config struct {
 	Document   DocumentConfig   `yaml:"document"`
 	Input      InputConfig      `yaml:"input"`
 	Output     OutputConfig     `yaml:"output"`
-	CSS        CSSConfig        `yaml:"css"`
+	Style      string           `yaml:"style"` // CSS style name or file path
 	Footer     FooterConfig     `yaml:"footer"`
 	Signature  SignatureConfig  `yaml:"signature"`
 	Assets     AssetsConfig     `yaml:"assets"`
@@ -178,11 +178,6 @@ type InputConfig struct {
 // OutputConfig defines output destination options.
 type OutputConfig struct {
 	DefaultDir string `yaml:"defaultDir"` // Default output directory (empty = same as source)
-}
-
-// CSSConfig defines CSS styling options.
-type CSSConfig struct {
-	Style string `yaml:"style"` // Name of style in internal/assets/styles/ (empty = no CSS)
 }
 
 // FooterConfig defines page footer options.
@@ -454,7 +449,7 @@ func DefaultConfig() *Config {
 		Document:   DocumentConfig{},
 		Input:      InputConfig{DefaultDir: ""},
 		Output:     OutputConfig{DefaultDir: ""},
-		CSS:        CSSConfig{Style: ""},
+		Style:      "",
 		Footer:     FooterConfig{Enabled: false},
 		Signature:  SignatureConfig{Enabled: false},
 		Assets:     AssetsConfig{BasePath: ""},
@@ -507,16 +502,10 @@ func LoadConfig(nameOrPath string) (*Config, error) {
 	return &cfg, nil
 }
 
-// isFilePath returns true if the string looks like a file path.
-// A string containing path separators (/ or \) is treated as a path.
-// This means:
-//   - "myconfig" -> name (searched in standard locations)
-//   - "./myconfig.yaml" -> path (used directly)
-//   - "/path/to/config.yaml" -> path
-//
-// Edge case: a config literally named "my/config" would be treated as a path.
+// isFilePath delegates to md2pdf.IsFilePath for path detection.
+// See md2pdf.IsFilePath for documentation and examples.
 func isFilePath(s string) bool {
-	return strings.ContainsAny(s, "/\\")
+	return md2pdf.IsFilePath(s)
 }
 
 // resolveConfigPath searches for a config file by name in standard locations.
@@ -550,11 +539,8 @@ func resolveConfigPath(name string) (string, error) {
 	return "", fmt.Errorf("%w: tried %s", ErrConfigNotFound, strings.Join(triedPaths, ", "))
 }
 
-// fileExists returns true if the path exists and is a regular file.
+// fileExists delegates to md2pdf.FileExists for path existence check.
+// See md2pdf.FileExists for documentation.
 func fileExists(path string) bool {
-	info, err := os.Stat(path)
-	if err != nil {
-		return false
-	}
-	return !info.IsDir()
+	return md2pdf.FileExists(path)
 }

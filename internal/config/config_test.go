@@ -17,8 +17,8 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.Output.DefaultDir != "" {
 		t.Errorf("Output.DefaultDir = %q, want empty", cfg.Output.DefaultDir)
 	}
-	if cfg.CSS.Style != "" {
-		t.Errorf("CSS.Style = %q, want empty", cfg.CSS.Style)
+	if cfg.Style != "" {
+		t.Errorf("Style = %q, want empty", cfg.Style)
 	}
 	if cfg.Footer.Enabled {
 		t.Error("Footer.Enabled = true, want false")
@@ -189,8 +189,7 @@ func TestLoadConfig(t *testing.T) {
 	t.Run("valid file path loads config", func(t *testing.T) {
 		dir := t.TempDir()
 		configPath := filepath.Join(dir, "test.yaml")
-		content := `css:
-  style: "default"
+		content := `style: "default"
 footer:
   enabled: true
   position: "center"
@@ -203,8 +202,8 @@ footer:
 		if err != nil {
 			t.Fatalf("LoadConfig() error = %v", err)
 		}
-		if cfg.CSS.Style != "default" {
-			t.Errorf("CSS.Style = %q, want %q", cfg.CSS.Style, "default")
+		if cfg.Style != "default" {
+			t.Errorf("CSS.Style = %q, want %q", cfg.Style, "default")
 		}
 		if !cfg.Footer.Enabled {
 			t.Error("Footer.Enabled = false, want true")
@@ -248,7 +247,7 @@ output:
 	t.Run("invalid YAML returns ErrConfigParse", func(t *testing.T) {
 		dir := t.TempDir()
 		configPath := filepath.Join(dir, "invalid.yaml")
-		if err := os.WriteFile(configPath, []byte("css:\n  style: [unclosed"), 0600); err != nil {
+		if err := os.WriteFile(configPath, []byte("style: [unclosed"), 0600); err != nil {
 			t.Fatalf("setup: %v", err)
 		}
 
@@ -261,8 +260,7 @@ output:
 	t.Run("unknown field returns ErrConfigParse in strict mode", func(t *testing.T) {
 		dir := t.TempDir()
 		configPath := filepath.Join(dir, "unknown.yaml")
-		content := `css:
-  style: "default"
+		content := `style: "default"
 unknownField: "should fail"
 `
 		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
@@ -293,7 +291,7 @@ unknownField: "should fail"
 	t.Run("unreadable file returns read error not ErrConfigNotFound", func(t *testing.T) {
 		dir := t.TempDir()
 		configPath := filepath.Join(dir, "unreadable.yaml")
-		if err := os.WriteFile(configPath, []byte("css:\n  style: test\n"), 0600); err != nil {
+		if err := os.WriteFile(configPath, []byte("style: test\n"), 0600); err != nil {
 			t.Fatalf("setup: %v", err)
 		}
 		if err := os.Chmod(configPath, 0000); err != nil {
@@ -313,7 +311,7 @@ unknownField: "should fail"
 	t.Run("config name resolves yaml in current directory", func(t *testing.T) {
 		dir := t.TempDir()
 		configPath := filepath.Join(dir, "myconfig.yaml")
-		if err := os.WriteFile(configPath, []byte("css:\n  style: fromname\n"), 0600); err != nil {
+		if err := os.WriteFile(configPath, []byte("style: fromname\n"), 0600); err != nil {
 			t.Fatalf("setup: %v", err)
 		}
 
@@ -330,15 +328,15 @@ unknownField: "should fail"
 		if err != nil {
 			t.Fatalf("LoadConfig() error = %v", err)
 		}
-		if cfg.CSS.Style != "fromname" {
-			t.Errorf("CSS.Style = %q, want %q", cfg.CSS.Style, "fromname")
+		if cfg.Style != "fromname" {
+			t.Errorf("CSS.Style = %q, want %q", cfg.Style, "fromname")
 		}
 	})
 
 	t.Run("config name resolves yml when yaml not found", func(t *testing.T) {
 		dir := t.TempDir()
 		configPath := filepath.Join(dir, "myconfig.yml")
-		if err := os.WriteFile(configPath, []byte("css:\n  style: fromyml\n"), 0600); err != nil {
+		if err := os.WriteFile(configPath, []byte("style: fromyml\n"), 0600); err != nil {
 			t.Fatalf("setup: %v", err)
 		}
 
@@ -355,17 +353,17 @@ unknownField: "should fail"
 		if err != nil {
 			t.Fatalf("LoadConfig() error = %v", err)
 		}
-		if cfg.CSS.Style != "fromyml" {
-			t.Errorf("CSS.Style = %q, want %q", cfg.CSS.Style, "fromyml")
+		if cfg.Style != "fromyml" {
+			t.Errorf("CSS.Style = %q, want %q", cfg.Style, "fromyml")
 		}
 	})
 
 	t.Run("config name prefers yaml over yml", func(t *testing.T) {
 		dir := t.TempDir()
-		if err := os.WriteFile(filepath.Join(dir, "myconfig.yaml"), []byte("css:\n  style: yaml\n"), 0600); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "myconfig.yaml"), []byte("style: yaml\n"), 0600); err != nil {
 			t.Fatalf("setup yaml: %v", err)
 		}
-		if err := os.WriteFile(filepath.Join(dir, "myconfig.yml"), []byte("css:\n  style: yml\n"), 0600); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "myconfig.yml"), []byte("style: yml\n"), 0600); err != nil {
 			t.Fatalf("setup yml: %v", err)
 		}
 
@@ -382,8 +380,8 @@ unknownField: "should fail"
 		if err != nil {
 			t.Fatalf("LoadConfig() error = %v", err)
 		}
-		if cfg.CSS.Style != "yaml" {
-			t.Errorf("CSS.Style = %q, want %q (should prefer .yaml)", cfg.CSS.Style, "yaml")
+		if cfg.Style != "yaml" {
+			t.Errorf("CSS.Style = %q, want %q (should prefer .yaml)", cfg.Style, "yaml")
 		}
 	})
 
@@ -399,7 +397,7 @@ unknownField: "should fail"
 		if err := os.MkdirAll(appConfigDir, 0755); err != nil {
 			t.Fatalf("setup mkdir: %v", err)
 		}
-		if err := os.WriteFile(configPath, []byte("css:\n  style: userdir\n"), 0600); err != nil {
+		if err := os.WriteFile(configPath, []byte("style: userdir\n"), 0600); err != nil {
 			t.Fatalf("setup write: %v", err)
 		}
 		defer os.Remove(configPath)
@@ -419,8 +417,8 @@ unknownField: "should fail"
 		if err != nil {
 			t.Fatalf("LoadConfig() error = %v", err)
 		}
-		if cfg.CSS.Style != "userdir" {
-			t.Errorf("CSS.Style = %q, want %q", cfg.CSS.Style, "userdir")
+		if cfg.Style != "userdir" {
+			t.Errorf("CSS.Style = %q, want %q", cfg.Style, "userdir")
 		}
 	})
 
