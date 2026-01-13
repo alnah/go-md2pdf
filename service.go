@@ -3,6 +3,8 @@ package md2pdf
 import (
 	"context"
 	"fmt"
+
+	"github.com/alnah/go-md2pdf/internal/assets"
 )
 
 // Compile-time interface implementation checks.
@@ -22,6 +24,7 @@ var (
 // Service orchestrates the markdown-to-PDF pipeline.
 type Service struct {
 	cfg               serviceConfig
+	assetLoader       assets.AssetLoader
 	preprocessor      markdownPreprocessor
 	htmlConverter     htmlConverter
 	cssInjector       cssInjector
@@ -32,20 +35,36 @@ type Service struct {
 }
 
 // New creates a Service with default configuration.
-// Use options to customize behavior (e.g., WithTimeout).
-func New(opts ...Option) *Service {
+// Use options to customize behavior (e.g., WithTimeout, WithAssetLoader).
+// Returns error if asset loading or template parsing fails.
+func New(opts ...Option) (*Service, error) {
 	s := &Service{
-		cfg:               serviceConfig{timeout: defaultTimeout},
-		preprocessor:      &commonMarkPreprocessor{},
-		htmlConverter:     newGoldmarkConverter(),
-		cssInjector:       &cssInjection{},
-		coverInjector:     newCoverInjection(),
-		tocInjector:       newTOCInjection(),
-		signatureInjector: newSignatureInjection(),
+		cfg:           serviceConfig{timeout: defaultTimeout},
+		assetLoader:   assets.NewEmbeddedLoader(),
+		preprocessor:  &commonMarkPreprocessor{},
+		htmlConverter: newGoldmarkConverter(),
+		cssInjector:   &cssInjection{},
+		tocInjector:   newTOCInjection(),
 	}
 
 	for _, opt := range opts {
 		opt(s)
+	}
+
+	// Create injectors using the configured asset loader (if not injected by tests)
+	var err error
+	if s.coverInjector == nil {
+		s.coverInjector, err = newCoverInjection(s.assetLoader)
+		if err != nil {
+			return nil, fmt.Errorf("initializing cover injector: %w", err)
+		}
+	}
+
+	if s.signatureInjector == nil {
+		s.signatureInjector, err = newSignatureInjection(s.assetLoader)
+		if err != nil {
+			return nil, fmt.Errorf("initializing signature injector: %w", err)
+		}
 	}
 
 	// Create PDF converter if not injected (e.g., by tests)
@@ -53,7 +72,7 @@ func New(opts ...Option) *Service {
 		s.pdfConverter = newRodConverter(s.cfg.timeout)
 	}
 
-	return s
+	return s, nil
 }
 
 // Convert runs the full pipeline and returns the PDF as bytes.

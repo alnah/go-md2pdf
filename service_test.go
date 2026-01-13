@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/alnah/go-md2pdf/internal/assets"
 )
 
 // Mock implementations for testing.
@@ -154,6 +156,27 @@ func (p *panicPreprocessor) PreprocessMarkdown(ctx context.Context, content stri
 	panic("simulated panic in preprocessor")
 }
 
+type mockAssetLoader struct {
+	styleContent    string
+	styleErr        error
+	templateContent string
+	templateErr     error
+}
+
+func (m *mockAssetLoader) LoadStyle(name string) (string, error) {
+	if m.styleErr != nil {
+		return "", m.styleErr
+	}
+	return m.styleContent, nil
+}
+
+func (m *mockAssetLoader) LoadTemplate(name string) (string, error) {
+	if m.templateErr != nil {
+		return "", m.templateErr
+	}
+	return m.templateContent, nil
+}
+
 // Test options for dependency injection (not exported).
 
 func withPreprocessor(p markdownPreprocessor) Option {
@@ -201,7 +224,10 @@ func withTOCInjector(t tocInjector) Option {
 func TestValidateInput(t *testing.T) {
 	t.Parallel()
 
-	service := New()
+	service, err := New()
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	tests := []struct {
@@ -247,13 +273,16 @@ func TestConvert_Success(t *testing.T) {
 	sigInjector := &mockSignatureInjector{output: "<html>with-sig</html>"}
 	pdfConv := &mockPDFConverter{output: []byte("%PDF-1.4 test")}
 
-	service := New(
+	service, err := New(
 		withPreprocessor(preprocessor),
 		withHTMLConverter(htmlConv),
 		withCSSInjector(cssInj),
 		withSignatureInjector(sigInjector),
 		withPDFConverter(pdfConv),
 	)
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	input := Input{
@@ -319,11 +348,14 @@ func TestConvert_Success(t *testing.T) {
 func TestConvert_ValidationError(t *testing.T) {
 	t.Parallel()
 
-	service := New()
+	service, err := New()
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	ctx := context.Background()
-	_, err := service.Convert(ctx, Input{Markdown: ""})
+	_, err = service.Convert(ctx, Input{Markdown: ""})
 
 	if !errors.Is(err, ErrEmptyMarkdown) {
 		t.Errorf("Convert() error = %v, want %v", err, ErrEmptyMarkdown)
@@ -335,17 +367,20 @@ func TestConvert_HTMLConverterError(t *testing.T) {
 
 	htmlErr := errors.New("pandoc failed")
 
-	service := New(
+	service, err := New(
 		withPreprocessor(&mockPreprocessor{}),
 		withHTMLConverter(&mockHTMLConverter{err: htmlErr}),
 		withCSSInjector(&mockCSSInjector{}),
 		withSignatureInjector(&mockSignatureInjector{}),
 		withPDFConverter(&mockPDFConverter{}),
 	)
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	ctx := context.Background()
-	_, err := service.Convert(ctx, Input{Markdown: "# Hello"})
+	_, err = service.Convert(ctx, Input{Markdown: "# Hello"})
 
 	if err == nil {
 		t.Fatal("Convert() expected error, got nil")
@@ -360,17 +395,20 @@ func TestConvert_PDFConverterError(t *testing.T) {
 
 	pdfErr := errors.New("chrome failed")
 
-	service := New(
+	service, err := New(
 		withPreprocessor(&mockPreprocessor{}),
 		withHTMLConverter(&mockHTMLConverter{}),
 		withCSSInjector(&mockCSSInjector{}),
 		withSignatureInjector(&mockSignatureInjector{}),
 		withPDFConverter(&mockPDFConverter{err: pdfErr}),
 	)
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	ctx := context.Background()
-	_, err := service.Convert(ctx, Input{Markdown: "# Hello"})
+	_, err = service.Convert(ctx, Input{Markdown: "# Hello"})
 
 	if err == nil {
 		t.Fatal("Convert() expected error, got nil")
@@ -385,17 +423,20 @@ func TestConvert_SignatureInjectorError(t *testing.T) {
 
 	sigErr := errors.New("signature template failed")
 
-	service := New(
+	service, err := New(
 		withPreprocessor(&mockPreprocessor{}),
 		withHTMLConverter(&mockHTMLConverter{}),
 		withCSSInjector(&mockCSSInjector{}),
 		withSignatureInjector(&mockSignatureInjector{err: sigErr}),
 		withPDFConverter(&mockPDFConverter{}),
 	)
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	ctx := context.Background()
-	_, err := service.Convert(ctx, Input{Markdown: "# Hello"})
+	_, err = service.Convert(ctx, Input{Markdown: "# Hello"})
 
 	if err == nil {
 		t.Fatal("Convert() expected error, got nil")
@@ -410,17 +451,20 @@ func TestConvert_NoCSSByDefault(t *testing.T) {
 
 	cssInj := &mockCSSInjector{}
 
-	service := New(
+	service, err := New(
 		withPreprocessor(&mockPreprocessor{}),
 		withHTMLConverter(&mockHTMLConverter{}),
 		withCSSInjector(cssInj),
 		withSignatureInjector(&mockSignatureInjector{}),
 		withPDFConverter(&mockPDFConverter{}),
 	)
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	ctx := context.Background()
-	_, err := service.Convert(ctx, Input{Markdown: "# Hello"})
+	_, err = service.Convert(ctx, Input{Markdown: "# Hello"})
 
 	if err != nil {
 		t.Fatalf("Convert() unexpected error: %v", err)
@@ -439,7 +483,10 @@ func TestConvert_NoCSSByDefault(t *testing.T) {
 func TestNew(t *testing.T) {
 	t.Parallel()
 
-	service := New()
+	service, err := New()
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	if service.preprocessor == nil {
@@ -462,7 +509,10 @@ func TestNew(t *testing.T) {
 func TestWithTimeout(t *testing.T) {
 	t.Parallel()
 
-	service := New(WithTimeout(60 * defaultTimeout))
+	service, err := New(WithTimeout(60 * defaultTimeout))
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	if service.cfg.timeout != 60*defaultTimeout {
@@ -470,10 +520,54 @@ func TestWithTimeout(t *testing.T) {
 	}
 }
 
+func TestWithAssetLoader(t *testing.T) {
+	t.Parallel()
+
+	customLoader := &mockAssetLoader{
+		styleContent:    "/* custom */",
+		templateContent: "<div>custom</div>",
+	}
+
+	service, err := New(WithAssetLoader(customLoader))
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
+	defer service.Close()
+
+	if service.assetLoader != customLoader {
+		t.Error("assetLoader should be the custom loader")
+	}
+}
+
+func TestWithAssetLoader_UsedByInjectors(t *testing.T) {
+	t.Parallel()
+
+	// Test that the asset loader is used when creating cover and signature injectors.
+	// We use the embedded loader which is the default.
+	loader := assets.NewEmbeddedLoader()
+
+	service, err := New(WithAssetLoader(loader))
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
+	defer service.Close()
+
+	// Service should have initialized its injectors using the loader
+	if service.coverInjector == nil {
+		t.Error("coverInjector should not be nil")
+	}
+	if service.signatureInjector == nil {
+		t.Error("signatureInjector should not be nil")
+	}
+}
+
 func TestService_Close(t *testing.T) {
 	t.Parallel()
 
-	service := New()
+	service, err := New()
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 
 	// Close should not error
 	if err := service.Close(); err != nil {
@@ -809,7 +903,10 @@ func TestToTOCData(t *testing.T) {
 func TestValidateInput_TOC(t *testing.T) {
 	t.Parallel()
 
-	service := New()
+	service, err := New()
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	t.Run("nil TOC is valid", func(t *testing.T) {
@@ -854,17 +951,20 @@ func TestValidateInput_TOC(t *testing.T) {
 func TestConvert_RecoversPanic(t *testing.T) {
 	t.Parallel()
 
-	service := New(
+	service, err := New(
 		withPreprocessor(&panicPreprocessor{}),
 		withHTMLConverter(&mockHTMLConverter{}),
 		withCSSInjector(&mockCSSInjector{}),
 		withSignatureInjector(&mockSignatureInjector{}),
 		withPDFConverter(&mockPDFConverter{}),
 	)
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	ctx := context.Background()
-	_, err := service.Convert(ctx, Input{Markdown: "# Test"})
+	_, err = service.Convert(ctx, Input{Markdown: "# Test"})
 
 	if err == nil {
 		t.Fatal("expected error from panic recovery, got nil")
@@ -877,20 +977,23 @@ func TestConvert_RecoversPanic(t *testing.T) {
 func TestConvert_ContextCancellation(t *testing.T) {
 	t.Parallel()
 
-	service := New(
+	service, err := New(
 		withPreprocessor(&mockPreprocessor{}),
 		withHTMLConverter(&mockHTMLConverter{output: "<html></html>"}),
 		withCSSInjector(&mockCSSInjector{}),
 		withSignatureInjector(&mockSignatureInjector{}),
 		withPDFConverter(&mockPDFConverter{}),
 	)
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	// Cancel context before calling Convert
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	_, err := service.Convert(ctx, Input{Markdown: "# Test"})
+	_, err = service.Convert(ctx, Input{Markdown: "# Test"})
 
 	if err == nil {
 		t.Fatal("expected context error, got nil")
@@ -903,7 +1006,10 @@ func TestConvert_ContextCancellation(t *testing.T) {
 func TestValidateInput_InvalidWatermark(t *testing.T) {
 	t.Parallel()
 
-	service := New()
+	service, err := New()
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	tests := []struct {
@@ -949,7 +1055,10 @@ func TestValidateInput_InvalidWatermark(t *testing.T) {
 func TestValidateInput_InvalidPageBreaks(t *testing.T) {
 	t.Parallel()
 
-	service := New()
+	service, err := New()
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	tests := []struct {
@@ -1010,7 +1119,7 @@ func TestConvert_WatermarkCSSOrder(t *testing.T) {
 
 	cssInj := &mockCSSInjector{}
 
-	service := New(
+	service, err := New(
 		withPreprocessor(&mockPreprocessor{}),
 		withHTMLConverter(&mockHTMLConverter{}),
 		withCSSInjector(cssInj),
@@ -1019,6 +1128,9 @@ func TestConvert_WatermarkCSSOrder(t *testing.T) {
 		withSignatureInjector(&mockSignatureInjector{}),
 		withPDFConverter(&mockPDFConverter{}),
 	)
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	ctx := context.Background()
@@ -1033,7 +1145,7 @@ func TestConvert_WatermarkCSSOrder(t *testing.T) {
 		},
 	}
 
-	_, err := service.Convert(ctx, input)
+	_, err = service.Convert(ctx, input)
 	if err != nil {
 		t.Fatalf("Convert() unexpected error: %v", err)
 	}
@@ -1073,7 +1185,7 @@ func TestConvert_CoverInjectorError(t *testing.T) {
 
 	coverErr := errors.New("cover template failed")
 
-	service := New(
+	service, err := New(
 		withPreprocessor(&mockPreprocessor{}),
 		withHTMLConverter(&mockHTMLConverter{}),
 		withCSSInjector(&mockCSSInjector{}),
@@ -1082,10 +1194,13 @@ func TestConvert_CoverInjectorError(t *testing.T) {
 		withSignatureInjector(&mockSignatureInjector{}),
 		withPDFConverter(&mockPDFConverter{}),
 	)
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	ctx := context.Background()
-	_, err := service.Convert(ctx, Input{Markdown: "# Hello"})
+	_, err = service.Convert(ctx, Input{Markdown: "# Hello"})
 
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -1103,7 +1218,7 @@ func TestConvert_TOCInjectorError(t *testing.T) {
 
 	tocErr := errors.New("TOC generation failed")
 
-	service := New(
+	service, err := New(
 		withPreprocessor(&mockPreprocessor{}),
 		withHTMLConverter(&mockHTMLConverter{}),
 		withCSSInjector(&mockCSSInjector{}),
@@ -1112,10 +1227,13 @@ func TestConvert_TOCInjectorError(t *testing.T) {
 		withSignatureInjector(&mockSignatureInjector{}),
 		withPDFConverter(&mockPDFConverter{}),
 	)
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	ctx := context.Background()
-	_, err := service.Convert(ctx, Input{Markdown: "# Hello"})
+	_, err = service.Convert(ctx, Input{Markdown: "# Hello"})
 
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -1133,7 +1251,7 @@ func TestConvert_PDFOptionsTransmission(t *testing.T) {
 
 	pdfConv := &mockPDFConverter{}
 
-	service := New(
+	service, err := New(
 		withPreprocessor(&mockPreprocessor{}),
 		withHTMLConverter(&mockHTMLConverter{}),
 		withCSSInjector(&mockCSSInjector{}),
@@ -1142,6 +1260,9 @@ func TestConvert_PDFOptionsTransmission(t *testing.T) {
 		withSignatureInjector(&mockSignatureInjector{}),
 		withPDFConverter(pdfConv),
 	)
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	ctx := context.Background()
@@ -1161,7 +1282,7 @@ func TestConvert_PDFOptionsTransmission(t *testing.T) {
 		},
 	}
 
-	_, err := service.Convert(ctx, input)
+	_, err = service.Convert(ctx, input)
 	if err != nil {
 		t.Fatalf("Convert() unexpected error: %v", err)
 	}
@@ -1198,7 +1319,7 @@ func TestConvert_CoverDataTransmission(t *testing.T) {
 
 	coverInj := &mockCoverInjector{}
 
-	service := New(
+	service, err := New(
 		withPreprocessor(&mockPreprocessor{}),
 		withHTMLConverter(&mockHTMLConverter{}),
 		withCSSInjector(&mockCSSInjector{}),
@@ -1207,6 +1328,9 @@ func TestConvert_CoverDataTransmission(t *testing.T) {
 		withSignatureInjector(&mockSignatureInjector{}),
 		withPDFConverter(&mockPDFConverter{}),
 	)
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	ctx := context.Background()
@@ -1223,7 +1347,7 @@ func TestConvert_CoverDataTransmission(t *testing.T) {
 		},
 	}
 
-	_, err := service.Convert(ctx, input)
+	_, err = service.Convert(ctx, input)
 	if err != nil {
 		t.Fatalf("Convert() unexpected error: %v", err)
 	}
@@ -1247,7 +1371,7 @@ func TestConvert_TOCDataTransmission(t *testing.T) {
 
 	tocInj := &mockTOCInjector{}
 
-	service := New(
+	service, err := New(
 		withPreprocessor(&mockPreprocessor{}),
 		withHTMLConverter(&mockHTMLConverter{}),
 		withCSSInjector(&mockCSSInjector{}),
@@ -1256,6 +1380,9 @@ func TestConvert_TOCDataTransmission(t *testing.T) {
 		withSignatureInjector(&mockSignatureInjector{}),
 		withPDFConverter(&mockPDFConverter{}),
 	)
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	ctx := context.Background()
@@ -1267,7 +1394,7 @@ func TestConvert_TOCDataTransmission(t *testing.T) {
 		},
 	}
 
-	_, err := service.Convert(ctx, input)
+	_, err = service.Convert(ctx, input)
 	if err != nil {
 		t.Fatalf("Convert() unexpected error: %v", err)
 	}
@@ -1292,7 +1419,7 @@ func TestConvert_NilOptionalFieldsNotPassed(t *testing.T) {
 	coverInj := &mockCoverInjector{}
 	tocInj := &mockTOCInjector{}
 
-	service := New(
+	service, err := New(
 		withPreprocessor(&mockPreprocessor{}),
 		withHTMLConverter(&mockHTMLConverter{}),
 		withCSSInjector(&mockCSSInjector{}),
@@ -1301,6 +1428,9 @@ func TestConvert_NilOptionalFieldsNotPassed(t *testing.T) {
 		withSignatureInjector(&mockSignatureInjector{}),
 		withPDFConverter(&mockPDFConverter{}),
 	)
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	ctx := context.Background()
@@ -1310,7 +1440,7 @@ func TestConvert_NilOptionalFieldsNotPassed(t *testing.T) {
 		TOC:      nil,
 	}
 
-	_, err := service.Convert(ctx, input)
+	_, err = service.Convert(ctx, input)
 	if err != nil {
 		t.Fatalf("Convert() unexpected error: %v", err)
 	}
@@ -1334,7 +1464,10 @@ func TestConvert_NilOptionalFieldsNotPassed(t *testing.T) {
 func TestValidateInput_InvalidPage(t *testing.T) {
 	t.Parallel()
 
-	service := New()
+	service, err := New()
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	tests := []struct {
@@ -1380,7 +1513,10 @@ func TestValidateInput_InvalidPage(t *testing.T) {
 func TestValidateInput_InvalidFooter(t *testing.T) {
 	t.Parallel()
 
-	service := New()
+	service, err := New()
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	input := Input{
@@ -1388,7 +1524,7 @@ func TestValidateInput_InvalidFooter(t *testing.T) {
 		Footer:   &Footer{Position: "top"},
 	}
 
-	err := service.validateInput(input)
+	err = service.validateInput(input)
 	if !errors.Is(err, ErrInvalidFooterPosition) {
 		t.Errorf("validateInput() error = %v, want ErrInvalidFooterPosition", err)
 	}
@@ -1397,7 +1533,10 @@ func TestValidateInput_InvalidFooter(t *testing.T) {
 func TestValidateInput_InvalidWatermarkColor(t *testing.T) {
 	t.Parallel()
 
-	service := New()
+	service, err := New()
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
 	defer service.Close()
 
 	input := Input{
@@ -1405,7 +1544,7 @@ func TestValidateInput_InvalidWatermarkColor(t *testing.T) {
 		Watermark: &Watermark{Text: "DRAFT", Color: "red", Opacity: 0.1, Angle: -45},
 	}
 
-	err := service.validateInput(input)
+	err = service.validateInput(input)
 	if !errors.Is(err, ErrInvalidWatermarkColor) {
 		t.Errorf("validateInput() error = %v, want ErrInvalidWatermarkColor", err)
 	}

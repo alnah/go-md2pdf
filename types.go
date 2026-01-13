@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/alnah/go-md2pdf/internal/assets"
 )
 
 // Page size constants.
@@ -322,5 +324,14 @@ func WithTimeout(d time.Duration) Option {
 	}
 	return func(s *Service) {
 		s.cfg.timeout = d
+	}
+}
+
+// WithAssetLoader sets a custom asset loader for CSS styles and HTML templates.
+// Use assets.NewAssetResolver(basePath) to load from a custom directory with
+// fallback to embedded assets, or implement assets.AssetLoader for custom backends.
+func WithAssetLoader(loader assets.AssetLoader) Option {
+	return func(s *Service) {
+		s.assetLoader = loader
 	}
 }
