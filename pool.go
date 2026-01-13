@@ -23,22 +23,26 @@ const (
 // Services are created lazily on first acquire to avoid startup delay.
 type ServicePool struct {
 	size     int
+	opts     []Option
 	services []*Service
 	sem      chan *Service
 	mu       sync.Mutex
 	created  int
 	closed   bool
+	initErr  error // First error encountered during service creation
 }
 
 // NewServicePool creates a pool with capacity for n Service instances.
 // Services are created lazily when acquired, not at pool creation.
-func NewServicePool(n int) *ServicePool {
+// Options are applied to each service when created.
+func NewServicePool(n int, opts ...Option) *ServicePool {
 	if n < 1 {
 		n = 1
 	}
 
 	return &ServicePool{
 		size:     n,
+		opts:     opts,
 		services: make([]*Service, 0, n),
 		sem:      make(chan *Service, n),
 	}
@@ -46,6 +50,8 @@ func NewServicePool(n int) *ServicePool {
 
 // Acquire gets a service from the pool, creating one if needed.
 // Blocks if all services are in use.
+// Returns nil and sets internal error if service creation fails.
+// Use InitError() to check for initialization failures.
 func (p *ServicePool) Acquire() *Service {
 	// Try to get an existing service (non-blocking)
 	select {
@@ -56,12 +62,25 @@ func (p *ServicePool) Acquire() *Service {
 
 	// Check if we can create a new service
 	p.mu.Lock()
+	if p.initErr != nil {
+		p.mu.Unlock()
+		return nil
+	}
 	if p.created < p.size {
 		p.created++
 		p.mu.Unlock()
 
 		// Create new service outside the lock
-		svc := New()
+		svc, err := New(p.opts...)
+		if err != nil {
+			p.mu.Lock()
+			if p.initErr == nil {
+				p.initErr = err
+			}
+			p.created--
+			p.mu.Unlock()
+			return nil
+		}
 
 		p.mu.Lock()
 		p.services = append(p.services, svc)
@@ -73,6 +92,14 @@ func (p *ServicePool) Acquire() *Service {
 
 	// All services created, wait for one to be released
 	return <-p.sem
+}
+
+// InitError returns the first error encountered during service creation.
+// Returns nil if all services were created successfully.
+func (p *ServicePool) InitError() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.initErr
 }
 
 // Release returns a service to the pool.
