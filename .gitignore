@@ -298,3 +298,6 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/go,macos,linux,windows,vim,visualstudiocode,jetbrains,sublimetext
 completions/
+
+# Private/draft markdown files
+_*.md
