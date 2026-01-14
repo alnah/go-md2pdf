@@ -44,7 +44,7 @@ Open an issue to discuss before implementing. This ensures alignment and avoids 
 1. Reference an existing issue (small fixes like typos are exempt)
 2. Follow existing code patterns
 3. Add tests for new functionality
-4. Run `go test ./...` and `go vet ./...` before submitting
+4. Run `make check-all` before submitting
 
 ### Contributing Styles
 
