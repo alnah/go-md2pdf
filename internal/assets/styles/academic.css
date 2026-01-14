@@ -527,6 +527,12 @@ img {
   align-items: center;
 }
 
+/* Hide the auto-generated hr before footnotes */
+.footnotes > hr,
+hr.footnotes-sep {
+  display: none;
+}
+
 .footnotes {
   margin-top: 3em;
   padding-top: var(--spacing-md);
