@@ -22,6 +22,7 @@
 # Generated PDF and HTML files (from --html/--html-only debugging)
 *.pdf
 *.html
+!examples/*.pdf
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
