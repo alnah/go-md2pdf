@@ -16,6 +16,15 @@ Contributions are welcome! go-md2pdf aims to be the best Markdown-to-PDF tool fo
 - Architectural changes
 - New dependencies
 
+## Setup
+
+```bash
+git clone https://github.com/alnah/go-md2pdf.git
+cd go-md2pdf
+git lfs install  # Required for example PDFs
+git lfs pull     # Download example PDFs
+```
+
 ## How to Contribute
 
 ### Bug Reports
