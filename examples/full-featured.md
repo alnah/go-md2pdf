@@ -1,0 +1,114 @@
+# API Security Audit Report
+
+## Executive Summary
+
+This document presents the findings from the Q4 2024 security assessment of the Northwind Trading Platform API. The audit identified 3 critical, 7 medium, and 12 low-severity vulnerabilities.
+
+## Scope
+
+The assessment covered:
+
+- REST API endpoints (v2.x)
+- Authentication and authorization flows
+- Data validation and sanitization
+- Rate limiting and abuse prevention
+
+## Critical Findings
+
+### 1. SQL Injection in Search Endpoint
+
+**Severity:** Critical
+**Endpoint:** `GET /api/v2/products/search`
+
+The `query` parameter is concatenated directly into SQL without parameterization:
+
+```go
+// Vulnerable code
+func SearchProducts(query string) ([]Product, error) {
+    sql := "SELECT * FROM products WHERE name LIKE '%" + query + "%'"
+    return db.Query(sql)
+}
+```
+
+**Recommendation:** Use parameterized queries:
+
+```go
+// Fixed code
+func SearchProducts(query string) ([]Product, error) {
+    sql := "SELECT * FROM products WHERE name LIKE ?"
+    return db.Query(sql, "%"+query+"%")
+}
+```
+
+### 2. Missing Rate Limiting on Auth Endpoints
+
+**Severity:** Critical
+**Endpoints:** `POST /api/v2/auth/login`, `POST /api/v2/auth/reset-password`
+
+No rate limiting allows brute-force attacks. During testing, we achieved 50,000 login attempts per minute.
+
+| Metric | Current | Recommended |
+|--------|---------|-------------|
+| Login attempts/min | Unlimited | 5 |
+| Password resets/hour | Unlimited | 3 |
+| API calls/min (authenticated) | Unlimited | 1000 |
+
+### 3. JWT Token Never Expires
+
+**Severity:** Critical
+**Location:** `internal/auth/jwt.go:47`
+
+Tokens are issued without expiration:
+
+```go
+token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+    "user_id": user.ID,
+    "role":    user.Role,
+    // Missing: "exp" claim
+})
+```
+
+## Medium Findings
+
+| ID | Issue | Location | Status |
+|----|-------|----------|--------|
+| M-01 | Verbose error messages expose internals | Global error handler | Open |
+| M-02 | Missing CORS restrictions | API gateway config | Open |
+| M-03 | Insecure direct object reference | Order endpoints | Fixed |
+| M-04 | Session fixation possible | Login flow | Open |
+| M-05 | Missing Content-Security-Policy | Response headers | Open |
+| M-06 | Weak password requirements | Registration | Fixed |
+| M-07 | No request signing | Webhook handlers | Open |
+
+## Remediation Checklist
+
+- [x] Implement parameterized queries
+- [x] Add rate limiting middleware
+- [ ] Set JWT expiration to 15 minutes
+- [ ] Implement refresh token rotation
+- [ ] Add CORS allowlist
+- [ ] Review all error messages
+- [ ] Deploy WAF rules
+
+## Timeline
+
+> All critical vulnerabilities must be remediated within 14 days. Medium-severity issues require resolution within 30 days.
+
+## Methodology
+
+We followed OWASP Testing Guide v4.2 methodology:
+
+1. Information gathering
+2. Configuration testing
+3. Authentication testing
+4. Authorization testing
+5. Input validation testing
+6. Error handling review
+
+## Conclusion
+
+The Northwind Trading Platform requires immediate attention to address the three critical vulnerabilities. The development team has already begun remediation, with SQL injection fixes deployed to staging.
+
+A follow-up assessment is recommended in 30 days to verify all fixes.[^1]
+
+[^1]: This report follows ISO 27001 audit documentation standards.

@@ -1,0 +1,39 @@
+# Full-featured example configuration
+# Demonstrates: cover, TOC, signature, watermark, footer
+
+document:
+  title: "API Security Audit Report"
+  subtitle: "Northwind Trading Platform"
+  version: "1.0"
+  date: auto
+  documentID: "SEC-2024-Q4-001"
+
+author:
+  name: "Sarah Chen"
+  title: "Senior Security Engineer"
+  organization: "Ironclad Security Consulting"
+  email: "sarah.chen@ironclad-sec.io"
+
+cover:
+  enabled: true
+
+toc:
+  enabled: true
+  title: "Contents"
+  maxDepth: 3
+
+signature:
+  enabled: true
+
+watermark:
+  enabled: true
+  text: "SECRET"
+  opacity: 0.08
+  angle: -45
+
+footer:
+  enabled: true
+  showPageNumber: true
+  showDocumentID: true
+
+style: technical
