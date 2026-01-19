@@ -478,4 +478,3 @@ func TestResolveTemplateSet(t *testing.T) {
 		}
 	})
 }
-

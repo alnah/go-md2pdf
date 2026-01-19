@@ -10,19 +10,19 @@ import (
 
 // Type aliases for cleaner test code.
 type (
-	Config          = config.Config
-	InputConfig     = config.InputConfig
-	OutputConfig    = config.OutputConfig
-	SignatureConfig = config.SignatureConfig
-	FooterConfig    = config.FooterConfig
-	AuthorConfig    = config.AuthorConfig
-	DocumentConfig  = config.DocumentConfig
-	PageConfig      = config.PageConfig
-	WatermarkConfig = config.WatermarkConfig
-	CoverConfig     = config.CoverConfig
-	TOCConfig       = config.TOCConfig
+	Config           = config.Config
+	InputConfig      = config.InputConfig
+	OutputConfig     = config.OutputConfig
+	SignatureConfig  = config.SignatureConfig
+	FooterConfig     = config.FooterConfig
+	AuthorConfig     = config.AuthorConfig
+	DocumentConfig   = config.DocumentConfig
+	PageConfig       = config.PageConfig
+	WatermarkConfig  = config.WatermarkConfig
+	CoverConfig      = config.CoverConfig
+	TOCConfig        = config.TOCConfig
 	PageBreaksConfig = config.PageBreaksConfig
-	Link            = config.Link
+	Link             = config.Link
 )
 
 // cliFlags is an alias for convertFlags (backward compatibility for tests).
