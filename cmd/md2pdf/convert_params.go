@@ -88,50 +88,27 @@ func buildFooterData(cfg *config.Config, noFooter bool) *md2pdf.Footer {
 	}
 }
 
-// buildWatermarkData creates md2pdf.Watermark from flags and config.
-func buildWatermarkData(flags *convertFlags, cfg *config.Config) (*md2pdf.Watermark, error) {
-	if flags.watermark.disabled {
+// buildWatermarkData creates md2pdf.Watermark from config.
+// Flags are merged into config by mergeFlags before this is called.
+func buildWatermarkData(cfg *config.Config) (*md2pdf.Watermark, error) {
+	if !cfg.Watermark.Enabled {
 		return nil, nil
 	}
 
-	hasFlags := flags.watermark.text != ""
-	hasConfig := cfg.Watermark.Enabled
-
-	if !hasFlags && !hasConfig {
-		return nil, nil
+	w := &md2pdf.Watermark{
+		Text:    cfg.Watermark.Text,
+		Color:   cfg.Watermark.Color,
+		Opacity: cfg.Watermark.Opacity,
+		Angle:   cfg.Watermark.Angle,
 	}
 
-	w := &md2pdf.Watermark{}
-	if cfg.Watermark.Enabled {
-		w.Text = cfg.Watermark.Text
-		w.Color = cfg.Watermark.Color
-		w.Opacity = cfg.Watermark.Opacity
-		w.Angle = cfg.Watermark.Angle
-	}
-
-	// CLI flags override config
-	if flags.watermark.text != "" {
-		w.Text = flags.watermark.text
-	}
-	if flags.watermark.color != "" {
-		w.Color = flags.watermark.color
-	}
-	if flags.watermark.opacity != 0 {
-		w.Opacity = flags.watermark.opacity
-	}
-	if flags.watermark.angle != watermarkAngleSentinel {
-		w.Angle = flags.watermark.angle
-	}
-
-	// Apply defaults
+	// Apply defaults for color and opacity.
+	// Angle default is handled in mergeFlags to distinguish "not set" from "0".
 	if w.Color == "" {
 		w.Color = md2pdf.DefaultWatermarkColor
 	}
 	if w.Opacity == 0 {
 		w.Opacity = md2pdf.DefaultWatermarkOpacity
-	}
-	if shouldApplyDefaultAngle(flags.watermark.angle, cfg) {
-		w.Angle = md2pdf.DefaultWatermarkAngle
 	}
 
 	// Validate
@@ -145,19 +122,12 @@ func buildWatermarkData(flags *convertFlags, cfg *config.Config) (*md2pdf.Waterm
 	return w, nil
 }
 
-// shouldApplyDefaultAngle returns true if the watermark angle should use default.
-func shouldApplyDefaultAngle(flagAngle float64, cfg *config.Config) bool {
-	flagNotSet := flagAngle == watermarkAngleSentinel
-	configNotSet := cfg.Watermark.Angle == 0 && !cfg.Watermark.Enabled
-	return flagNotSet && configNotSet
-}
-
-// buildPageSettings creates md2pdf.PageSettings from flags and config.
-func buildPageSettings(flags *convertFlags, cfg *config.Config) (*md2pdf.PageSettings, error) {
-	hasFlags := flags.page.size != "" || flags.page.orientation != "" || flags.page.margin > 0
+// buildPageSettings creates md2pdf.PageSettings from config.
+// Flags are merged into config by mergeFlags before this is called.
+func buildPageSettings(cfg *config.Config) (*md2pdf.PageSettings, error) {
 	hasConfig := cfg.Page.Size != "" || cfg.Page.Orientation != "" || cfg.Page.Margin > 0
 
-	if !hasFlags && !hasConfig {
+	if !hasConfig {
 		return nil, nil
 	}
 
@@ -165,17 +135,6 @@ func buildPageSettings(flags *convertFlags, cfg *config.Config) (*md2pdf.PageSet
 		Size:        cfg.Page.Size,
 		Orientation: cfg.Page.Orientation,
 		Margin:      cfg.Page.Margin,
-	}
-
-	// CLI flags override config
-	if flags.page.size != "" {
-		ps.Size = flags.page.size
-	}
-	if flags.page.orientation != "" {
-		ps.Orientation = flags.page.orientation
-	}
-	if flags.page.margin > 0 {
-		ps.Margin = flags.page.margin
 	}
 
 	// Apply defaults
@@ -274,60 +233,26 @@ func buildTOCData(cfg *config.Config, tocFlags tocFlags) *md2pdf.TOC {
 	}
 }
 
-// parseBreakBefore parses "--break-before=h1,h2,h3" into individual bools.
-func parseBreakBefore(value string) (h1, h2, h3 bool) {
-	if value == "" {
-		return false, false, false
-	}
-	parts := strings.Split(strings.ToLower(value), ",")
-	for _, p := range parts {
-		switch strings.TrimSpace(p) {
-		case "h1":
-			h1 = true
-		case "h2":
-			h2 = true
-		case "h3":
-			h3 = true
-		}
-	}
-	return h1, h2, h3
-}
-
-// buildPageBreaksData creates md2pdf.PageBreaks from flags and config.
-func buildPageBreaksData(flags *convertFlags, cfg *config.Config) *md2pdf.PageBreaks {
-	if flags.pageBreaks.disabled {
+// buildPageBreaksData creates md2pdf.PageBreaks from config.
+// Flags are merged into config by mergeFlags before this is called.
+func buildPageBreaksData(cfg *config.Config) *md2pdf.PageBreaks {
+	if !cfg.PageBreaks.Enabled {
 		return nil
 	}
 
 	pb := &md2pdf.PageBreaks{
-		Orphans: md2pdf.DefaultOrphans,
-		Widows:  md2pdf.DefaultWidows,
+		BeforeH1: cfg.PageBreaks.BeforeH1,
+		BeforeH2: cfg.PageBreaks.BeforeH2,
+		BeforeH3: cfg.PageBreaks.BeforeH3,
+		Orphans:  md2pdf.DefaultOrphans,
+		Widows:   md2pdf.DefaultWidows,
 	}
 
-	if cfg.PageBreaks.Enabled {
-		pb.BeforeH1 = cfg.PageBreaks.BeforeH1
-		pb.BeforeH2 = cfg.PageBreaks.BeforeH2
-		pb.BeforeH3 = cfg.PageBreaks.BeforeH3
-		if cfg.PageBreaks.Orphans > 0 {
-			pb.Orphans = cfg.PageBreaks.Orphans
-		}
-		if cfg.PageBreaks.Widows > 0 {
-			pb.Widows = cfg.PageBreaks.Widows
-		}
+	if cfg.PageBreaks.Orphans > 0 {
+		pb.Orphans = cfg.PageBreaks.Orphans
 	}
-
-	// CLI flags override config
-	if flags.pageBreaks.breakBefore != "" {
-		h1, h2, h3 := parseBreakBefore(flags.pageBreaks.breakBefore)
-		pb.BeforeH1 = h1
-		pb.BeforeH2 = h2
-		pb.BeforeH3 = h3
-	}
-	if flags.pageBreaks.orphans > 0 {
-		pb.Orphans = flags.pageBreaks.orphans
-	}
-	if flags.pageBreaks.widows > 0 {
-		pb.Widows = flags.pageBreaks.widows
+	if cfg.PageBreaks.Widows > 0 {
+		pb.Widows = cfg.PageBreaks.Widows
 	}
 
 	return pb

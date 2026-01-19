@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	md2pdf "github.com/alnah/go-md2pdf"
@@ -63,13 +64,13 @@ func runConvert(ctx context.Context, positionalArgs []string, flags *convertFlag
 	footerData := buildFooterData(cfg, flags.footer.disabled)
 
 	// Build page settings
-	pageData, err := buildPageSettings(flags, cfg)
+	pageData, err := buildPageSettings(cfg)
 	if err != nil {
 		return err
 	}
 
 	// Build watermark data
-	watermarkData, err := buildWatermarkData(flags, cfg)
+	watermarkData, err := buildWatermarkData(cfg)
 	if err != nil {
 		return err
 	}
@@ -78,7 +79,7 @@ func runConvert(ctx context.Context, positionalArgs []string, flags *convertFlag
 	tocData := buildTOCData(cfg, flags.toc)
 
 	// Build page breaks data
-	pageBreaksData := buildPageBreaksData(flags, cfg)
+	pageBreaksData := buildPageBreaksData(cfg)
 
 	// Bundle conversion parameters
 	params := &conversionParams{
@@ -104,6 +105,25 @@ func runConvert(ctx context.Context, positionalArgs []string, flags *convertFlag
 	}
 
 	return nil
+}
+
+// parseBreakBefore parses "--break-before=h1,h2,h3" into individual bools.
+func parseBreakBefore(value string) (h1, h2, h3 bool) {
+	if value == "" {
+		return false, false, false
+	}
+	parts := strings.Split(strings.ToLower(value), ",")
+	for _, p := range parts {
+		switch strings.TrimSpace(p) {
+		case "h1":
+			h1 = true
+		case "h2":
+			h2 = true
+		case "h3":
+			h3 = true
+		}
+	}
+	return h1, h2, h3
 }
 
 // mergeFlags merges CLI flags into config. CLI values override config values.
@@ -204,6 +224,53 @@ func mergeFlags(flags *convertFlags, cfg *config.Config) {
 		cfg.TOC.Enabled = true
 	}
 
+	// Watermark flags
+	// Track if watermark was configured via config file (vs just CLI flags)
+	configuredViaFile := cfg.Watermark.Enabled
+	if flags.watermark.text != "" {
+		cfg.Watermark.Text = flags.watermark.text
+		cfg.Watermark.Enabled = true
+	}
+	if flags.watermark.color != "" {
+		cfg.Watermark.Color = flags.watermark.color
+	}
+	if flags.watermark.opacity != 0 {
+		cfg.Watermark.Opacity = flags.watermark.opacity
+	}
+	if flags.watermark.angle != watermarkAngleSentinel {
+		cfg.Watermark.Angle = flags.watermark.angle
+	} else if !configuredViaFile && cfg.Watermark.Enabled {
+		// Only apply default angle if enabled purely by CLI flags (not config file)
+		// Config file with Angle: 0 is considered intentional
+		cfg.Watermark.Angle = md2pdf.DefaultWatermarkAngle
+	}
+
+	// Page flags
+	if flags.page.size != "" {
+		cfg.Page.Size = flags.page.size
+	}
+	if flags.page.orientation != "" {
+		cfg.Page.Orientation = flags.page.orientation
+	}
+	if flags.page.margin > 0 {
+		cfg.Page.Margin = flags.page.margin
+	}
+
+	// PageBreaks flags
+	if flags.pageBreaks.breakBefore != "" {
+		h1, h2, h3 := parseBreakBefore(flags.pageBreaks.breakBefore)
+		cfg.PageBreaks.BeforeH1 = h1
+		cfg.PageBreaks.BeforeH2 = h2
+		cfg.PageBreaks.BeforeH3 = h3
+		cfg.PageBreaks.Enabled = true
+	}
+	if flags.pageBreaks.orphans > 0 {
+		cfg.PageBreaks.Orphans = flags.pageBreaks.orphans
+	}
+	if flags.pageBreaks.widows > 0 {
+		cfg.PageBreaks.Widows = flags.pageBreaks.widows
+	}
+
 	// Disable flags
 	if flags.footer.disabled {
 		cfg.Footer.Enabled = false
@@ -216,6 +283,12 @@ func mergeFlags(flags *convertFlags, cfg *config.Config) {
 	}
 	if flags.toc.disabled {
 		cfg.TOC.Enabled = false
+	}
+	if flags.watermark.disabled {
+		cfg.Watermark.Enabled = false
+	}
+	if flags.pageBreaks.disabled {
+		cfg.PageBreaks.Enabled = false
 	}
 }
 

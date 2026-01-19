@@ -508,7 +508,9 @@ func TestBuildPageSettings(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := buildPageSettings(tt.flags, tt.cfg)
+			// Merge flags into config (simulates CLI behavior)
+			mergeFlags(tt.flags, tt.cfg)
+			got, err := buildPageSettings(tt.cfg)
 
 			if tt.wantErr {
 				if err == nil {
@@ -863,7 +865,9 @@ func TestBuildWatermarkData(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := buildWatermarkData(tt.flags, tt.cfg)
+			// Merge flags into config (simulates CLI behavior)
+			mergeFlags(tt.flags, tt.cfg)
+			got, err := buildWatermarkData(tt.cfg)
 
 			if tt.wantErr {
 				if err == nil {
@@ -1664,11 +1668,10 @@ func TestBuildPageBreaksData(t *testing.T) {
 			wantNil: true,
 		},
 		{
-			name:        "neither flags nor config returns defaults",
-			flags:       &cliFlags{},
-			cfg:         &Config{},
-			wantOrphans: md2pdf.DefaultOrphans,
-			wantWidows:  md2pdf.DefaultWidows,
+			name:    "neither flags nor config returns nil",
+			flags:   &cliFlags{},
+			cfg:     &Config{},
+			wantNil: true,
 		},
 		{
 			name:         "config only returns config values",
@@ -1715,12 +1718,10 @@ func TestBuildPageBreaksData(t *testing.T) {
 			wantWidows:   5,
 		},
 		{
-			name:         "config disabled but has values - uses defaults",
-			flags:        &cliFlags{},
-			cfg:          &Config{PageBreaks: PageBreaksConfig{Enabled: false, BeforeH1: true, Orphans: 5}},
-			wantBeforeH1: false,
-			wantOrphans:  md2pdf.DefaultOrphans,
-			wantWidows:   md2pdf.DefaultWidows,
+			name:    "config disabled but has values - returns nil",
+			flags:   &cliFlags{},
+			cfg:     &Config{PageBreaks: PageBreaksConfig{Enabled: false, BeforeH1: true, Orphans: 5}},
+			wantNil: true,
 		},
 		{
 			name:        "config orphans 0 uses default",
@@ -1752,7 +1753,9 @@ func TestBuildPageBreaksData(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := buildPageBreaksData(tt.flags, tt.cfg)
+			// Merge flags into config (simulates CLI behavior)
+			mergeFlags(tt.flags, tt.cfg)
+			got := buildPageBreaksData(tt.cfg)
 
 			if tt.wantNil {
 				if got != nil {
