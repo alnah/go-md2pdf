@@ -1,5 +1,3 @@
-// Package assets provides CSS styles and HTML templates for PDF generation.
-// Assets can be loaded from embedded files or custom filesystem paths.
 package assets
 
 // defaultLoader is the package-level embedded loader for backward compatibility.
