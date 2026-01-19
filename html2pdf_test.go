@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/alnah/go-md2pdf/internal/fileutil"
+	"github.com/alnah/go-md2pdf/internal/pipeline"
 )
 
 // Compile-time interface checks.
@@ -160,7 +161,7 @@ func TestBuildFooterTemplate(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		data     *footerData
+		data     *pipeline.FooterData
 		wantPart string // Substring that should appear
 		wantNot  string // Substring that should NOT appear
 	}{
@@ -171,27 +172,27 @@ func TestBuildFooterTemplate(t *testing.T) {
 		},
 		{
 			name:     "page number only",
-			data:     &footerData{ShowPageNumber: true},
+			data:     &pipeline.FooterData{ShowPageNumber: true},
 			wantPart: `class="pageNumber"`,
 		},
 		{
 			name:     "date only",
-			data:     &footerData{Date: "2025-01-15"},
+			data:     &pipeline.FooterData{Date: "2025-01-15"},
 			wantPart: "2025-01-15",
 		},
 		{
 			name:     "status only",
-			data:     &footerData{Status: "DRAFT"},
+			data:     &pipeline.FooterData{Status: "DRAFT"},
 			wantPart: "DRAFT",
 		},
 		{
 			name:     "text only",
-			data:     &footerData{Text: "Footer Text"},
+			data:     &pipeline.FooterData{Text: "Footer Text"},
 			wantPart: "Footer Text",
 		},
 		{
 			name: "all fields",
-			data: &footerData{
+			data: &pipeline.FooterData{
 				ShowPageNumber: true,
 				Date:           "2025-01-15",
 				Status:         "DRAFT",
@@ -201,37 +202,37 @@ func TestBuildFooterTemplate(t *testing.T) {
 		},
 		{
 			name:     "left position",
-			data:     &footerData{Text: "Test", Position: "left"},
+			data:     &pipeline.FooterData{Text: "Test", Position: "left"},
 			wantPart: "text-align: left",
 		},
 		{
 			name:     "center position",
-			data:     &footerData{Text: "Test", Position: "center"},
+			data:     &pipeline.FooterData{Text: "Test", Position: "center"},
 			wantPart: "text-align: center",
 		},
 		{
 			name:     "right position (default)",
-			data:     &footerData{Text: "Test", Position: "right"},
+			data:     &pipeline.FooterData{Text: "Test", Position: "right"},
 			wantPart: "text-align: right",
 		},
 		{
 			name:     "empty position defaults to right",
-			data:     &footerData{Text: "Test"},
+			data:     &pipeline.FooterData{Text: "Test"},
 			wantPart: "text-align: right",
 		},
 		{
 			name:    "HTML escapes special chars",
-			data:    &footerData{Text: "<script>alert('xss')</script>"},
+			data:    &pipeline.FooterData{Text: "<script>alert('xss')</script>"},
 			wantNot: "<script>",
 		},
 		{
 			name:     "DocumentID only",
-			data:     &footerData{DocumentID: "DOC-2024-001"},
+			data:     &pipeline.FooterData{DocumentID: "DOC-2024-001"},
 			wantPart: "DOC-2024-001",
 		},
 		{
 			name: "DocumentID with other fields",
-			data: &footerData{
+			data: &pipeline.FooterData{
 				Date:       "2025-01-15",
 				Status:     "FINAL",
 				DocumentID: "REF-001",
@@ -240,7 +241,7 @@ func TestBuildFooterTemplate(t *testing.T) {
 		},
 		{
 			name:    "DocumentID HTML escapes special chars",
-			data:    &footerData{DocumentID: "<doc>&test</doc>"},
+			data:    &pipeline.FooterData{DocumentID: "<doc>&test</doc>"},
 			wantNot: "<doc>",
 		},
 	}
@@ -494,7 +495,7 @@ func TestBuildPDFOptions(t *testing.T) {
 	t.Run("with footer increases bottom margin", func(t *testing.T) {
 		t.Parallel()
 
-		opts := &pdfOptions{Footer: &footerData{Text: "Footer"}}
+		opts := &pdfOptions{Footer: &pipeline.FooterData{Text: "Footer"}}
 		pdfOpts := renderer.buildPDFOptions(opts)
 
 		expectedMargin := DefaultMargin + footerMarginExtra
@@ -533,7 +534,7 @@ func TestBuildPDFOptions(t *testing.T) {
 
 		opts := &pdfOptions{
 			Page:   &PageSettings{Size: "letter", Orientation: "portrait", Margin: 0.75},
-			Footer: &footerData{Text: "Footer"},
+			Footer: &pipeline.FooterData{Text: "Footer"},
 		}
 		pdfOpts := renderer.buildPDFOptions(opts)
 

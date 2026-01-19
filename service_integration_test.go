@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/alnah/go-md2pdf/internal/pipeline"
 )
 
 func TestNewConversionService(t *testing.T) {
@@ -18,22 +20,22 @@ func TestNewConversionService(t *testing.T) {
 	if service.preprocessor == nil {
 		t.Error("preprocessor is nil")
 	}
-	if _, ok := service.preprocessor.(*commonMarkPreprocessor); !ok {
-		t.Errorf("preprocessor type = %T, want *commonMarkPreprocessor", service.preprocessor)
+	if _, ok := service.preprocessor.(*pipeline.CommonMarkPreprocessor); !ok {
+		t.Errorf("preprocessor type = %T, want *pipeline.CommonMarkPreprocessor", service.preprocessor)
 	}
 
 	if service.htmlConverter == nil {
 		t.Error("htmlConverter is nil")
 	}
-	if _, ok := service.htmlConverter.(*goldmarkConverter); !ok {
-		t.Errorf("htmlConverter type = %T, want *goldmarkConverter", service.htmlConverter)
+	if _, ok := service.htmlConverter.(*pipeline.GoldmarkConverter); !ok {
+		t.Errorf("htmlConverter type = %T, want *pipeline.GoldmarkConverter", service.htmlConverter)
 	}
 
 	if service.cssInjector == nil {
 		t.Error("cssInjector is nil")
 	}
-	if _, ok := service.cssInjector.(*cssInjection); !ok {
-		t.Errorf("cssInjector type = %T, want *cssInjection", service.cssInjector)
+	if _, ok := service.cssInjector.(*pipeline.CSSInjection); !ok {
+		t.Errorf("cssInjector type = %T, want *pipeline.CSSInjection", service.cssInjector)
 	}
 
 	if service.pdfConverter == nil {

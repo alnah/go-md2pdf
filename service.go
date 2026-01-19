@@ -7,20 +7,21 @@ import (
 
 	"github.com/alnah/go-md2pdf/internal/assets"
 	"github.com/alnah/go-md2pdf/internal/fileutil"
+	"github.com/alnah/go-md2pdf/internal/pipeline"
 )
 
 // Compile-time interface implementation checks.
 // These ensure implementations satisfy their interfaces at compile time,
 // catching signature mismatches before runtime.
 var (
-	_ markdownPreprocessor = (*commonMarkPreprocessor)(nil)
-	_ htmlConverter        = (*goldmarkConverter)(nil)
-	_ cssInjector          = (*cssInjection)(nil)
-	_ coverInjector        = (*coverInjection)(nil)
-	_ tocInjector          = (*tocInjection)(nil)
-	_ signatureInjector    = (*signatureInjection)(nil)
-	_ pdfConverter         = (*rodConverter)(nil)
-	_ pdfRenderer          = (*rodRenderer)(nil)
+	_ pipeline.MarkdownPreprocessor = (*pipeline.CommonMarkPreprocessor)(nil)
+	_ pipeline.HTMLConverter        = (*pipeline.GoldmarkConverter)(nil)
+	_ pipeline.CSSInjector          = (*pipeline.CSSInjection)(nil)
+	_ pipeline.CoverInjector        = (*pipeline.CoverInjection)(nil)
+	_ pipeline.TOCInjector          = (*pipeline.TOCInjection)(nil)
+	_ pipeline.SignatureInjector    = (*pipeline.SignatureInjection)(nil)
+	_ pdfConverter                  = (*rodConverter)(nil)
+	_ pdfRenderer                   = (*rodRenderer)(nil)
 )
 
 // Service orchestrates the markdown-to-PDF pipeline.
@@ -28,12 +29,12 @@ type Service struct {
 	cfg               serviceConfig
 	assetLoader       assets.AssetLoader // internal loader (for backward compat)
 	publicAssetLoader AssetLoader        // public loader (from WithAssetLoader)
-	preprocessor      markdownPreprocessor
-	htmlConverter     htmlConverter
-	cssInjector       cssInjector
-	coverInjector     coverInjector
-	tocInjector       tocInjector
-	signatureInjector signatureInjector
+	preprocessor      pipeline.MarkdownPreprocessor
+	htmlConverter     pipeline.HTMLConverter
+	cssInjector       pipeline.CSSInjector
+	coverInjector     pipeline.CoverInjector
+	tocInjector       pipeline.TOCInjector
+	signatureInjector pipeline.SignatureInjector
 	pdfConverter      pdfConverter
 }
 
@@ -65,10 +66,10 @@ func New(opts ...Option) (*Service, error) {
 	s := &Service{
 		cfg:           serviceConfig{timeout: defaultTimeout},
 		assetLoader:   assets.NewEmbeddedLoader(),
-		preprocessor:  &commonMarkPreprocessor{},
-		htmlConverter: newGoldmarkConverter(),
-		cssInjector:   &cssInjection{},
-		tocInjector:   newTOCInjection(),
+		preprocessor:  &pipeline.CommonMarkPreprocessor{},
+		htmlConverter: pipeline.NewGoldmarkConverter(),
+		cssInjector:   &pipeline.CSSInjection{},
+		tocInjector:   pipeline.NewTOCInjection(),
 	}
 
 	for _, opt := range opts {
@@ -110,14 +111,14 @@ func New(opts ...Option) (*Service, error) {
 	// Create injectors using template content (if not injected by tests)
 	var err error
 	if s.coverInjector == nil {
-		s.coverInjector, err = newCoverInjection(templateSet.Cover)
+		s.coverInjector, err = pipeline.NewCoverInjection(templateSet.Cover)
 		if err != nil {
 			return nil, fmt.Errorf("initializing cover injector: %w", err)
 		}
 	}
 
 	if s.signatureInjector == nil {
-		s.signatureInjector, err = newSignatureInjection(templateSet.Signature)
+		s.signatureInjector, err = pipeline.NewSignatureInjection(templateSet.Signature)
 		if err != nil {
 			return nil, fmt.Errorf("initializing signature injector: %w", err)
 		}
@@ -161,7 +162,7 @@ func (s *Service) Convert(ctx context.Context, input Input) (result *ConvertResu
 	// Convert highlight placeholders to <mark> tags.
 	// This completes the ==text== feature started in preprocessing.
 	// Done after Goldmark to avoid needing html.WithUnsafe().
-	htmlContent = convertMarkPlaceholders(htmlContent)
+	htmlContent = pipeline.ConvertMarkPlaceholders(htmlContent)
 
 	// Build combined CSS (service style + page breaks + watermark + user CSS)
 	// Order matters: service style first (base), user CSS last (can override)
@@ -184,7 +185,7 @@ func (s *Service) Convert(ctx context.Context, input Input) (result *ConvertResu
 	}
 
 	// Inject cover (if provided)
-	var cvData *coverData
+	var cvData *pipeline.CoverData
 	if input.Cover != nil {
 		cvData = toCoverData(input.Cover)
 	}
@@ -194,7 +195,7 @@ func (s *Service) Convert(ctx context.Context, input Input) (result *ConvertResu
 	}
 
 	// Inject TOC (if provided) - must be after cover
-	var tData *tocData
+	var tData *pipeline.TOCData
 	if input.TOC != nil {
 		tData = toTOCData(input.TOC)
 	}
@@ -204,7 +205,7 @@ func (s *Service) Convert(ctx context.Context, input Input) (result *ConvertResu
 	}
 
 	// Inject signature (if provided)
-	var sigData *signatureData
+	var sigData *pipeline.SignatureData
 	if input.Signature != nil {
 		sigData = toSignatureData(input.Signature)
 	}
@@ -224,7 +225,7 @@ func (s *Service) Convert(ctx context.Context, input Input) (result *ConvertResu
 	}
 
 	// Build PDF options with footer and page settings
-	var footData *footerData
+	var footData *pipeline.FooterData
 	if input.Footer != nil {
 		footData = toFooterData(input.Footer)
 	}
@@ -310,16 +311,16 @@ func (s *Service) validateInput(input Input) error {
 	return nil
 }
 
-// toSignatureData converts the public Signature type to internal signatureData.
-func toSignatureData(sig *Signature) *signatureData {
+// toSignatureData converts the public Signature type to internal pipeline.SignatureData.
+func toSignatureData(sig *Signature) *pipeline.SignatureData {
 	if sig == nil {
 		return nil
 	}
-	links := make([]signatureLink, len(sig.Links))
+	links := make([]pipeline.SignatureLink, len(sig.Links))
 	for i, l := range sig.Links {
-		links[i] = signatureLink(l)
+		links[i] = pipeline.SignatureLink(l)
 	}
-	return &signatureData{
+	return &pipeline.SignatureData{
 		Name:         sig.Name,
 		Title:        sig.Title,
 		Email:        sig.Email,
@@ -332,12 +333,12 @@ func toSignatureData(sig *Signature) *signatureData {
 	}
 }
 
-// toFooterData converts the public Footer type to internal footerData.
-func toFooterData(f *Footer) *footerData {
+// toFooterData converts the public Footer type to internal pipeline.FooterData.
+func toFooterData(f *Footer) *pipeline.FooterData {
 	if f == nil {
 		return nil
 	}
-	return &footerData{
+	return &pipeline.FooterData{
 		Position:       f.Position,
 		ShowPageNumber: f.ShowPageNumber,
 		Date:           f.Date,
@@ -347,12 +348,12 @@ func toFooterData(f *Footer) *footerData {
 	}
 }
 
-// toCoverData converts the public Cover type to internal coverData.
-func toCoverData(c *Cover) *coverData {
+// toCoverData converts the public Cover type to internal pipeline.CoverData.
+func toCoverData(c *Cover) *pipeline.CoverData {
 	if c == nil {
 		return nil
 	}
-	return &coverData{
+	return &pipeline.CoverData{
 		Title:        c.Title,
 		Subtitle:     c.Subtitle,
 		Logo:         c.Logo,
@@ -370,8 +371,8 @@ func toCoverData(c *Cover) *coverData {
 	}
 }
 
-// toTOCData converts the public TOC type to internal tocData.
-func toTOCData(t *TOC) *tocData {
+// toTOCData converts the public TOC type to internal pipeline.TOCData.
+func toTOCData(t *TOC) *pipeline.TOCData {
 	if t == nil {
 		return nil
 	}
@@ -383,7 +384,7 @@ func toTOCData(t *TOC) *tocData {
 	if maxDepth == 0 {
 		maxDepth = DefaultTOCMaxDepth
 	}
-	return &tocData{
+	return &pipeline.TOCData{
 		Title:    t.Title,
 		MinDepth: minDepth,
 		MaxDepth: maxDepth,

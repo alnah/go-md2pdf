@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/alnah/go-md2pdf/internal/pipeline"
 )
 
 func assertValidPDF(t *testing.T, data []byte) {
@@ -62,7 +64,7 @@ func TestRodConverter_ToPDF_Integration(t *testing.T) {
 		t.Parallel()
 
 		// CSS is now injected before calling ToPDF
-		injector := &cssInjection{}
+		injector := &pipeline.CSSInjection{}
 		html := `<!DOCTYPE html>
 <html>
 <head><title>Test</title></head>
@@ -91,7 +93,7 @@ func TestRodConverter_ToPDF_Integration(t *testing.T) {
 
 		converter := newRodConverter(defaultTimeout)
 		opts := &pdfOptions{
-			Footer: &footerData{
+			Footer: &pipeline.FooterData{
 				ShowPageNumber: true,
 				Date:           "2025-01-15",
 				Status:         "DRAFT",

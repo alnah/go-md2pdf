@@ -6,6 +6,8 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	"github.com/alnah/go-md2pdf/internal/pipeline"
 )
 
 func TestGoldmarkConverter_ToHTML_Integration(t *testing.T) {
@@ -18,7 +20,7 @@ func TestGoldmarkConverter_ToHTML_Integration(t *testing.T) {
 		content := `# Hello
 
 World`
-		converter := newGoldmarkConverter()
+		converter := pipeline.NewGoldmarkConverter()
 		got, err := converter.ToHTML(ctx, content)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -42,7 +44,7 @@ World`
 
 Ceci est un test avec des caracteres speciaux.`
 
-		converter := newGoldmarkConverter()
+		converter := pipeline.NewGoldmarkConverter()
 		got, err := converter.ToHTML(ctx, content)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -58,7 +60,7 @@ Ceci est un test avec des caracteres speciaux.`
 
 		content := "# Code Example\n\n```go\nfunc main() {\n\tfmt.Println(\"<hello>\")\n}\n```"
 
-		converter := newGoldmarkConverter()
+		converter := pipeline.NewGoldmarkConverter()
 		got, err := converter.ToHTML(ctx, content)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -74,7 +76,7 @@ Ceci est un test avec des caracteres speciaux.`
 
 		content := "```go\nfunc main() {}\n```"
 
-		converter := newGoldmarkConverter()
+		converter := pipeline.NewGoldmarkConverter()
 		got, err := converter.ToHTML(ctx, content)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -100,7 +102,7 @@ Ceci est un test avec des caracteres speciaux.`
 | Alice | 30 |
 | Bob | 25 |`
 
-		converter := newGoldmarkConverter()
+		converter := pipeline.NewGoldmarkConverter()
 		got, err := converter.ToHTML(ctx, content)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -124,7 +126,7 @@ Ceci est un test avec des caracteres speciaux.`
   - Subitem 1.2
 - Item 2`
 
-		converter := newGoldmarkConverter()
+		converter := pipeline.NewGoldmarkConverter()
 		got, err := converter.ToHTML(ctx, content)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -143,7 +145,7 @@ Ceci est un test avec des caracteres speciaux.`
 
 		content := "   \n\t\n   "
 
-		converter := newGoldmarkConverter()
+		converter := pipeline.NewGoldmarkConverter()
 		_, err := converter.ToHTML(ctx, content)
 		if err != nil {
 			t.Fatalf("whitespace-only content should be valid, got error: %v", err)
@@ -157,24 +159,24 @@ Ceci est un test avec des caracteres speciaux.`
 		t.Parallel()
 
 		// Simulate what convertHighlights() produces (placeholder, not <mark>)
-		content := "This is " + MarkStartPlaceholder + "highlighted" + MarkEndPlaceholder + " text"
+		content := "This is " + pipeline.MarkStartPlaceholder + "highlighted" + pipeline.MarkEndPlaceholder + " text"
 
-		converter := newGoldmarkConverter()
+		converter := pipeline.NewGoldmarkConverter()
 		got, err := converter.ToHTML(ctx, content)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
 		// Placeholders should survive Goldmark
-		if !strings.Contains(got, MarkStartPlaceholder) || !strings.Contains(got, MarkEndPlaceholder) {
+		if !strings.Contains(got, pipeline.MarkStartPlaceholder) || !strings.Contains(got, pipeline.MarkEndPlaceholder) {
 			t.Errorf("placeholders should pass through Goldmark unchanged.\n"+
 				"Got: %q", got)
 		}
 
 		// After post-processing, should become <mark>
-		final := convertMarkPlaceholders(got)
+		final := pipeline.ConvertMarkPlaceholders(got)
 		if !strings.Contains(final, "<mark>highlighted</mark>") {
-			t.Errorf("convertMarkPlaceholders should convert to <mark> tags.\n"+
+			t.Errorf("pipeline.ConvertMarkPlaceholders should convert to <mark> tags.\n"+
 				"Got: %q", final)
 		}
 	})
@@ -186,7 +188,7 @@ Ceci est un test avec des caracteres speciaux.`
 
 		content := "This has <script>alert('xss')</script> injection"
 
-		converter := newGoldmarkConverter()
+		converter := pipeline.NewGoldmarkConverter()
 		got, err := converter.ToHTML(ctx, content)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -234,8 +236,8 @@ func TestHighlightFullPipeline(t *testing.T) {
 		},
 	}
 
-	preprocessor := &commonMarkPreprocessor{}
-	converter := newGoldmarkConverter()
+	preprocessor := &pipeline.CommonMarkPreprocessor{}
+	converter := pipeline.NewGoldmarkConverter()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -251,7 +253,7 @@ func TestHighlightFullPipeline(t *testing.T) {
 			}
 
 			// Step 3: Post-processing converts placeholders to <mark> tags
-			final := convertMarkPlaceholders(html)
+			final := pipeline.ConvertMarkPlaceholders(html)
 
 			// Verify the <mark> tag is in the final output
 			if !strings.Contains(final, tt.wantMark) {

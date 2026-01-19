@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/alnah/go-md2pdf/internal/fileutil"
+	"github.com/alnah/go-md2pdf/internal/pipeline"
+	"github.com/alnah/go-md2pdf/internal/process"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
@@ -32,7 +34,7 @@ type pdfRenderer interface {
 
 // pdfOptions holds options for PDF generation.
 type pdfOptions struct {
-	Footer *footerData
+	Footer *pipeline.FooterData
 	Page   *PageSettings
 }
 
@@ -158,7 +160,7 @@ func (r *rodRenderer) Close() error {
 		if pid > 0 {
 			// Kill the entire process group to ensure GPU, renderer,
 			// and other Chrome child processes are terminated.
-			killProcessGroup(pid)
+			process.KillProcessGroup(pid)
 		}
 
 		// Also call launcher.Kill() as fallback and cleanup user-data-dir
@@ -296,7 +298,7 @@ func (r *rodRenderer) buildPDFOptions(opts *pdfOptions) *proto.PagePrintToPDF {
 
 // buildFooterTemplate generates an HTML template for Chrome's native footer.
 // Supports pageNumber, totalPages, date placeholders via CSS classes.
-func buildFooterTemplate(data *footerData) string {
+func buildFooterTemplate(data *pipeline.FooterData) string {
 	if data == nil {
 		return "<span></span>"
 	}

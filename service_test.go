@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/alnah/go-md2pdf/internal/pipeline"
 )
 
 // Mock implementations for testing.
@@ -90,12 +92,12 @@ func (m *mockPDFConverter) Close() error {
 type mockSignatureInjector struct {
 	called    bool
 	inputHTML string
-	inputData *signatureData
+	inputData *pipeline.SignatureData
 	output    string
 	err       error
 }
 
-func (m *mockSignatureInjector) InjectSignature(ctx context.Context, htmlContent string, data *signatureData) (string, error) {
+func (m *mockSignatureInjector) InjectSignature(ctx context.Context, htmlContent string, data *pipeline.SignatureData) (string, error) {
 	m.called = true
 	m.inputHTML = htmlContent
 	m.inputData = data
@@ -111,12 +113,12 @@ func (m *mockSignatureInjector) InjectSignature(ctx context.Context, htmlContent
 type mockCoverInjector struct {
 	called    bool
 	inputHTML string
-	inputData *coverData
+	inputData *pipeline.CoverData
 	output    string
 	err       error
 }
 
-func (m *mockCoverInjector) InjectCover(ctx context.Context, htmlContent string, data *coverData) (string, error) {
+func (m *mockCoverInjector) InjectCover(ctx context.Context, htmlContent string, data *pipeline.CoverData) (string, error) {
 	m.called = true
 	m.inputHTML = htmlContent
 	m.inputData = data
@@ -132,12 +134,12 @@ func (m *mockCoverInjector) InjectCover(ctx context.Context, htmlContent string,
 type mockTOCInjector struct {
 	called    bool
 	inputHTML string
-	inputData *tocData
+	inputData *pipeline.TOCData
 	output    string
 	err       error
 }
 
-func (m *mockTOCInjector) InjectTOC(ctx context.Context, htmlContent string, data *tocData) (string, error) {
+func (m *mockTOCInjector) InjectTOC(ctx context.Context, htmlContent string, data *pipeline.TOCData) (string, error) {
 	m.called = true
 	m.inputHTML = htmlContent
 	m.inputData = data
@@ -187,25 +189,25 @@ func (m *mockAssetLoader) LoadTemplateSet(name string) (*TemplateSet, error) {
 
 // Test options for dependency injection (not exported).
 
-func withPreprocessor(p markdownPreprocessor) Option {
+func withPreprocessor(p pipeline.MarkdownPreprocessor) Option {
 	return func(s *Service) {
 		s.preprocessor = p
 	}
 }
 
-func withHTMLConverter(c htmlConverter) Option {
+func withHTMLConverter(c pipeline.HTMLConverter) Option {
 	return func(s *Service) {
 		s.htmlConverter = c
 	}
 }
 
-func withCSSInjector(c cssInjector) Option {
+func withCSSInjector(c pipeline.CSSInjector) Option {
 	return func(s *Service) {
 		s.cssInjector = c
 	}
 }
 
-func withSignatureInjector(i signatureInjector) Option {
+func withSignatureInjector(i pipeline.SignatureInjector) Option {
 	return func(s *Service) {
 		s.signatureInjector = i
 	}
@@ -217,13 +219,13 @@ func withPDFConverter(c pdfConverter) Option {
 	}
 }
 
-func withCoverInjector(c coverInjector) Option {
+func withCoverInjector(c pipeline.CoverInjector) Option {
 	return func(s *Service) {
 		s.coverInjector = c
 	}
 }
 
-func withTOCInjector(t tocInjector) Option {
+func withTOCInjector(t pipeline.TOCInjector) Option {
 	return func(s *Service) {
 		s.tocInjector = t
 	}
@@ -324,25 +326,25 @@ func TestConvert_Success(t *testing.T) {
 	}
 
 	if !cssInj.called {
-		t.Error("cssInjector was not called")
+		t.Error("pipeline.CSSInjector was not called")
 	}
 	if cssInj.inputHTML != "<html>converted</html>" {
-		t.Errorf("cssInjector inputHTML = %q, want %q", cssInj.inputHTML, "<html>converted</html>")
+		t.Errorf("pipeline.CSSInjector inputHTML = %q, want %q", cssInj.inputHTML, "<html>converted</html>")
 	}
 	// Page breaks CSS is always prepended, user CSS should be at the end
 	if !strings.HasSuffix(cssInj.inputCSS, "body {}") {
-		t.Errorf("cssInjector inputCSS should end with user CSS %q, got %q", "body {}", cssInj.inputCSS)
+		t.Errorf("pipeline.CSSInjector inputCSS should end with user CSS %q, got %q", "body {}", cssInj.inputCSS)
 	}
 	// Verify page breaks CSS is present
 	if !strings.Contains(cssInj.inputCSS, "break-after: avoid") {
-		t.Errorf("cssInjector inputCSS should contain page breaks CSS, got %q", cssInj.inputCSS)
+		t.Errorf("pipeline.CSSInjector inputCSS should contain page breaks CSS, got %q", cssInj.inputCSS)
 	}
 
 	if !sigInjector.called {
-		t.Error("signatureInjector was not called")
+		t.Error("pipeline.SignatureInjector was not called")
 	}
 	if sigInjector.inputHTML != "<html>with-css</html>" {
-		t.Errorf("signatureInjector inputHTML = %q, want %q", sigInjector.inputHTML, "<html>with-css</html>")
+		t.Errorf("pipeline.SignatureInjector inputHTML = %q, want %q", sigInjector.inputHTML, "<html>with-css</html>")
 	}
 
 	if !pdfConv.called {
@@ -480,11 +482,11 @@ func TestConvert_NoCSSByDefault(t *testing.T) {
 
 	// Page breaks CSS is always generated, so we should get at least that
 	if !strings.Contains(cssInj.inputCSS, "break-after: avoid") {
-		t.Errorf("cssInjector should receive page breaks CSS by default, got %q", cssInj.inputCSS)
+		t.Errorf("pipeline.CSSInjector should receive page breaks CSS by default, got %q", cssInj.inputCSS)
 	}
 	// But no user CSS should be appended
 	if strings.Contains(cssInj.inputCSS, "body") {
-		t.Errorf("cssInjector should not contain user CSS rules, got %q", cssInj.inputCSS)
+		t.Errorf("pipeline.CSSInjector should not contain user CSS rules, got %q", cssInj.inputCSS)
 	}
 }
 
@@ -1887,7 +1889,7 @@ func TestWithStyle(t *testing.T) {
 			cfg:               serviceConfig{resolvedStyle: customCSS},
 			preprocessor:      &mockPreprocessor{},
 			htmlConverter:     &mockHTMLConverter{output: "<html><body>test</body></html>"},
-			cssInjector:       &cssInjection{},
+			cssInjector:       &pipeline.CSSInjection{},
 			coverInjector:     &mockCoverInjector{},
 			tocInjector:       &mockTOCInjector{},
 			signatureInjector: &mockSignatureInjector{},
@@ -1918,7 +1920,7 @@ func TestWithStyle(t *testing.T) {
 			cfg:               serviceConfig{resolvedStyle: serviceCSS},
 			preprocessor:      &mockPreprocessor{},
 			htmlConverter:     &mockHTMLConverter{output: "<html><body>test</body></html>"},
-			cssInjector:       &cssInjection{},
+			cssInjector:       &pipeline.CSSInjection{},
 			coverInjector:     &mockCoverInjector{},
 			tocInjector:       &mockTOCInjector{},
 			signatureInjector: &mockSignatureInjector{},
