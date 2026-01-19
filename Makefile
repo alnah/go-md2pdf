@@ -11,13 +11,8 @@ tools: ## Install development tools (staticcheck, gosec)
 	go get -tool honnef.co/go/tools/cmd/staticcheck
 	go get -tool github.com/securego/gosec/v2/cmd/gosec
 
-deps: ## Install dependencies (go-rod, go-yaml, pflag, goldmark, goldmark-highlighting, automaxprocs)
-	go get github.com/go-rod/rod
-	go get github.com/goccy/go-yaml
-	go get github.com/spf13/pflag
-	go get github.com/yuin/goldmark
-	go get github.com/yuin/goldmark-highlighting/v2
-	go get go.uber.org/automaxprocs
+deps: ## Download dependencies from go.mod
+	go mod download
 
 build: ## Build the binary
 	go build -o $(BINARY) ./cmd/md2pdf
