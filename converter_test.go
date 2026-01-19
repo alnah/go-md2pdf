@@ -1886,7 +1886,7 @@ func TestWithStyle(t *testing.T) {
 		customCSS := "body { background-color: #ff0000; }"
 
 		service := &Service{
-			cfg:               serviceConfig{resolvedStyle: customCSS},
+			cfg:               converterConfig{resolvedStyle: customCSS},
 			preprocessor:      &mockPreprocessor{},
 			htmlConverter:     &mockHTMLConverter{output: "<html><body>test</body></html>"},
 			cssInjector:       &pipeline.CSSInjection{},
@@ -1917,7 +1917,7 @@ func TestWithStyle(t *testing.T) {
 		inputCSS := "body { color: red; }"
 
 		service := &Service{
-			cfg:               serviceConfig{resolvedStyle: serviceCSS},
+			cfg:               converterConfig{resolvedStyle: serviceCSS},
 			preprocessor:      &mockPreprocessor{},
 			htmlConverter:     &mockHTMLConverter{output: "<html><body>test</body></html>"},
 			cssInjector:       &pipeline.CSSInjection{},

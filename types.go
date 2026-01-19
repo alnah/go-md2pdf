@@ -312,11 +312,11 @@ type Link struct {
 	URL   string
 }
 
-// Option configures a Service.
-type Option func(*Service)
+// Option configures a Converter.
+type Option func(*Converter)
 
-// serviceConfig holds internal configuration for Service.
-type serviceConfig struct {
+// converterConfig holds internal configuration for Converter.
+type converterConfig struct {
 	timeout       time.Duration
 	templateSet   *assets.TemplateSet
 	assetPath     string // Path for WithAssetPath, resolved in New()
@@ -333,8 +333,8 @@ func WithTimeout(d time.Duration) Option {
 	if d <= 0 {
 		panic("md2pdf: WithTimeout duration must be positive")
 	}
-	return func(s *Service) {
-		s.cfg.timeout = d
+	return func(c *Converter) {
+		c.cfg.timeout = d
 	}
 }
 
@@ -348,10 +348,10 @@ func WithTimeout(d time.Duration) Option {
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
-//	svc, err := md2pdf.New(md2pdf.WithAssetLoader(loader))
+//	conv, err := md2pdf.NewConverter(md2pdf.WithAssetLoader(loader))
 func WithAssetLoader(loader AssetLoader) Option {
-	return func(s *Service) {
-		s.publicAssetLoader = loader
+	return func(c *Converter) {
+		c.publicAssetLoader = loader
 	}
 }
 
@@ -363,10 +363,10 @@ func WithAssetLoader(loader AssetLoader) Option {
 //   - templates/{name}/cover.html and signature.html for template sets
 //
 // This is equivalent to calling NewAssetLoader(path) and WithAssetLoader().
-// Returns error from New() if the path is invalid.
+// Returns error from NewConverter() if the path is invalid.
 func WithAssetPath(path string) Option {
-	return func(s *Service) {
-		s.cfg.assetPath = path
+	return func(c *Converter) {
+		c.cfg.assetPath = path
 	}
 }
 
@@ -379,8 +379,8 @@ func WithAssetPath(path string) Option {
 // Detection: paths contain / or \, CSS content contains {,
 // otherwise treated as a style name.
 func WithStyle(style string) Option {
-	return func(s *Service) {
-		s.cfg.styleInput = style
+	return func(c *Converter) {
+		c.cfg.styleInput = style
 	}
 }
 
@@ -390,11 +390,11 @@ func WithStyle(style string) Option {
 // Example:
 //
 //	ts := md2pdf.NewTemplateSet("custom", coverHTML, signatureHTML)
-//	svc, err := md2pdf.New(md2pdf.WithTemplateSet(ts))
+//	conv, err := md2pdf.NewConverter(md2pdf.WithTemplateSet(ts))
 func WithTemplateSet(ts *TemplateSet) Option {
-	return func(s *Service) {
+	return func(c *Converter) {
 		if ts != nil {
-			s.cfg.templateSet = &assets.TemplateSet{
+			c.cfg.templateSet = &assets.TemplateSet{
 				Name:      ts.Name,
 				Cover:     ts.Cover,
 				Signature: ts.Signature,

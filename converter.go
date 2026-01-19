@@ -24,9 +24,10 @@ var (
 	_ pdfRenderer                   = (*rodRenderer)(nil)
 )
 
-// Service orchestrates the markdown-to-PDF pipeline.
-type Service struct {
-	cfg               serviceConfig
+// Converter orchestrates the markdown-to-PDF conversion pipeline.
+// Create with New() or NewConverter(), use Convert() for conversion, and Close() when done.
+type Converter struct {
+	cfg               converterConfig
 	assetLoader       assets.AssetLoader // internal loader (for backward compat)
 	publicAssetLoader AssetLoader        // public loader (from WithAssetLoader)
 	preprocessor      pipeline.MarkdownPreprocessor
@@ -37,6 +38,11 @@ type Service struct {
 	signatureInjector pipeline.SignatureInjector
 	pdfConverter      pdfConverter
 }
+
+// Service is an alias for Converter for backward compatibility.
+//
+// Deprecated: Use Converter instead. This alias will be removed in v2.
+type Service = Converter
 
 // publicToInternalAdapter wraps public AssetLoader to internal assets.AssetLoader.
 type publicToInternalAdapter struct {
@@ -59,12 +65,21 @@ func (a *publicToInternalAdapter) LoadTemplateSet(name string) (*assets.Template
 	}, nil
 }
 
-// New creates a Service with default configuration.
+// New creates a Converter with default configuration.
 // Use options to customize behavior (e.g., WithTimeout, WithAssetLoader, WithTemplateSet).
 // Returns error if asset loading or template parsing fails.
-func New(opts ...Option) (*Service, error) {
-	s := &Service{
-		cfg:           serviceConfig{timeout: defaultTimeout},
+//
+// Deprecated: Use NewConverter instead. New will be removed in v2.
+func New(opts ...Option) (*Converter, error) {
+	return NewConverter(opts...)
+}
+
+// NewConverter creates a Converter with default configuration.
+// Use options to customize behavior (e.g., WithTimeout, WithAssetLoader, WithTemplateSet).
+// Returns error if asset loading or template parsing fails.
+func NewConverter(opts ...Option) (*Converter, error) {
+	c := &Converter{
+		cfg:           converterConfig{timeout: defaultTimeout},
 		assetLoader:   assets.NewEmbeddedLoader(),
 		preprocessor:  &pipeline.CommonMarkPreprocessor{},
 		htmlConverter: pipeline.NewGoldmarkConverter(),
@@ -73,36 +88,36 @@ func New(opts ...Option) (*Service, error) {
 	}
 
 	for _, opt := range opts {
-		opt(s)
+		opt(c)
 	}
 
 	// Handle WithAssetPath: resolve to internal loader
-	if s.cfg.assetPath != "" {
-		resolver, err := assets.NewAssetResolver(s.cfg.assetPath)
+	if c.cfg.assetPath != "" {
+		resolver, err := assets.NewAssetResolver(c.cfg.assetPath)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %v", ErrInvalidAssetPath, err)
 		}
-		s.assetLoader = resolver
+		c.assetLoader = resolver
 	}
 
 	// Handle WithAssetLoader (public interface): wrap to internal interface
-	if s.publicAssetLoader != nil {
-		s.assetLoader = &publicToInternalAdapter{pub: s.publicAssetLoader}
+	if c.publicAssetLoader != nil {
+		c.assetLoader = &publicToInternalAdapter{pub: c.publicAssetLoader}
 	}
 
 	// Resolve style input (name, path, or CSS content) to CSS content
-	if err := s.resolveStyle(); err != nil {
+	if err := c.resolveStyle(); err != nil {
 		return nil, err
 	}
 
 	// Load template set if not already configured via WithTemplateSet
 	var templateSet *assets.TemplateSet
-	if s.cfg.templateSet != nil {
-		templateSet = s.cfg.templateSet
+	if c.cfg.templateSet != nil {
+		templateSet = c.cfg.templateSet
 	} else {
 		// Load default template set
 		var err error
-		templateSet, err = s.assetLoader.LoadTemplateSet(assets.DefaultTemplateSetName)
+		templateSet, err = c.assetLoader.LoadTemplateSet(assets.DefaultTemplateSetName)
 		if err != nil {
 			return nil, fmt.Errorf("loading default template set: %w", err)
 		}
@@ -110,51 +125,51 @@ func New(opts ...Option) (*Service, error) {
 
 	// Create injectors using template content (if not injected by tests)
 	var err error
-	if s.coverInjector == nil {
-		s.coverInjector, err = pipeline.NewCoverInjection(templateSet.Cover)
+	if c.coverInjector == nil {
+		c.coverInjector, err = pipeline.NewCoverInjection(templateSet.Cover)
 		if err != nil {
 			return nil, fmt.Errorf("initializing cover injector: %w", err)
 		}
 	}
 
-	if s.signatureInjector == nil {
-		s.signatureInjector, err = pipeline.NewSignatureInjection(templateSet.Signature)
+	if c.signatureInjector == nil {
+		c.signatureInjector, err = pipeline.NewSignatureInjection(templateSet.Signature)
 		if err != nil {
 			return nil, fmt.Errorf("initializing signature injector: %w", err)
 		}
 	}
 
 	// Create PDF converter if not injected (e.g., by tests)
-	if s.pdfConverter == nil {
-		s.pdfConverter = newRodConverter(s.cfg.timeout)
+	if c.pdfConverter == nil {
+		c.pdfConverter = newRodConverter(c.cfg.timeout)
 	}
 
-	return s, nil
+	return c, nil
 }
 
 // Convert runs the full pipeline and returns the result containing HTML and PDF.
 // The context is used for cancellation and timeout.
 // If input.HTMLOnly is true, PDF generation is skipped (for debugging).
 // Recovers from internal panics to prevent crashes from propagating to callers.
-func (s *Service) Convert(ctx context.Context, input Input) (result *ConvertResult, err error) {
+func (c *Converter) Convert(ctx context.Context, input Input) (result *ConvertResult, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("internal error: %v", r)
 		}
 	}()
 
-	if err := s.validateInput(input); err != nil {
+	if err := c.validateInput(input); err != nil {
 		return nil, err
 	}
 
 	// Preprocess markdown
-	mdContent := s.preprocessor.PreprocessMarkdown(ctx, input.Markdown)
+	mdContent := c.preprocessor.PreprocessMarkdown(ctx, input.Markdown)
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
 
 	// Convert to HTML
-	htmlContent, err := s.htmlConverter.ToHTML(ctx, mdContent)
+	htmlContent, err := c.htmlConverter.ToHTML(ctx, mdContent)
 	if err != nil {
 		return nil, fmt.Errorf("converting to HTML: %w", err)
 	}
@@ -164,9 +179,9 @@ func (s *Service) Convert(ctx context.Context, input Input) (result *ConvertResu
 	// Done after Goldmark to avoid needing html.WithUnsafe().
 	htmlContent = pipeline.ConvertMarkPlaceholders(htmlContent)
 
-	// Build combined CSS (service style + page breaks + watermark + user CSS)
-	// Order matters: service style first (base), user CSS last (can override)
-	cssContent := s.cfg.resolvedStyle
+	// Build combined CSS (converter style + page breaks + watermark + user CSS)
+	// Order matters: converter style first (base), user CSS last (can override)
+	cssContent := c.cfg.resolvedStyle
 	if input.CSS != "" {
 		cssContent += "\n" + input.CSS
 	}
@@ -179,7 +194,7 @@ func (s *Service) Convert(ctx context.Context, input Input) (result *ConvertResu
 	cssContent = pageBreaksCSS + cssContent
 
 	// Inject CSS
-	htmlContent = s.cssInjector.InjectCSS(ctx, htmlContent, cssContent)
+	htmlContent = c.cssInjector.InjectCSS(ctx, htmlContent, cssContent)
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -189,7 +204,7 @@ func (s *Service) Convert(ctx context.Context, input Input) (result *ConvertResu
 	if input.Cover != nil {
 		cvData = toCoverData(input.Cover)
 	}
-	htmlContent, err = s.coverInjector.InjectCover(ctx, htmlContent, cvData)
+	htmlContent, err = c.coverInjector.InjectCover(ctx, htmlContent, cvData)
 	if err != nil {
 		return nil, fmt.Errorf("injecting cover: %w", err)
 	}
@@ -199,7 +214,7 @@ func (s *Service) Convert(ctx context.Context, input Input) (result *ConvertResu
 	if input.TOC != nil {
 		tData = toTOCData(input.TOC)
 	}
-	htmlContent, err = s.tocInjector.InjectTOC(ctx, htmlContent, tData)
+	htmlContent, err = c.tocInjector.InjectTOC(ctx, htmlContent, tData)
 	if err != nil {
 		return nil, fmt.Errorf("injecting TOC: %w", err)
 	}
@@ -209,7 +224,7 @@ func (s *Service) Convert(ctx context.Context, input Input) (result *ConvertResu
 	if input.Signature != nil {
 		sigData = toSignatureData(input.Signature)
 	}
-	htmlContent, err = s.signatureInjector.InjectSignature(ctx, htmlContent, sigData)
+	htmlContent, err = c.signatureInjector.InjectSignature(ctx, htmlContent, sigData)
 	if err != nil {
 		return nil, fmt.Errorf("injecting signature: %w", err)
 	}
@@ -235,7 +250,7 @@ func (s *Service) Convert(ctx context.Context, input Input) (result *ConvertResu
 	}
 
 	// Convert to PDF
-	pdfBytes, err := s.pdfConverter.ToPDF(ctx, htmlContent, pdfOpts)
+	pdfBytes, err := c.pdfConverter.ToPDF(ctx, htmlContent, pdfOpts)
 	if err != nil {
 		return nil, fmt.Errorf("converting to PDF: %w", err)
 	}
@@ -245,17 +260,17 @@ func (s *Service) Convert(ctx context.Context, input Input) (result *ConvertResu
 }
 
 // Close releases resources (headless Chrome browser).
-func (s *Service) Close() error {
-	if s.pdfConverter != nil {
-		return s.pdfConverter.Close()
+func (c *Converter) Close() error {
+	if c.pdfConverter != nil {
+		return c.pdfConverter.Close()
 	}
 	return nil
 }
 
 // resolveStyle resolves the style input (name, path, or CSS content) to CSS content.
 // Called during New() after options are applied and asset loader is configured.
-func (s *Service) resolveStyle() error {
-	input := s.cfg.styleInput
+func (c *Converter) resolveStyle() error {
+	input := c.cfg.styleInput
 	if input == "" {
 		return nil // no style specified, use default from loader if needed
 	}
@@ -266,27 +281,27 @@ func (s *Service) resolveStyle() error {
 		if err != nil {
 			return fmt.Errorf("loading style file %q: %w", input, err)
 		}
-		s.cfg.resolvedStyle = string(content)
+		c.cfg.resolvedStyle = string(content)
 		return nil
 	}
 
 	// CSS content? (contains {)
 	if fileutil.IsCSS(input) {
-		s.cfg.resolvedStyle = input
+		c.cfg.resolvedStyle = input
 		return nil
 	}
 
 	// Style name -> use asset loader
-	css, err := s.assetLoader.LoadStyle(input)
+	css, err := c.assetLoader.LoadStyle(input)
 	if err != nil {
 		return fmt.Errorf("loading style %q: %w", input, err)
 	}
-	s.cfg.resolvedStyle = css
+	c.cfg.resolvedStyle = css
 	return nil
 }
 
 // validateInput checks that required fields are present and valid.
-func (s *Service) validateInput(input Input) error {
+func (c *Converter) validateInput(input Input) error {
 	if input.Markdown == "" {
 		return ErrEmptyMarkdown
 	}
