@@ -27,18 +27,18 @@ var (
 	ErrServiceInit  = errors.New("failed to initialize conversion service")
 )
 
-// Converter is the interface for the conversion service.
-type Converter interface {
+// CLIConverter is the interface for the conversion service.
+type CLIConverter interface {
 	Convert(ctx context.Context, input md2pdf.Input) (*md2pdf.ConvertResult, error)
 }
 
 // Compile-time interface implementation check.
-var _ Converter = (*md2pdf.Service)(nil)
+var _ CLIConverter = (*md2pdf.Converter)(nil)
 
 // Pool abstracts service pool operations for testability.
 type Pool interface {
-	Acquire() Converter
-	Release(Converter)
+	Acquire() CLIConverter
+	Release(CLIConverter)
 	Size() int
 }
 
@@ -106,7 +106,7 @@ func convertBatch(ctx context.Context, pool Pool, files []FileToConvert, params 
 }
 
 // convertFile processes a single file and returns the result.
-func convertFile(ctx context.Context, service Converter, f FileToConvert, params *conversionParams) ConversionResult {
+func convertFile(ctx context.Context, service CLIConverter, f FileToConvert, params *conversionParams) ConversionResult {
 	start := time.Now()
 	result := ConversionResult{
 		InputPath:  f.InputPath,

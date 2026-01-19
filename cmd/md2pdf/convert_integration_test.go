@@ -17,22 +17,22 @@ import (
 // concurrentTestFiles is the number of files to create for concurrent conversion tests.
 const concurrentTestFiles = 10
 
-// integrationPool wraps md2pdf.ServicePool for integration testing.
+// integrationPool wraps md2pdf.ConverterPool for integration testing.
 type integrationPool struct {
-	pool *md2pdf.ServicePool
+	pool *md2pdf.ConverterPool
 }
 
 func newIntegrationPool(size int) *integrationPool {
-	return &integrationPool{pool: md2pdf.NewServicePool(size)}
+	return &integrationPool{pool: md2pdf.NewConverterPool(size)}
 }
 
-func (p *integrationPool) Acquire() Converter {
+func (p *integrationPool) Acquire() CLIConverter {
 	return p.pool.Acquire()
 }
 
-func (p *integrationPool) Release(c Converter) {
-	if svc, ok := c.(*md2pdf.Service); ok {
-		p.pool.Release(svc)
+func (p *integrationPool) Release(c CLIConverter) {
+	if conv, ok := c.(*md2pdf.Converter); ok {
+		p.pool.Release(conv)
 	}
 }
 

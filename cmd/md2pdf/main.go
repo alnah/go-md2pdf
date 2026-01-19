@@ -139,14 +139,14 @@ func runConvertCmd(args []string, env *Environment) error {
 	if flags.common.verbose {
 		fmt.Fprintf(env.Stderr, "Pool size: %d\n", poolSize)
 	}
-	servicePool := md2pdf.NewServicePool(poolSize,
+	converterPool := md2pdf.NewConverterPool(poolSize,
 		md2pdf.WithAssetLoader(env.AssetLoader),
 		md2pdf.WithTemplateSet(templateSet),
 	)
-	defer servicePool.Close()
+	defer converterPool.Close()
 
 	// Wrap in adapter for local Pool interface
-	pool := &poolAdapter{pool: servicePool}
+	pool := &poolAdapter{pool: converterPool}
 
 	// Setup signal handling for graceful shutdown
 	ctx, stop := notifyContext(context.Background())
@@ -159,21 +159,21 @@ func runConvertCmd(args []string, env *Environment) error {
 	return runConvert(ctx, positionalArgs, flags, pool, env)
 }
 
-// poolAdapter adapts md2pdf.ServicePool to the local Pool interface.
+// poolAdapter adapts md2pdf.ConverterPool to the local Pool interface.
 type poolAdapter struct {
-	pool *md2pdf.ServicePool
+	pool *md2pdf.ConverterPool
 }
 
-func (a *poolAdapter) Acquire() Converter {
+func (a *poolAdapter) Acquire() CLIConverter {
 	return a.pool.Acquire()
 }
 
-func (a *poolAdapter) Release(c Converter) {
-	svc, ok := c.(*md2pdf.Service)
+func (a *poolAdapter) Release(c CLIConverter) {
+	conv, ok := c.(*md2pdf.Converter)
 	if !ok {
-		panic(fmt.Sprintf("poolAdapter.Release: unexpected type %T, expected *md2pdf.Service", c))
+		panic(fmt.Sprintf("poolAdapter.Release: unexpected type %T, expected *md2pdf.Converter", c))
 	}
-	a.pool.Release(svc)
+	a.pool.Release(conv)
 }
 
 func (a *poolAdapter) Size() int {

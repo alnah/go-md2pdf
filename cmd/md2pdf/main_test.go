@@ -22,7 +22,7 @@ func TestPoolAdapter_Release_WrongType(t *testing.T) {
 	t.Parallel()
 
 	// Create a real pool with size 1
-	pool := md2pdf.NewServicePool(1)
+	pool := md2pdf.NewConverterPool(1)
 	defer pool.Close()
 
 	adapter := &poolAdapter{pool: pool}
@@ -49,7 +49,7 @@ func TestPoolAdapter_Release_WrongType(t *testing.T) {
 func TestPoolAdapter_Size(t *testing.T) {
 	t.Parallel()
 
-	pool := md2pdf.NewServicePool(3)
+	pool := md2pdf.NewConverterPool(3)
 	defer pool.Close()
 
 	adapter := &poolAdapter{pool: pool}
@@ -62,7 +62,7 @@ func TestPoolAdapter_Size(t *testing.T) {
 func TestPoolAdapter_AcquireRelease(t *testing.T) {
 	t.Parallel()
 
-	pool := md2pdf.NewServicePool(1)
+	pool := md2pdf.NewConverterPool(1)
 	defer pool.Close()
 
 	adapter := &poolAdapter{pool: pool}
