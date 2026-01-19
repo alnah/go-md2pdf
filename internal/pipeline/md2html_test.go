@@ -1,4 +1,4 @@
-package md2pdf
+package pipeline
 
 import (
 	"context"
@@ -221,7 +221,7 @@ func TestGoldmarkConverter_ToHTML(t *testing.T) {
 		},
 	}
 
-	converter := newGoldmarkConverter()
+	converter := NewGoldmarkConverter()
 	ctx := context.Background()
 
 	for _, tt := range tests {
@@ -251,7 +251,7 @@ func TestGoldmarkConverter_ToHTML(t *testing.T) {
 func TestGoldmarkConverter_ToHTML_ContextCancellation(t *testing.T) {
 	t.Parallel()
 
-	converter := newGoldmarkConverter()
+	converter := NewGoldmarkConverter()
 
 	t.Run("cancelled context returns error", func(t *testing.T) {
 		t.Parallel()
@@ -303,10 +303,10 @@ func TestGoldmarkConverter_ToHTML_ContextCancellation(t *testing.T) {
 func TestNewGoldmarkConverter(t *testing.T) {
 	t.Parallel()
 
-	converter := newGoldmarkConverter()
+	converter := NewGoldmarkConverter()
 
 	if converter == nil {
-		t.Fatal("newGoldmarkConverter() returned nil")
+		t.Fatal("NewGoldmarkConverter() returned nil")
 	}
 
 	if converter.md == nil {
@@ -317,7 +317,7 @@ func TestNewGoldmarkConverter(t *testing.T) {
 func TestGoldmarkConverter_GFMExtensions(t *testing.T) {
 	t.Parallel()
 
-	converter := newGoldmarkConverter()
+	converter := NewGoldmarkConverter()
 	ctx := context.Background()
 
 	t.Run("table alignment", func(t *testing.T) {
@@ -412,7 +412,7 @@ This is a paragraph with **bold** and *italic* text.
 func TestGoldmarkConverter_HeadingIDs(t *testing.T) {
 	t.Parallel()
 
-	converter := newGoldmarkConverter()
+	converter := NewGoldmarkConverter()
 	ctx := context.Background()
 
 	tests := []struct {

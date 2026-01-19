@@ -1,6 +1,6 @@
 //go:build bench
 
-package md2pdf
+package pipeline
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 // BenchmarkGoldmarkToHTML benchmarks markdown to HTML conversion.
 // This is the core conversion step in the pipeline.
 func BenchmarkGoldmarkToHTML(b *testing.B) {
-	converter := newGoldmarkConverter()
+	converter := NewGoldmarkConverter()
 	ctx := context.Background()
 
 	inputs := []struct {
@@ -47,7 +47,7 @@ func BenchmarkGoldmarkToHTML(b *testing.B) {
 
 // BenchmarkGoldmarkToHTMLBySize benchmarks conversion scaling with input size.
 func BenchmarkGoldmarkToHTMLBySize(b *testing.B) {
-	converter := newGoldmarkConverter()
+	converter := NewGoldmarkConverter()
 	ctx := context.Background()
 
 	sizes := []int{1, 10, 50, 100, 500}
@@ -71,7 +71,7 @@ func BenchmarkGoldmarkToHTMLBySize(b *testing.B) {
 
 // BenchmarkGoldmarkToHTMLParallel benchmarks concurrent HTML conversion.
 func BenchmarkGoldmarkToHTMLParallel(b *testing.B) {
-	converter := newGoldmarkConverter()
+	converter := NewGoldmarkConverter()
 	ctx := context.Background()
 	content := generateMixedMarkdown(20)
 
@@ -92,7 +92,7 @@ func BenchmarkGoldmarkToHTMLParallel(b *testing.B) {
 // BenchmarkGoldmarkSyntaxHighlighting benchmarks code block highlighting.
 // Tests chroma syntax highlighting performance.
 func BenchmarkGoldmarkSyntaxHighlighting(b *testing.B) {
-	converter := newGoldmarkConverter()
+	converter := NewGoldmarkConverter()
 	ctx := context.Background()
 
 	languages := []string{"go", "python", "javascript", "rust", "sql"}

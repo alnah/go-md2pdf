@@ -1,4 +1,4 @@
-package md2pdf
+package pipeline
 
 import (
 	"context"
@@ -147,7 +147,7 @@ func TestInjectCSS(t *testing.T) {
 		},
 	}
 
-	injector := &cssInjection{}
+	injector := &CSSInjection{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -165,7 +165,7 @@ func TestInjectCSS(t *testing.T) {
 func TestInjectCSS_ContextCancellation(t *testing.T) {
 	t.Parallel()
 
-	injector := &cssInjection{}
+	injector := &CSSInjection{}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
@@ -188,7 +188,7 @@ func TestInjectSignature(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load template set: %v", err)
 	}
-	injector, err := newSignatureInjection(ts.Signature)
+	injector, err := NewSignatureInjection(ts.Signature)
 	if err != nil {
 		t.Fatalf("failed to create signature injector: %v", err)
 	}
@@ -212,7 +212,7 @@ func TestInjectSignature(t *testing.T) {
 
 		ctx := context.Background()
 		html := "<html><body>Content</body></html>"
-		data := &signatureData{Name: "John Doe", Email: "john@example.com"}
+		data := &SignatureData{Name: "John Doe", Email: "john@example.com"}
 
 		got, err := injector.InjectSignature(ctx, html, data)
 		if err != nil {
@@ -240,7 +240,7 @@ func TestInjectSignature(t *testing.T) {
 
 		ctx := context.Background()
 		html := "<html><BODY>Content</BODY></html>"
-		data := &signatureData{Name: "Test"}
+		data := &SignatureData{Name: "Test"}
 
 		got, err := injector.InjectSignature(ctx, html, data)
 		if err != nil {
@@ -257,7 +257,7 @@ func TestInjectSignature(t *testing.T) {
 
 		ctx := context.Background()
 		html := "<p>Content</p>"
-		data := &signatureData{Name: "Test"}
+		data := &SignatureData{Name: "Test"}
 
 		got, err := injector.InjectSignature(ctx, html, data)
 		if err != nil {
@@ -275,12 +275,12 @@ func TestInjectSignature(t *testing.T) {
 
 		ctx := context.Background()
 		html := "<html><body></body></html>"
-		data := &signatureData{
+		data := &SignatureData{
 			Name:      "Jane Smith",
 			Title:     "Software Engineer",
 			Email:     "jane@example.com",
 			ImagePath: "https://example.com/photo.jpg",
-			Links: []signatureLink{
+			Links: []SignatureLink{
 				{Label: "GitHub", URL: "https://github.com/jane"},
 				{Label: "LinkedIn", URL: "https://linkedin.com/in/jane"},
 			},
@@ -314,7 +314,7 @@ func TestInjectSignature(t *testing.T) {
 
 		ctx := context.Background()
 		html := "<html><body></body></html>"
-		data := &signatureData{
+		data := &SignatureData{
 			Name: "Minimal",
 			// Title, Email, ImagePath, Links all empty
 		}
@@ -342,7 +342,7 @@ func TestInjectSignature_ContextCancellation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load template set: %v", err)
 	}
-	injector, err := newSignatureInjection(ts.Signature)
+	injector, err := NewSignatureInjection(ts.Signature)
 	if err != nil {
 		t.Fatalf("failed to create signature injector: %v", err)
 	}
@@ -350,7 +350,7 @@ func TestInjectSignature_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
 
-	data := &signatureData{Name: "Test"}
+	data := &SignatureData{Name: "Test"}
 	_, err = injector.InjectSignature(ctx, "<body></body>", data)
 
 	if err == nil {
@@ -365,7 +365,7 @@ func TestInjectSignature_TemplateError(t *testing.T) {
 	t.Parallel()
 
 	// Create injector with a broken template to test error path
-	// This is difficult to trigger with valid signatureData,
+	// This is difficult to trigger with valid SignatureData,
 	// but we can verify the error type is returned correctly
 	// by using the mock in service_test.go
 
@@ -375,12 +375,12 @@ func TestInjectSignature_TemplateError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load template set: %v", err)
 	}
-	injector, err := newSignatureInjection(ts.Signature)
+	injector, err := NewSignatureInjection(ts.Signature)
 	if err != nil {
 		t.Fatalf("failed to create signature injector: %v", err)
 	}
 	ctx := context.Background()
-	data := &signatureData{Name: "Test"}
+	data := &SignatureData{Name: "Test"}
 
 	_, err = injector.InjectSignature(ctx, "<body></body>", data)
 	if err != nil {
@@ -399,7 +399,7 @@ func TestInjectCover(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load template set: %v", err)
 	}
-	injector, err := newCoverInjection(ts.Cover)
+	injector, err := NewCoverInjection(ts.Cover)
 	if err != nil {
 		t.Fatalf("failed to create cover injector: %v", err)
 	}
@@ -423,7 +423,7 @@ func TestInjectCover(t *testing.T) {
 
 		ctx := context.Background()
 		html := "<html><body>Content</body></html>"
-		data := &coverData{Title: "My Document"}
+		data := &CoverData{Title: "My Document"}
 
 		got, err := injector.InjectCover(ctx, html, data)
 		if err != nil {
@@ -448,7 +448,7 @@ func TestInjectCover(t *testing.T) {
 
 		ctx := context.Background()
 		html := `<html><body class="main">Content</body></html>`
-		data := &coverData{Title: "Test"}
+		data := &CoverData{Title: "Test"}
 
 		got, err := injector.InjectCover(ctx, html, data)
 		if err != nil {
@@ -465,7 +465,7 @@ func TestInjectCover(t *testing.T) {
 
 		ctx := context.Background()
 		html := "<html><BODY>Content</BODY></html>"
-		data := &coverData{Title: "Test"}
+		data := &CoverData{Title: "Test"}
 
 		got, err := injector.InjectCover(ctx, html, data)
 		if err != nil {
@@ -482,7 +482,7 @@ func TestInjectCover(t *testing.T) {
 
 		ctx := context.Background()
 		html := "<p>Content</p>"
-		data := &coverData{Title: "Test"}
+		data := &CoverData{Title: "Test"}
 
 		got, err := injector.InjectCover(ctx, html, data)
 		if err != nil {
@@ -500,7 +500,7 @@ func TestInjectCover(t *testing.T) {
 
 		ctx := context.Background()
 		html := "<html><body></body></html>"
-		data := &coverData{
+		data := &CoverData{
 			Title:        "My Document",
 			Subtitle:     "A Comprehensive Guide",
 			Logo:         "https://example.com/logo.png",
@@ -539,7 +539,7 @@ func TestInjectCover(t *testing.T) {
 
 		ctx := context.Background()
 		html := "<html><body></body></html>"
-		data := &coverData{
+		data := &CoverData{
 			Title: "Minimal",
 			// All other fields empty
 		}
@@ -562,7 +562,7 @@ func TestInjectCover(t *testing.T) {
 
 		ctx := context.Background()
 		html := "<html><body></body></html>"
-		data := &coverData{
+		data := &CoverData{
 			Title:  "<script>alert('xss')</script>",
 			Author: "John & Jane",
 		}
@@ -591,7 +591,7 @@ func TestInjectCover_ContextCancellation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load template set: %v", err)
 	}
-	injector, err := newCoverInjection(ts.Cover)
+	injector, err := NewCoverInjection(ts.Cover)
 	if err != nil {
 		t.Fatalf("failed to create cover injector: %v", err)
 	}
@@ -599,7 +599,7 @@ func TestInjectCover_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
 
-	data := &coverData{Title: "Test"}
+	data := &CoverData{Title: "Test"}
 	_, err = injector.InjectCover(ctx, "<body></body>", data)
 
 	if err == nil {
@@ -607,417 +607,6 @@ func TestInjectCover_ContextCancellation(t *testing.T) {
 	}
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("expected context.Canceled, got %v", err)
-	}
-}
-
-func TestEscapeCSSString(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "empty string",
-			input:    "",
-			expected: "",
-		},
-		{
-			name:     "simple text",
-			input:    "DRAFT",
-			expected: "DRAFT",
-		},
-		{
-			name:     "text with spaces",
-			input:    "FOR REVIEW",
-			expected: "FOR REVIEW",
-		},
-		{
-			name:     "escapes double quotes",
-			input:    `DRAFT "v1"`,
-			expected: `DRAFT \"v1\"`,
-		},
-		{
-			name:     "escapes backslash",
-			input:    `path\to\file`,
-			expected: `path\\to\\file`,
-		},
-		{
-			name:     "escapes newline",
-			input:    "line1\nline2",
-			expected: `line1\A line2`,
-		},
-		{
-			name:     "removes carriage return",
-			input:    "line1\r\nline2",
-			expected: `line1\A line2`,
-		},
-		{
-			name:     "CSS injection attempt - closing quote",
-			input:    `DRAFT"; } body { display: none } .x { content: "`,
-			expected: `DRAFT\"; } body { display: none } .x { content: \"`,
-		},
-		{
-			name:     "CSS injection attempt - backslash escape",
-			input:    `DRAFT\"; } body { display: none }`,
-			expected: `DRAFT\\\"; } body { display: none }`,
-		},
-		{
-			name:     "unicode preserved",
-			input:    "BROUILLON",
-			expected: "BROUILLON",
-		},
-		{
-			name:     "mixed special characters",
-			input:    "A\"B\\C\nD\rE",
-			expected: `A\"B\\C\A DE`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			got := escapeCSSString(tt.input)
-			if got != tt.expected {
-				t.Errorf("escapeCSSString(%q) = %q, want %q", tt.input, got, tt.expected)
-			}
-		})
-	}
-}
-
-func TestBuildWatermarkCSS(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name           string
-		watermark      *Watermark
-		wantEmpty      bool
-		wantContains   []string
-		wantNotContain []string
-	}{
-		{
-			name:      "nil watermark returns empty",
-			watermark: nil,
-			wantEmpty: true,
-		},
-		{
-			name:      "empty text returns empty",
-			watermark: &Watermark{Text: "", Color: "#888888", Opacity: 0.1, Angle: -45},
-			wantEmpty: true,
-		},
-		{
-			name:      "simple watermark",
-			watermark: &Watermark{Text: "DRAFT", Color: "#888888", Opacity: 0.1, Angle: -45},
-			wantContains: []string{
-				`content: "DRAFT"`,
-				"color: #888888",
-				"opacity: 0.10",
-				"rotate(-45.0deg)",
-			},
-		},
-		{
-			name:      "watermark with positive angle",
-			watermark: &Watermark{Text: "TEST", Color: "#ff0000", Opacity: 0.5, Angle: 30},
-			wantContains: []string{
-				`content: "TEST"`,
-				"color: #ff0000",
-				"opacity: 0.50",
-				"rotate(30.0deg)",
-			},
-		},
-		{
-			name:      "watermark text with quotes is escaped",
-			watermark: &Watermark{Text: `DRAFT "v1"`, Color: "#888888", Opacity: 0.1, Angle: -45},
-			wantContains: []string{
-				`content: "DRAFT \"v1\""`,
-			},
-			wantNotContain: []string{
-				`content: "DRAFT "v1""`, // unescaped quotes would break CSS
-			},
-		},
-		{
-			name:      "watermark text with backslash is escaped",
-			watermark: &Watermark{Text: `A\B`, Color: "#888888", Opacity: 0.1, Angle: -45},
-			wantContains: []string{
-				`content: "A\\B"`,
-			},
-		},
-		{
-			name:      "CSS injection attempt is escaped",
-			watermark: &Watermark{Text: `"; } body { display: none } .x { content: "`, Color: "#888888", Opacity: 0.1, Angle: -45},
-			wantContains: []string{
-				`content: "\"; } body { display: none } ` + "\u2024" + `x { content: \""`,
-				"opacity: 0.10", // verify CSS structure is intact after injection attempt
-			},
-		},
-		{
-			name:      "watermark with newline in text",
-			watermark: &Watermark{Text: "LINE1\nLINE2", Color: "#888888", Opacity: 0.1, Angle: -45},
-			wantContains: []string{
-				`content: "LINE1\A LINE2"`,
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			got := buildWatermarkCSS(tt.watermark)
-
-			if tt.wantEmpty {
-				if got != "" {
-					t.Errorf("buildWatermarkCSS() = %q, want empty", got)
-				}
-				return
-			}
-
-			if got == "" {
-				t.Fatal("buildWatermarkCSS() returned empty, want CSS")
-			}
-
-			for _, want := range tt.wantContains {
-				if !strings.Contains(got, want) {
-					t.Errorf("buildWatermarkCSS() missing %q\nGot:\n%s", want, got)
-				}
-			}
-
-			for _, notWant := range tt.wantNotContain {
-				if strings.Contains(got, notWant) {
-					t.Errorf("buildWatermarkCSS() should not contain %q\nGot:\n%s", notWant, got)
-				}
-			}
-		})
-	}
-}
-
-func TestBreakURLPattern(t *testing.T) {
-	t.Parallel()
-
-	// U+2024 ONE DOT LEADER - visually identical to period but not recognized as URL
-	const dotLeader = "\u2024"
-
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "plain text unchanged",
-			input:    "DRAFT",
-			expected: "DRAFT",
-		},
-		{
-			name:     "CONFIDENTIAL unchanged",
-			input:    "CONFIDENTIAL",
-			expected: "CONFIDENTIAL",
-		},
-		{
-			name:     "domain.com dots replaced",
-			input:    "domain.com",
-			expected: "domain" + dotLeader + "com",
-		},
-		{
-			name:     "domain.tech dots replaced",
-			input:    "alnah.tech",
-			expected: "alnah" + dotLeader + "tech",
-		},
-		{
-			name:     "www.example.com all dots replaced",
-			input:    "www.example.com",
-			expected: "www" + dotLeader + "example" + dotLeader + "com",
-		},
-		{
-			name:     "full URL with path",
-			input:    "https://www.example.com/path",
-			expected: "https://www" + dotLeader + "example" + dotLeader + "com/path",
-		},
-		{
-			name:     "multiple dots in text",
-			input:    "version 1.0.0",
-			expected: "version 1" + dotLeader + "0" + dotLeader + "0",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			got := breakURLPattern(tt.input)
-			if got != tt.expected {
-				t.Errorf("breakURLPattern(%q) = %q, want %q", tt.input, got, tt.expected)
-			}
-		})
-	}
-}
-
-func TestBuildPageBreaksCSS(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name           string
-		pageBreaks     *PageBreaks
-		wantContains   []string
-		wantNotContain []string
-	}{
-		{
-			name:       "nil pageBreaks uses defaults",
-			pageBreaks: nil,
-			wantContains: []string{
-				"break-after: avoid",
-				"page-break-after: avoid",
-				"break-inside: avoid",
-				"page-break-inside: avoid",
-				"orphans: 2",
-				"widows: 2",
-			},
-			wantNotContain: []string{
-				"break-before: page",
-			},
-		},
-		{
-			name:       "empty pageBreaks uses defaults",
-			pageBreaks: &PageBreaks{},
-			wantContains: []string{
-				"orphans: 2",
-				"widows: 2",
-				"break-after: avoid",
-			},
-			wantNotContain: []string{
-				"break-before: page",
-			},
-		},
-		{
-			name:       "custom orphans and widows",
-			pageBreaks: &PageBreaks{Orphans: 3, Widows: 4},
-			wantContains: []string{
-				"orphans: 3",
-				"widows: 4",
-			},
-		},
-		{
-			name:       "orphans 0 uses default",
-			pageBreaks: &PageBreaks{Orphans: 0, Widows: 3},
-			wantContains: []string{
-				"orphans: 2",
-				"widows: 3",
-			},
-		},
-		{
-			name:       "widows 0 uses default",
-			pageBreaks: &PageBreaks{Orphans: 4, Widows: 0},
-			wantContains: []string{
-				"orphans: 4",
-				"widows: 2",
-			},
-		},
-		{
-			name:       "BeforeH1 adds page break CSS",
-			pageBreaks: &PageBreaks{BeforeH1: true},
-			wantContains: []string{
-				"/* Page breaks: before H1 */",
-				"h1 {",
-				"break-before: page",
-				"page-break-before: always",
-				"/* Exception: no break before first H1 if it's first element in body */",
-				"body > h1:first-child",
-			},
-			wantNotContain: []string{
-				"/* Page breaks: before H2 */",
-				"/* Page breaks: before H3 */",
-			},
-		},
-		{
-			name:       "BeforeH2 adds page break CSS",
-			pageBreaks: &PageBreaks{BeforeH2: true},
-			wantContains: []string{
-				"/* Page breaks: before H2 */",
-				"h2 {",
-				"break-before: page",
-				"page-break-before: always",
-			},
-			wantNotContain: []string{
-				"/* Page breaks: before H1 */",
-				"/* Page breaks: before H3 */",
-			},
-		},
-		{
-			name:       "BeforeH3 adds page break CSS",
-			pageBreaks: &PageBreaks{BeforeH3: true},
-			wantContains: []string{
-				"/* Page breaks: before H3 */",
-				"h3 {",
-				"break-before: page",
-				"page-break-before: always",
-			},
-			wantNotContain: []string{
-				"/* Page breaks: before H1 */",
-				"/* Page breaks: before H2 */",
-			},
-		},
-		{
-			name:       "all heading breaks enabled",
-			pageBreaks: &PageBreaks{BeforeH1: true, BeforeH2: true, BeforeH3: true},
-			wantContains: []string{
-				"/* Page breaks: before H1 */",
-				"/* Page breaks: before H2 */",
-				"/* Page breaks: before H3 */",
-			},
-		},
-		{
-			name:       "heading breaks with custom orphans widows",
-			pageBreaks: &PageBreaks{BeforeH1: true, Orphans: 5, Widows: 5},
-			wantContains: []string{
-				"orphans: 5",
-				"widows: 5",
-				"/* Page breaks: before H1 */",
-			},
-		},
-		{
-			name:       "always includes hardcoded heading protection",
-			pageBreaks: &PageBreaks{BeforeH2: true},
-			wantContains: []string{
-				"h1, h2, h3, h4, h5, h6 {",
-				"break-after: avoid",
-				"page-break-after: avoid",
-				"break-inside: avoid",
-				"page-break-inside: avoid",
-			},
-		},
-		{
-			name:       "always includes orphan widow rules for content elements",
-			pageBreaks: &PageBreaks{},
-			wantContains: []string{
-				"p, li, dd, dt, blockquote {",
-				"orphans:",
-				"widows:",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			got := buildPageBreaksCSS(tt.pageBreaks)
-
-			if got == "" {
-				t.Fatal("buildPageBreaksCSS() returned empty, want CSS")
-			}
-
-			for _, want := range tt.wantContains {
-				if !strings.Contains(got, want) {
-					t.Errorf("buildPageBreaksCSS() missing %q\nGot:\n%s", want, got)
-				}
-			}
-
-			for _, notWant := range tt.wantNotContain {
-				if strings.Contains(got, notWant) {
-					t.Errorf("buildPageBreaksCSS() should not contain %q\nGot:\n%s", notWant, got)
-				}
-			}
-		})
 	}
 }
 
@@ -1574,7 +1163,7 @@ func TestGenerateNumberedTOC(t *testing.T) {
 func TestInjectTOC(t *testing.T) {
 	t.Parallel()
 
-	injector := newTOCInjection()
+	injector := NewTOCInjection()
 
 	t.Run("nil data returns HTML unchanged", func(t *testing.T) {
 		t.Parallel()
@@ -1595,7 +1184,7 @@ func TestInjectTOC(t *testing.T) {
 
 		ctx := context.Background()
 		html := "<html><body><p>No headings</p></body></html>"
-		data := &tocData{Title: "TOC", MaxDepth: 3}
+		data := &TOCData{Title: "TOC", MaxDepth: 3}
 		got, err := injector.InjectTOC(ctx, html, data)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -1611,7 +1200,7 @@ func TestInjectTOC(t *testing.T) {
 		ctx := context.Background()
 		// Use <span data-cover-end> marker (not HTML comment, which html/template strips)
 		html := `<html><body></div></section><span data-cover-end></span><h1 id="ch1">Chapter 1</h1></body></html>`
-		data := &tocData{Title: "Contents", MaxDepth: 3}
+		data := &TOCData{Title: "Contents", MaxDepth: 3}
 
 		got, err := injector.InjectTOC(ctx, html, data)
 		if err != nil {
@@ -1634,7 +1223,7 @@ func TestInjectTOC(t *testing.T) {
 
 		ctx := context.Background()
 		html := `<html><body><h1 id="ch1">Chapter 1</h1></body></html>`
-		data := &tocData{Title: "", MaxDepth: 3}
+		data := &TOCData{Title: "", MaxDepth: 3}
 
 		got, err := injector.InjectTOC(ctx, html, data)
 		if err != nil {
@@ -1657,7 +1246,7 @@ func TestInjectTOC(t *testing.T) {
 
 		ctx := context.Background()
 		html := `<html><body class="main"><h1 id="ch1">Chapter 1</h1></body></html>`
-		data := &tocData{MaxDepth: 3}
+		data := &TOCData{MaxDepth: 3}
 
 		got, err := injector.InjectTOC(ctx, html, data)
 		if err != nil {
@@ -1674,7 +1263,7 @@ func TestInjectTOC(t *testing.T) {
 
 		ctx := context.Background()
 		html := `<h1 id="ch1">Chapter 1</h1><p>Content</p>`
-		data := &tocData{MaxDepth: 3}
+		data := &TOCData{MaxDepth: 3}
 
 		got, err := injector.InjectTOC(ctx, html, data)
 		if err != nil {
@@ -1691,7 +1280,7 @@ func TestInjectTOC(t *testing.T) {
 
 		ctx := context.Background()
 		html := `<body><h1 id="h1">H1</h1><h2 id="h2">H2</h2><h3 id="h3">H3</h3></body>`
-		data := &tocData{MaxDepth: 2}
+		data := &TOCData{MaxDepth: 2}
 
 		got, err := injector.InjectTOC(ctx, html, data)
 		if err != nil {
@@ -1711,12 +1300,12 @@ func TestInjectTOC(t *testing.T) {
 func TestInjectTOC_ContextCancellation(t *testing.T) {
 	t.Parallel()
 
-	injector := newTOCInjection()
+	injector := NewTOCInjection()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
 
-	data := &tocData{Title: "TOC", MaxDepth: 3}
+	data := &TOCData{Title: "TOC", MaxDepth: 3}
 	html := `<body><h1 id="test">Test</h1></body>`
 	_, err := injector.InjectTOC(ctx, html, data)
 
@@ -1741,11 +1330,11 @@ func TestInjectTOC_AfterCover(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load template set: %v", err)
 	}
-	coverInjector, err := newCoverInjection(ts.Cover)
+	coverInjector, err := NewCoverInjection(ts.Cover)
 	if err != nil {
 		t.Fatalf("failed to create cover injector: %v", err)
 	}
-	tocInjector := newTOCInjection()
+	tocInjector := NewTOCInjection()
 
 	// Start with HTML that has a heading (needed for TOC generation)
 	html := `<!DOCTYPE html>
@@ -1758,21 +1347,21 @@ func TestInjectTOC_AfterCover(t *testing.T) {
 </html>`
 
 	// Step 1: Inject cover
-	coverData := &coverData{
+	CoverData := &CoverData{
 		Title:  "My Document",
 		Author: "Test Author",
 	}
-	htmlWithCover, err := coverInjector.InjectCover(ctx, html, coverData)
+	htmlWithCover, err := coverInjector.InjectCover(ctx, html, CoverData)
 	if err != nil {
 		t.Fatalf("InjectCover failed: %v", err)
 	}
 
 	// Step 2: Inject TOC
-	tocData := &tocData{
+	TOCData := &TOCData{
 		Title:    "Table of Contents",
 		MaxDepth: 3,
 	}
-	htmlWithTOC, err := tocInjector.InjectTOC(ctx, htmlWithCover, tocData)
+	htmlWithTOC, err := tocInjector.InjectTOC(ctx, htmlWithCover, TOCData)
 	if err != nil {
 		t.Fatalf("InjectTOC failed: %v", err)
 	}
@@ -1799,7 +1388,7 @@ func TestInjectTOC_AfterCover(t *testing.T) {
 func TestInjectTOC_HTMLEntities(t *testing.T) {
 	t.Parallel()
 
-	injector := newTOCInjection()
+	injector := NewTOCInjection()
 	ctx := context.Background()
 
 	tests := []struct {
@@ -1876,7 +1465,7 @@ func TestInjectTOC_HTMLEntities(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			data := &tocData{MaxDepth: 3}
+			data := &TOCData{MaxDepth: 3}
 			got, err := injector.InjectTOC(ctx, tt.html, data)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)

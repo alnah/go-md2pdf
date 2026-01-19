@@ -1,8 +1,9 @@
-package md2pdf
+package pipeline
 
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"html"
 	"html/template"
@@ -11,24 +12,24 @@ import (
 	"strings"
 )
 
-// defaultFontFamily is the standard font stack for PDF footers and generated content.
-const defaultFontFamily = "'Inter', sans-serif"
+// Sentinel errors for template rendering.
+var (
+	ErrSignatureRender = errors.New("signature template rendering failed")
+	ErrCoverRender     = errors.New("cover template rendering failed")
+)
 
-// watermarkFontSize is the font size for watermark text overlay.
-const watermarkFontSize = "8rem"
-
-// cssInjector defines the contract for CSS injection into HTML.
-type cssInjector interface {
+// CSSInjector defines the contract for CSS injection into HTML.
+type CSSInjector interface {
 	InjectCSS(ctx context.Context, htmlContent, cssContent string) string
 }
 
-// cssInjection injects CSS as a <style> block into HTML content.
-type cssInjection struct{}
+// CSSInjection injects CSS as a <style> block into HTML content.
+type CSSInjection struct{}
 
 // InjectCSS inserts a <style> block into HTML content.
 // Tries </head> first, then <body>, then prepends to the HTML.
 // CSS content is sanitized to prevent injection attacks.
-func (s *cssInjection) InjectCSS(ctx context.Context, htmlContent, cssContent string) string {
+func (s *CSSInjection) InjectCSS(ctx context.Context, htmlContent, cssContent string) string {
 	if cssContent == "" {
 		return htmlContent
 	}
@@ -68,52 +69,51 @@ func sanitizeCSS(css string) string {
 	return strings.ReplaceAll(css, "</", `<\/`)
 }
 
-// signatureData holds signature information for injection into HTML.
-// This is the internal type used by the injector.
-type signatureData struct {
+// SignatureData holds signature information for injection into HTML.
+type SignatureData struct {
 	Name         string
 	Title        string
 	Email        string
 	Organization string
 	ImagePath    string
-	Links        []signatureLink
+	Links        []SignatureLink
 	// Extended metadata fields
 	Phone      string
 	Address    string
 	Department string
 }
 
-// signatureLink represents a clickable link in the signature block.
-type signatureLink struct {
+// SignatureLink represents a clickable link in the signature block.
+type SignatureLink struct {
 	Label string
 	URL   string
 }
 
-// signatureInjector defines the contract for signature injection into HTML.
-type signatureInjector interface {
-	InjectSignature(ctx context.Context, htmlContent string, data *signatureData) (string, error)
+// SignatureInjector defines the contract for signature injection into HTML.
+type SignatureInjector interface {
+	InjectSignature(ctx context.Context, htmlContent string, data *SignatureData) (string, error)
 }
 
-// signatureInjection renders and injects a signature block into HTML content.
-type signatureInjection struct {
+// SignatureInjection renders and injects a signature block into HTML content.
+type SignatureInjection struct {
 	tmpl *template.Template
 }
 
-// newSignatureInjection creates a signatureInjection from template content.
+// NewSignatureInjection creates a SignatureInjection from template content.
 // Returns error if the template cannot be parsed.
-func newSignatureInjection(tmplContent string) (*signatureInjection, error) {
+func NewSignatureInjection(tmplContent string) (*SignatureInjection, error) {
 	tmpl, err := template.New("signature").Parse(tmplContent)
 	if err != nil {
 		return nil, fmt.Errorf("parsing signature template: %w", err)
 	}
 
-	return &signatureInjection{tmpl: tmpl}, nil
+	return &SignatureInjection{tmpl: tmpl}, nil
 }
 
 // InjectSignature renders the signature template and injects it before </body>.
 // If data is nil, returns htmlContent unchanged.
 // Returns error if template rendering fails.
-func (s *signatureInjection) InjectSignature(ctx context.Context, htmlContent string, data *signatureData) (string, error) {
+func (s *SignatureInjection) InjectSignature(ctx context.Context, htmlContent string, data *SignatureData) (string, error) {
 	if data == nil {
 		return htmlContent, nil
 	}
@@ -140,9 +140,8 @@ func (s *signatureInjection) InjectSignature(ctx context.Context, htmlContent st
 	return htmlContent + signatureHTML, nil
 }
 
-// coverData holds cover page information for injection into HTML.
-// This is the internal type used by the injector.
-type coverData struct {
+// CoverData holds cover page information for injection into HTML.
+type CoverData struct {
 	Title        string
 	Subtitle     string
 	Logo         string
@@ -160,31 +159,31 @@ type coverData struct {
 	Department   string // From author config (DRY)
 }
 
-// coverInjector defines the contract for cover injection into HTML.
-type coverInjector interface {
-	InjectCover(ctx context.Context, htmlContent string, data *coverData) (string, error)
+// CoverInjector defines the contract for cover injection into HTML.
+type CoverInjector interface {
+	InjectCover(ctx context.Context, htmlContent string, data *CoverData) (string, error)
 }
 
-// coverInjection renders and injects a cover page into HTML content.
-type coverInjection struct {
+// CoverInjection renders and injects a cover page into HTML content.
+type CoverInjection struct {
 	tmpl *template.Template
 }
 
-// newCoverInjection creates a coverInjection from template content.
+// NewCoverInjection creates a CoverInjection from template content.
 // Returns error if the template cannot be parsed.
-func newCoverInjection(tmplContent string) (*coverInjection, error) {
+func NewCoverInjection(tmplContent string) (*CoverInjection, error) {
 	tmpl, err := template.New("cover").Parse(tmplContent)
 	if err != nil {
 		return nil, fmt.Errorf("parsing cover template: %w", err)
 	}
 
-	return &coverInjection{tmpl: tmpl}, nil
+	return &CoverInjection{tmpl: tmpl}, nil
 }
 
 // InjectCover renders the cover template and injects it after <body>.
 // If data is nil, returns htmlContent unchanged.
 // Returns error if template rendering fails.
-func (c *coverInjection) InjectCover(ctx context.Context, htmlContent string, data *coverData) (string, error) {
+func (c *CoverInjection) InjectCover(ctx context.Context, htmlContent string, data *CoverData) (string, error) {
 	if data == nil {
 		return htmlContent, nil
 	}
@@ -216,9 +215,8 @@ func (c *coverInjection) InjectCover(ctx context.Context, htmlContent string, da
 	return coverHTML + htmlContent, nil
 }
 
-// footerData holds footer configuration for injection into HTML.
-// This is the internal type used by the injector.
-type footerData struct {
+// FooterData holds footer configuration for injection into HTML.
+type FooterData struct {
 	Position       string // "left", "center", "right" (default: "right")
 	ShowPageNumber bool
 	Date           string
@@ -227,141 +225,16 @@ type footerData struct {
 	DocumentID     string // Document reference number
 }
 
-// buildWatermarkCSS generates CSS for a diagonal background watermark.
-// The watermark uses position:fixed to appear on all pages when printed.
-func buildWatermarkCSS(w *Watermark) string {
-	if w == nil || w.Text == "" {
-		return ""
-	}
-
-	return fmt.Sprintf(`
-/* Watermark */
-body::before {
-  content: "%s";
-  position: fixed;
-  top: 50%%;
-  left: 50%%;
-  transform: translate(-50%%, -50%%) rotate(%.1fdeg);
-  font-size: %s;
-  font-weight: bold;
-  color: %s;
-  opacity: %.2f;
-  z-index: -1;
-  pointer-events: none;
-  white-space: nowrap;
-  font-family: %s;
-}
-`, escapeCSSString(breakURLPattern(w.Text)), w.Angle, watermarkFontSize, w.Color, w.Opacity, defaultFontFamily)
-}
-
-// escapeCSSString escapes a string for safe use in CSS content property.
-// Prevents CSS injection by escaping backslashes, quotes, newlines, and
-// percent signs (to avoid fmt.Sprintf format string issues).
-func escapeCSSString(s string) string {
-	s = strings.ReplaceAll(s, `\`, `\\`)
-	s = strings.ReplaceAll(s, `"`, `\"`)
-	s = strings.ReplaceAll(s, "\n", `\A `)
-	s = strings.ReplaceAll(s, "\r", "")
-	s = strings.ReplaceAll(s, `%`, `%%`)
-	return s
-}
-
-// breakURLPattern replaces ALL dots with a Unicode lookalike (ONE DOT LEADER U+2024)
-// to prevent PDF viewers from auto-detecting URLs and making them clickable.
-// The character ․ looks identical to . but is not recognized as a URL separator.
-//
-// Note: This affects all dots unconditionally, including version numbers (1.0.0),
-// abbreviations (e.g.), and decimal numbers. This is intentional - the U+2024
-// character is visually indistinguishable from a period in rendered output.
-func breakURLPattern(text string) string {
-	return strings.ReplaceAll(text, ".", "\u2024")
-}
-
-// buildPageBreaksCSS generates CSS for page break control.
-// Always includes hardcoded rules for heading protection (break-after/inside: avoid).
-// Configurable rules for page breaks before h1/h2/h3 and orphan/widow control.
-func buildPageBreaksCSS(pb *PageBreaks) string {
-	var buf strings.Builder
-
-	buf.WriteString(`
-/* Page breaks: always active - prevent heading alone at page bottom */
-h1, h2, h3, h4, h5, h6 {
-  break-after: avoid;
-  page-break-after: avoid;
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-`)
-
-	// Resolve orphans/widows (0 means use default)
-	orphans := DefaultOrphans
-	widows := DefaultWidows
-	if pb != nil {
-		if pb.Orphans > 0 {
-			orphans = pb.Orphans
-		}
-		if pb.Widows > 0 {
-			widows = pb.Widows
-		}
-	}
-
-	buf.WriteString(fmt.Sprintf(`
-/* Page breaks: orphan/widow control */
-p, li, dd, dt, blockquote {
-  orphans: %d;
-  widows: %d;
-}
-`, orphans, widows))
-
-	// Configurable page breaks before headings
-	if pb != nil && pb.BeforeH1 {
-		buf.WriteString(`
-/* Page breaks: before H1 */
-h1 {
-  break-before: page;
-  page-break-before: always;
-}
-/* Exception: no break before first H1 if it's first element in body */
-body > h1:first-child {
-  break-before: auto;
-  page-break-before: auto;
-}
-`)
-	}
-
-	if pb != nil && pb.BeforeH2 {
-		buf.WriteString(`
-/* Page breaks: before H2 */
-h2 {
-  break-before: page;
-  page-break-before: always;
-}
-`)
-	}
-
-	if pb != nil && pb.BeforeH3 {
-		buf.WriteString(`
-/* Page breaks: before H3 */
-h3 {
-  break-before: page;
-  page-break-before: always;
-}
-`)
-	}
-
-	return buf.String()
-}
-
-// tocData holds TOC configuration for injection.
-type tocData struct {
+// TOCData holds TOC configuration for injection.
+type TOCData struct {
 	Title    string
 	MinDepth int // Minimum heading level (default: 2, skips H1)
 	MaxDepth int // Maximum heading level (default: 3)
 }
 
-// tocInjector defines the contract for TOC injection into HTML.
-type tocInjector interface {
-	InjectTOC(ctx context.Context, htmlContent string, data *tocData) (string, error)
+// TOCInjector defines the contract for TOC injection into HTML.
+type TOCInjector interface {
+	InjectTOC(ctx context.Context, htmlContent string, data *TOCData) (string, error)
 }
 
 // headingInfo represents an extracted heading from HTML.
@@ -506,17 +379,17 @@ func generateNumberedTOC(headings []headingInfo, title string) string {
 	return buf.String()
 }
 
-// tocInjection implements tocInjector.
-type tocInjection struct{}
+// TOCInjection implements TOCInjector.
+type TOCInjection struct{}
 
-// newTOCInjection creates a new TOC injector.
-func newTOCInjection() *tocInjection {
-	return &tocInjection{}
+// NewTOCInjection creates a new TOC injector.
+func NewTOCInjection() *TOCInjection {
+	return &TOCInjection{}
 }
 
 // InjectTOC extracts headings and injects a numbered TOC after the cover page.
 // If data is nil, returns htmlContent unchanged.
-func (t *tocInjection) InjectTOC(ctx context.Context, htmlContent string, data *tocData) (string, error) {
+func (t *TOCInjection) InjectTOC(ctx context.Context, htmlContent string, data *TOCData) (string, error) {
 	if data == nil {
 		return htmlContent, nil
 	}

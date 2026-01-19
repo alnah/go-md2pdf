@@ -1,4 +1,4 @@
-package md2pdf
+package pipeline
 
 import (
 	"context"
@@ -27,16 +27,16 @@ var (
 	highlightPattern = regexp.MustCompile(`==(.*?)==`)
 )
 
-// markdownPreprocessor defines the contract for markdown preprocessing.
-type markdownPreprocessor interface {
+// MarkdownPreprocessor defines the contract for markdown preprocessing.
+type MarkdownPreprocessor interface {
 	PreprocessMarkdown(ctx context.Context, content string) string
 }
 
-// commonMarkPreprocessor applies transformations before CommonMark conversion.
-type commonMarkPreprocessor struct{}
+// CommonMarkPreprocessor applies transformations before CommonMark conversion.
+type CommonMarkPreprocessor struct{}
 
 // PreprocessMarkdown applies all transformations to prepare Markdown for conversion.
-func (p *commonMarkPreprocessor) PreprocessMarkdown(ctx context.Context, content string) string {
+func (p *CommonMarkPreprocessor) PreprocessMarkdown(ctx context.Context, content string) string {
 	// Check for cancellation before processing
 	if ctx.Err() != nil {
 		return content
@@ -65,11 +65,11 @@ func convertHighlights(content string) string {
 	return highlightPattern.ReplaceAllString(content, MarkStartPlaceholder+"$1"+MarkEndPlaceholder)
 }
 
-// convertMarkPlaceholders converts placeholder markers to <mark> tags.
+// ConvertMarkPlaceholders converts placeholder markers to <mark> tags.
 // Called after Goldmark HTML conversion to finalize highlight markup.
 // This is the second half of the ==highlight== feature, keeping Goldmark
 // secure (no WithUnsafe) while still supporting inline HTML marks.
-func convertMarkPlaceholders(content string) string {
+func ConvertMarkPlaceholders(content string) string {
 	return strings.ReplaceAll(
 		strings.ReplaceAll(content, MarkStartPlaceholder, "<mark>"),
 		MarkEndPlaceholder, "</mark>",

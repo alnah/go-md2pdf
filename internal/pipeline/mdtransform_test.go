@@ -1,4 +1,4 @@
-package md2pdf
+package pipeline
 
 import (
 	"context"
@@ -215,9 +215,9 @@ func TestConvertMarkPlaceholders(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := convertMarkPlaceholders(tt.input)
+			got := ConvertMarkPlaceholders(tt.input)
 			if got != tt.expected {
-				t.Errorf("convertMarkPlaceholders() = %q, want %q", got, tt.expected)
+				t.Errorf("ConvertMarkPlaceholders() = %q, want %q", got, tt.expected)
 			}
 		})
 	}
@@ -278,7 +278,7 @@ func TestCommonMarkPreprocessor_PreprocessMarkdown(t *testing.T) {
 		},
 	}
 
-	preprocessor := &commonMarkPreprocessor{}
+	preprocessor := &CommonMarkPreprocessor{}
 	ctx := context.Background()
 
 	for _, tt := range tests {

@@ -1,8 +1,9 @@
-package md2pdf
+package pipeline
 
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
@@ -12,6 +13,9 @@ import (
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
 )
+
+// ErrHTMLConversion indicates HTML conversion failed.
+var ErrHTMLConversion = errors.New("HTML conversion failed")
 
 // htmlTemplate wraps Goldmark's fragment output in a complete HTML5 document.
 const htmlTemplate = `<!DOCTYPE html>
@@ -25,18 +29,18 @@ const htmlTemplate = `<!DOCTYPE html>
 </body>
 </html>`
 
-// htmlConverter abstracts Markdown to HTML conversion.
-type htmlConverter interface {
+// HTMLConverter abstracts Markdown to HTML conversion.
+type HTMLConverter interface {
 	ToHTML(ctx context.Context, content string) (string, error)
 }
 
-// goldmarkConverter converts Markdown to HTML using goldmark (pure Go).
-type goldmarkConverter struct {
+// GoldmarkConverter converts Markdown to HTML using goldmark (pure Go).
+type GoldmarkConverter struct {
 	md goldmark.Markdown
 }
 
-// newGoldmarkConverter creates a goldmarkConverter with GFM extensions and syntax highlighting.
-func newGoldmarkConverter() *goldmarkConverter {
+// NewGoldmarkConverter creates a GoldmarkConverter with GFM extensions and syntax highlighting.
+func NewGoldmarkConverter() *GoldmarkConverter {
 	md := goldmark.New(
 		goldmark.WithExtensions(
 			extension.GFM,      // Tables, strikethrough, autolinks, task lists
@@ -57,13 +61,13 @@ func newGoldmarkConverter() *goldmarkConverter {
 			// The ==highlight== feature uses placeholders converted after Goldmark.
 		),
 	)
-	return &goldmarkConverter{md: md}
+	return &GoldmarkConverter{md: md}
 }
 
 // ToHTML converts Markdown content to a standalone HTML5 document.
 // Supports context cancellation via goroutine + select pattern since
 // Goldmark doesn't natively support context.
-func (c *goldmarkConverter) ToHTML(ctx context.Context, content string) (string, error) {
+func (c *GoldmarkConverter) ToHTML(ctx context.Context, content string) (string, error) {
 	// Fast path: check context before starting
 	if err := ctx.Err(); err != nil {
 		return "", err

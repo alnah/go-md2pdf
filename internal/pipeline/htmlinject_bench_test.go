@@ -1,6 +1,6 @@
 //go:build bench
 
-package md2pdf
+package pipeline
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 // BenchmarkInjectCSS benchmarks CSS injection into HTML.
 // Critical for styling as it's called on every conversion.
 func BenchmarkInjectCSS(b *testing.B) {
-	injector := &cssInjection{}
+	injector := &CSSInjection{}
 	ctx := context.Background()
 
 	smallHTML := `<!DOCTYPE html>
@@ -83,24 +83,24 @@ func BenchmarkSanitizeCSS(b *testing.B) {
 
 // BenchmarkInjectSignature benchmarks signature block injection.
 func BenchmarkInjectSignature(b *testing.B) {
-	injector := newSignatureInjection()
+	injector := NewSignatureInjection()
 	ctx := context.Background()
 
 	html := generateTestHTML(100)
 
 	signatures := []struct {
 		name string
-		data *signatureData
+		data *SignatureData
 	}{
 		{"nil", nil},
-		{"minimal", &signatureData{Name: "John Doe"}},
-		{"full", &signatureData{
+		{"minimal", &SignatureData{Name: "John Doe"}},
+		{"full", &SignatureData{
 			Name:         "John Doe",
 			Title:        "Senior Engineer",
 			Email:        "john@example.com",
 			Organization: "Example Corp",
 			ImagePath:    "/path/to/signature.png",
-			Links: []signatureLink{
+			Links: []SignatureLink{
 				{Label: "LinkedIn", URL: "https://linkedin.com/in/johndoe"},
 				{Label: "GitHub", URL: "https://github.com/johndoe"},
 			},
@@ -125,18 +125,18 @@ func BenchmarkInjectSignature(b *testing.B) {
 
 // BenchmarkInjectCover benchmarks cover page injection.
 func BenchmarkInjectCover(b *testing.B) {
-	injector := newCoverInjection()
+	injector := NewCoverInjection()
 	ctx := context.Background()
 
 	html := generateTestHTML(100)
 
 	covers := []struct {
 		name string
-		data *coverData
+		data *CoverData
 	}{
 		{"nil", nil},
-		{"minimal", &coverData{Title: "Document Title"}},
-		{"full", &coverData{
+		{"minimal", &CoverData{Title: "Document Title"}},
+		{"full", &CoverData{
 			Title:        "Comprehensive Guide",
 			Subtitle:     "A Deep Dive into Topics",
 			Logo:         "https://example.com/logo.png",
@@ -211,18 +211,18 @@ func BenchmarkGenerateNumberedTOC(b *testing.B) {
 
 // BenchmarkInjectTOC benchmarks full TOC injection.
 func BenchmarkInjectTOC(b *testing.B) {
-	injector := newTOCInjection()
+	injector := NewTOCInjection()
 	ctx := context.Background()
 
 	htmls := []struct {
 		name string
 		html string
-		data *tocData
+		data *TOCData
 	}{
 		{"nil_data", generateHTMLWithHeadings(20), nil},
-		{"shallow", generateHTMLWithHeadings(20), &tocData{Title: "Contents", MaxDepth: 2}},
-		{"deep", generateHTMLWithHeadings(50), &tocData{Title: "Table of Contents", MaxDepth: 6}},
-		{"no_title", generateHTMLWithHeadings(20), &tocData{Title: "", MaxDepth: 3}},
+		{"shallow", generateHTMLWithHeadings(20), &TOCData{Title: "Contents", MaxDepth: 2}},
+		{"deep", generateHTMLWithHeadings(50), &TOCData{Title: "Table of Contents", MaxDepth: 6}},
+		{"no_title", generateHTMLWithHeadings(20), &TOCData{Title: "", MaxDepth: 3}},
 	}
 
 	for _, h := range htmls {
@@ -235,81 +235,6 @@ func BenchmarkInjectTOC(b *testing.B) {
 				if err != nil {
 					b.Fatal(err)
 				}
-				_ = result
-			}
-		})
-	}
-}
-
-// BenchmarkBuildWatermarkCSS benchmarks watermark CSS generation.
-func BenchmarkBuildWatermarkCSS(b *testing.B) {
-	watermarks := []struct {
-		name string
-		data *Watermark
-	}{
-		{"nil", nil},
-		{"simple", &Watermark{Text: "DRAFT", Color: "#888888", Opacity: 0.1, Angle: -45}},
-		{"long_text", &Watermark{Text: "CONFIDENTIAL DOCUMENT", Color: "#ff0000", Opacity: 0.2, Angle: -30}},
-	}
-
-	for _, wm := range watermarks {
-		b.Run(wm.name, func(b *testing.B) {
-			b.ReportAllocs()
-			b.ResetTimer()
-
-			for i := 0; i < b.N; i++ {
-				result := buildWatermarkCSS(wm.data)
-				_ = result
-			}
-		})
-	}
-}
-
-// BenchmarkBuildPageBreaksCSS benchmarks page breaks CSS generation.
-func BenchmarkBuildPageBreaksCSS(b *testing.B) {
-	configs := []struct {
-		name string
-		data *PageBreaks
-	}{
-		{"nil", nil},
-		{"defaults", &PageBreaks{Orphans: 2, Widows: 2}},
-		{"all_breaks", &PageBreaks{BeforeH1: true, BeforeH2: true, BeforeH3: true, Orphans: 3, Widows: 3}},
-	}
-
-	for _, cfg := range configs {
-		b.Run(cfg.name, func(b *testing.B) {
-			b.ReportAllocs()
-			b.ResetTimer()
-
-			for i := 0; i < b.N; i++ {
-				result := buildPageBreaksCSS(cfg.data)
-				_ = result
-			}
-		})
-	}
-}
-
-// BenchmarkEscapeCSSString benchmarks CSS string escaping.
-func BenchmarkEscapeCSSString(b *testing.B) {
-	inputs := []struct {
-		name  string
-		value string
-	}{
-		{"clean", "DRAFT"},
-		{"with_quotes", `Text with "quotes"`},
-		{"with_backslash", `Path\to\file`},
-		{"with_newlines", "Line1\nLine2\r\nLine3"},
-		{"with_percent", "100% Complete"},
-		{"complex", `"Complex\nString" with 100% escapes`},
-	}
-
-	for _, input := range inputs {
-		b.Run(input.name, func(b *testing.B) {
-			b.ReportAllocs()
-			b.ResetTimer()
-
-			for i := 0; i < b.N; i++ {
-				result := escapeCSSString(input.value)
 				_ = result
 			}
 		})
