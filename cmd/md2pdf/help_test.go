@@ -98,6 +98,19 @@ func TestPrintConvertUsage(t *testing.T) {
 			t.Errorf("printConvertUsage output should contain %q", flag)
 		}
 	}
+
+	// Check for timeout flag (both short and long forms)
+	timeoutFlags := []string{
+		"-t, --timeout",
+		"default: 30s",
+		"30s, 2m, 1m30s",
+	}
+
+	for _, flag := range timeoutFlags {
+		if !strings.Contains(output, flag) {
+			t.Errorf("printConvertUsage output should contain %q", flag)
+		}
+	}
 }
 
 func TestRunHelp(t *testing.T) {

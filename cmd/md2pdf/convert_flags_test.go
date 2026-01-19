@@ -605,6 +605,48 @@ func TestParseConvertFlags_NewFlags(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "timeout flag long form",
+			args: []string{"--timeout", "2m"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.timeout != "2m" {
+					t.Errorf("timeout = %q, want %q", f.timeout, "2m")
+				}
+			},
+		},
+		{
+			name: "timeout flag short form",
+			args: []string{"-t", "30s"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.timeout != "30s" {
+					t.Errorf("timeout = %q, want %q", f.timeout, "30s")
+				}
+			},
+		},
+		{
+			name: "timeout flag combined duration",
+			args: []string{"--timeout", "1m30s"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.timeout != "1m30s" {
+					t.Errorf("timeout = %q, want %q", f.timeout, "1m30s")
+				}
+			},
+		},
+		{
+			name: "timeout with other flags",
+			args: []string{"--timeout", "5m", "--workers", "4", "-o", "output.pdf"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.timeout != "5m" {
+					t.Errorf("timeout = %q, want %q", f.timeout, "5m")
+				}
+				if f.workers != 4 {
+					t.Errorf("workers = %d, want %d", f.workers, 4)
+				}
+				if f.output != "output.pdf" {
+					t.Errorf("output = %q, want %q", f.output, "output.pdf")
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {

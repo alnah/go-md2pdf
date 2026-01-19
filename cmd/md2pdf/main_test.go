@@ -119,6 +119,142 @@ func TestIsCommand(t *testing.T) {
 	}
 }
 
+func TestResolveTimeout(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		flagValue   string
+		configValue string
+		want        time.Duration
+		wantErr     bool
+		errSubstr   string
+	}{
+		{
+			name:        "both empty uses default",
+			flagValue:   "",
+			configValue: "",
+			want:        0,
+			wantErr:     false,
+		},
+		{
+			name:        "flag only",
+			flagValue:   "2m",
+			configValue: "",
+			want:        2 * time.Minute,
+			wantErr:     false,
+		},
+		{
+			name:        "config only",
+			flagValue:   "",
+			configValue: "30s",
+			want:        30 * time.Second,
+			wantErr:     false,
+		},
+		{
+			name:        "flag overrides config",
+			flagValue:   "5m",
+			configValue: "30s",
+			want:        5 * time.Minute,
+			wantErr:     false,
+		},
+		{
+			name:        "combined duration",
+			flagValue:   "1m30s",
+			configValue: "",
+			want:        90 * time.Second,
+			wantErr:     false,
+		},
+		{
+			name:        "invalid flag format",
+			flagValue:   "abc",
+			configValue: "",
+			wantErr:     true,
+			errSubstr:   "invalid timeout",
+		},
+		{
+			name:        "invalid config format",
+			flagValue:   "",
+			configValue: "xyz",
+			wantErr:     true,
+			errSubstr:   "invalid timeout",
+		},
+		{
+			name:        "negative duration",
+			flagValue:   "-5s",
+			configValue: "",
+			wantErr:     true,
+			errSubstr:   "must be positive",
+		},
+		{
+			name:        "zero duration",
+			flagValue:   "0s",
+			configValue: "",
+			wantErr:     true,
+			errSubstr:   "must be positive",
+		},
+		{
+			name:        "hours duration",
+			flagValue:   "1h",
+			configValue: "",
+			want:        time.Hour,
+			wantErr:     false,
+		},
+		{
+			name:        "fractional seconds",
+			flagValue:   "500ms",
+			configValue: "",
+			want:        500 * time.Millisecond,
+			wantErr:     false,
+		},
+		{
+			name:        "complex duration",
+			flagValue:   "1h30m45s",
+			configValue: "",
+			want:        time.Hour + 30*time.Minute + 45*time.Second,
+			wantErr:     false,
+		},
+		{
+			name:        "invalid flag overrides valid config",
+			flagValue:   "invalid",
+			configValue: "30s",
+			wantErr:     true,
+			errSubstr:   "invalid timeout",
+		},
+		{
+			name:        "zero flag overrides valid config",
+			flagValue:   "0s",
+			configValue: "30s",
+			wantErr:     true,
+			errSubstr:   "must be positive",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := resolveTimeout(tt.flagValue, tt.configValue)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+					return
+				}
+				if tt.errSubstr != "" && !strings.Contains(err.Error(), tt.errSubstr) {
+					t.Errorf("error should contain %q, got: %v", tt.errSubstr, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("resolveTimeout(%q, %q) = %v, want %v", tt.flagValue, tt.configValue, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestLooksLikeMarkdown(t *testing.T) {
 	t.Parallel()
 
