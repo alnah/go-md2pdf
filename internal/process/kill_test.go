@@ -1,4 +1,4 @@
-package md2pdf
+package process
 
 import "testing"
 
@@ -11,5 +11,5 @@ func TestKillProcessGroup_InvalidPID(t *testing.T) {
 	// Note: Cannot safely test with:
 	// - PID 0: syscall.Kill(-0, SIGKILL) kills the current process group
 	// - Negative PIDs: syscall.Kill(positive, SIGKILL) would target real processes
-	killProcessGroup(999999999)
+	KillProcessGroup(999999999)
 }
