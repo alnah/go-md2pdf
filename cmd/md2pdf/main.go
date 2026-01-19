@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	md2pdf "github.com/alnah/go-md2pdf"
 	"github.com/alnah/go-md2pdf/internal/config"
@@ -134,15 +135,28 @@ func runConvertCmd(args []string, env *Environment) error {
 		fmt.Fprintf(env.Stderr, "Using template set: %s\n", templateSet.Name)
 	}
 
-	// Create pool with resolved size, asset loader, and template set
+	// Resolve timeout: CLI flag > config > library default
+	timeout, err := resolveTimeout(flags.timeout, env.Config.Timeout)
+	if err != nil {
+		return err
+	}
+
+	// Create pool with resolved size, asset loader, template set, and timeout
 	poolSize := md2pdf.ResolvePoolSize(flags.workers)
 	if flags.common.verbose {
 		fmt.Fprintf(env.Stderr, "Pool size: %d\n", poolSize)
+		if timeout > 0 {
+			fmt.Fprintf(env.Stderr, "Timeout: %v\n", timeout)
+		}
 	}
-	converterPool := md2pdf.NewConverterPool(poolSize,
+	poolOpts := []md2pdf.Option{
 		md2pdf.WithAssetLoader(env.AssetLoader),
 		md2pdf.WithTemplateSet(templateSet),
-	)
+	}
+	if timeout > 0 {
+		poolOpts = append(poolOpts, md2pdf.WithTimeout(timeout))
+	}
+	converterPool := md2pdf.NewConverterPool(poolSize, poolOpts...)
 	defer converterPool.Close()
 
 	// Wrap in adapter for local Pool interface
@@ -178,4 +192,25 @@ func (a *poolAdapter) Release(c CLIConverter) {
 
 func (a *poolAdapter) Size() int {
 	return a.pool.Size()
+}
+
+// resolveTimeout parses timeout from flag or config.
+// Returns 0 if neither is set (use library default).
+// Flag takes precedence over config.
+func resolveTimeout(flagValue, configValue string) (time.Duration, error) {
+	value := flagValue
+	if value == "" {
+		value = configValue
+	}
+	if value == "" {
+		return 0, nil
+	}
+	d, err := time.ParseDuration(value)
+	if err != nil {
+		return 0, fmt.Errorf("invalid timeout %q (use format like \"30s\", \"2m\")", value)
+	}
+	if d <= 0 {
+		return 0, fmt.Errorf("timeout must be positive, got %q", value)
+	}
+	return d, nil
 }

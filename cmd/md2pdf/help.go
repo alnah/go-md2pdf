@@ -31,6 +31,8 @@ func printConvertUsage(w io.Writer) {
 	fmt.Fprintln(w, "  -o, --output <path>       Output file or directory")
 	fmt.Fprintln(w, "  -c, --config <name>       Config file name or path")
 	fmt.Fprintln(w, "  -w, --workers <n>         Parallel workers (0 = auto)")
+	fmt.Fprintln(w, "  -t, --timeout <duration>  PDF generation timeout (default: 30s)")
+	fmt.Fprintln(w, "                            Examples: 30s, 2m, 1m30s")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Author:")
 	fmt.Fprintln(w, "      --author-name <s>     Author name")

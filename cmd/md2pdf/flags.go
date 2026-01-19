@@ -114,6 +114,7 @@ type convertFlags struct {
 	common     commonFlags
 	output     string
 	workers    int
+	timeout    string
 	author     authorFlags
 	document   documentFlags
 	page       pageFlags
@@ -233,6 +234,7 @@ func parseConvertFlags(args []string) (*convertFlags, []string, error) {
 	// I/O flags
 	fs.StringVarP(&f.output, "output", "o", "", "output file or directory")
 	fs.IntVarP(&f.workers, "workers", "w", 0, "parallel workers (0 = auto)")
+	fs.StringVarP(&f.timeout, "timeout", "t", "", "PDF generation timeout (e.g., 30s, 2m)")
 
 	// Flag groups
 	addCommonFlags(fs, &f.common)
