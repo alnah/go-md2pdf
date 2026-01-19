@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	md2pdf "github.com/alnah/go-md2pdf"
 	"github.com/alnah/go-md2pdf/internal/dateutil"
@@ -56,7 +57,8 @@ type Config struct {
 	Document   DocumentConfig   `yaml:"document"`
 	Input      InputConfig      `yaml:"input"`
 	Output     OutputConfig     `yaml:"output"`
-	Style      string           `yaml:"style"` // CSS style name or file path
+	Style      string           `yaml:"style"`   // CSS style name or file path
+	Timeout    string           `yaml:"timeout"` // PDF generation timeout (e.g., "30s", "2m")
 	Footer     FooterConfig     `yaml:"footer"`
 	Signature  SignatureConfig  `yaml:"signature"`
 	Assets     AssetsConfig     `yaml:"assets"`
@@ -409,6 +411,9 @@ func (c *Config) Validate() error {
 	if err := c.Document.Validate(); err != nil {
 		return err
 	}
+	if err := validateTimeout(c.Timeout); err != nil {
+		return err
+	}
 	if err := c.Footer.Validate(); err != nil {
 		return err
 	}
@@ -440,6 +445,21 @@ func (c *Config) Validate() error {
 func validateFieldLength(fieldName, value string, maxLength int) error {
 	if len(value) > maxLength {
 		return fmt.Errorf("%w: %s (%d chars, max %d)", ErrFieldTooLong, fieldName, len(value), maxLength)
+	}
+	return nil
+}
+
+// validateTimeout checks that the timeout string is a valid positive duration.
+func validateTimeout(timeout string) error {
+	if timeout == "" {
+		return nil
+	}
+	d, err := time.ParseDuration(timeout)
+	if err != nil {
+		return fmt.Errorf("timeout: invalid duration %q (use format like \"30s\", \"2m\")", timeout)
+	}
+	if d <= 0 {
+		return fmt.Errorf("timeout: must be positive, got %q", timeout)
 	}
 	return nil
 }
