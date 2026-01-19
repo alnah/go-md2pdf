@@ -18,49 +18,61 @@ const (
 	cpuDivisor = 2
 )
 
-// ServicePool manages a pool of Service instances for parallel processing.
-// Each service has its own browser instance, enabling true parallelism.
-// Services are created lazily on first acquire to avoid startup delay.
-type ServicePool struct {
-	size     int
-	opts     []Option
-	services []*Service
-	sem      chan *Service
-	mu       sync.Mutex
-	created  int
-	closed   bool
-	initErr  error // First error encountered during service creation
+// ConverterPool manages a pool of Converter instances for parallel processing.
+// Each converter has its own browser instance, enabling true parallelism.
+// Converters are created lazily on first acquire to avoid startup delay.
+type ConverterPool struct {
+	size       int
+	opts       []Option
+	converters []*Converter
+	sem        chan *Converter
+	mu         sync.Mutex
+	created    int
+	closed     bool
+	initErr    error // First error encountered during converter creation
 }
 
-// NewServicePool creates a pool with capacity for n Service instances.
-// Services are created lazily when acquired, not at pool creation.
-// Options are applied to each service when created.
-func NewServicePool(n int, opts ...Option) *ServicePool {
+// ServicePool is an alias for ConverterPool for backward compatibility.
+//
+// Deprecated: Use ConverterPool instead. This alias will be removed in v2.
+type ServicePool = ConverterPool
+
+// NewConverterPool creates a pool with capacity for n Converter instances.
+// Converters are created lazily when acquired, not at pool creation.
+// Options are applied to each converter when created.
+func NewConverterPool(n int, opts ...Option) *ConverterPool {
 	if n < 1 {
 		n = 1
 	}
 
-	return &ServicePool{
-		size:     n,
-		opts:     opts,
-		services: make([]*Service, 0, n),
-		sem:      make(chan *Service, n),
+	return &ConverterPool{
+		size:       n,
+		opts:       opts,
+		converters: make([]*Converter, 0, n),
+		sem:        make(chan *Converter, n),
 	}
 }
 
-// Acquire gets a service from the pool, creating one if needed.
-// Blocks if all services are in use.
-// Returns nil and sets internal error if service creation fails.
+// NewServicePool creates a pool with capacity for n Converter instances.
+//
+// Deprecated: Use NewConverterPool instead. NewServicePool will be removed in v2.
+func NewServicePool(n int, opts ...Option) *ConverterPool {
+	return NewConverterPool(n, opts...)
+}
+
+// Acquire gets a converter from the pool, creating one if needed.
+// Blocks if all converters are in use.
+// Returns nil and sets internal error if converter creation fails.
 // Use InitError() to check for initialization failures.
-func (p *ServicePool) Acquire() *Service {
-	// Try to get an existing service (non-blocking)
+func (p *ConverterPool) Acquire() *Converter {
+	// Try to get an existing converter (non-blocking)
 	select {
-	case svc := <-p.sem:
-		return svc
+	case conv := <-p.sem:
+		return conv
 	default:
 	}
 
-	// Check if we can create a new service
+	// Check if we can create a new converter
 	p.mu.Lock()
 	if p.initErr != nil {
 		p.mu.Unlock()
@@ -70,8 +82,8 @@ func (p *ServicePool) Acquire() *Service {
 		p.created++
 		p.mu.Unlock()
 
-		// Create new service outside the lock
-		svc, err := New(p.opts...)
+		// Create new converter outside the lock
+		conv, err := NewConverter(p.opts...)
 		if err != nil {
 			p.mu.Lock()
 			if p.initErr == nil {
@@ -83,28 +95,28 @@ func (p *ServicePool) Acquire() *Service {
 		}
 
 		p.mu.Lock()
-		p.services = append(p.services, svc)
+		p.converters = append(p.converters, conv)
 		p.mu.Unlock()
 
-		return svc
+		return conv
 	}
 	p.mu.Unlock()
 
-	// All services created, wait for one to be released
+	// All converters created, wait for one to be released
 	return <-p.sem
 }
 
-// InitError returns the first error encountered during service creation.
-// Returns nil if all services were created successfully.
-func (p *ServicePool) InitError() error {
+// InitError returns the first error encountered during converter creation.
+// Returns nil if all converters were created successfully.
+func (p *ConverterPool) InitError() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.initErr
 }
 
-// Release returns a service to the pool.
+// Release returns a converter to the pool.
 // The lock is released before sending to avoid deadlock when channel is full.
-func (p *ServicePool) Release(svc *Service) {
+func (p *ConverterPool) Release(conv *Converter) {
 	p.mu.Lock()
 	if p.closed {
 		p.mu.Unlock()
@@ -112,12 +124,12 @@ func (p *ServicePool) Release(svc *Service) {
 	}
 	p.mu.Unlock()
 
-	p.sem <- svc
+	p.sem <- conv
 }
 
 // Close releases all browser resources.
-// Returns an aggregated error if multiple services fail to close.
-func (p *ServicePool) Close() error {
+// Returns an aggregated error if multiple converters fail to close.
+func (p *ConverterPool) Close() error {
 	p.mu.Lock()
 	if p.closed {
 		p.mu.Unlock()
@@ -125,12 +137,12 @@ func (p *ServicePool) Close() error {
 	}
 	p.closed = true
 	close(p.sem)
-	services := p.services
+	converters := p.converters
 	p.mu.Unlock()
 
 	var errs []error
-	for _, svc := range services {
-		if err := svc.Close(); err != nil {
+	for _, conv := range converters {
+		if err := conv.Close(); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -138,7 +150,7 @@ func (p *ServicePool) Close() error {
 }
 
 // Size returns the pool capacity.
-func (p *ServicePool) Size() int {
+func (p *ConverterPool) Size() int {
 	return p.size
 }
 
