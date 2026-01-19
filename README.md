@@ -65,13 +65,13 @@ import (
 )
 
 func main() {
-    svc, err := md2pdf.New()
+    conv, err := md2pdf.NewConverter()
     if err != nil {
         log.Fatal(err)
     }
-    defer svc.Close()
+    defer conv.Close()
 
-    result, err := svc.Convert(context.Background(), md2pdf.Input{
+    result, err := conv.Convert(context.Background(), md2pdf.Input{
         Markdown: "# Hello World\n\nGenerated with go-md2pdf.",
     })
     if err != nil {
@@ -93,7 +93,7 @@ Use `Input.HTMLOnly: true` to skip PDF generation and only produce HTML.
 ### With Cover Page
 
 ```go
-result, err := svc.Convert(ctx, md2pdf.Input{
+result, err := conv.Convert(ctx, md2pdf.Input{
     Markdown: content,
     Cover: &md2pdf.Cover{
         Title:        "Project Report",
@@ -115,7 +115,7 @@ result, err := svc.Convert(ctx, md2pdf.Input{
 ### With Table of Contents
 
 ```go
-result, err := svc.Convert(ctx, md2pdf.Input{
+result, err := conv.Convert(ctx, md2pdf.Input{
     Markdown: content,
     TOC: &md2pdf.TOC{
         Title:    "Contents",
@@ -128,7 +128,7 @@ result, err := svc.Convert(ctx, md2pdf.Input{
 ### With Footer
 
 ```go
-result, err := svc.Convert(ctx, md2pdf.Input{
+result, err := conv.Convert(ctx, md2pdf.Input{
     Markdown: content,
     Footer: &md2pdf.Footer{
         ShowPageNumber: true,
@@ -142,7 +142,7 @@ result, err := svc.Convert(ctx, md2pdf.Input{
 ### With Signature
 
 ```go
-result, err := svc.Convert(ctx, md2pdf.Input{
+result, err := conv.Convert(ctx, md2pdf.Input{
     Markdown: content,
     Signature: &md2pdf.Signature{
         Name:         "John Doe",
@@ -158,7 +158,7 @@ result, err := svc.Convert(ctx, md2pdf.Input{
 ### With Watermark
 
 ```go
-result, err := svc.Convert(ctx, md2pdf.Input{
+result, err := conv.Convert(ctx, md2pdf.Input{
     Markdown: content,
     Watermark: &md2pdf.Watermark{
         Text:    "CONFIDENTIAL",
@@ -172,7 +172,7 @@ result, err := svc.Convert(ctx, md2pdf.Input{
 ### With Page Settings
 
 ```go
-result, err := svc.Convert(ctx, md2pdf.Input{
+result, err := conv.Convert(ctx, md2pdf.Input{
     Markdown: content,
     Page: &md2pdf.PageSettings{
         Size:        md2pdf.PageSizeA4,
@@ -185,7 +185,7 @@ result, err := svc.Convert(ctx, md2pdf.Input{
 ### With Page Breaks
 
 ```go
-result, err := svc.Convert(ctx, md2pdf.Input{
+result, err := conv.Convert(ctx, md2pdf.Input{
     Markdown: content,
     PageBreaks: &md2pdf.PageBreaks{
         BeforeH1: true, // Page break before H1 headings
@@ -202,7 +202,7 @@ The `CSS` field in `Input` accepts a CSS string that is injected into the HTML f
 
 ```go
 // CSS string injected into this document only
-result, err := svc.Convert(ctx, md2pdf.Input{
+result, err := conv.Convert(ctx, md2pdf.Input{
     Markdown: content,
     CSS: `
         body { font-family: Georgia, serif; }
@@ -225,27 +225,27 @@ Override embedded CSS styles and HTML templates:
 
 ```go
 // Option 1: Use embedded style by name
-svc, err := md2pdf.New(md2pdf.WithStyle("technical"))
+conv, err := md2pdf.NewConverter(md2pdf.WithStyle("technical"))
 
 // Option 2: Load CSS from file path
-svc, err := md2pdf.New(md2pdf.WithStyle("./custom.css"))
+conv, err := md2pdf.NewConverter(md2pdf.WithStyle("./custom.css"))
 
 // Option 3: Provide CSS content directly
-svc, err := md2pdf.New(md2pdf.WithStyle("body { font-family: Georgia; }"))
+conv, err := md2pdf.NewConverter(md2pdf.WithStyle("body { font-family: Georgia; }"))
 
 // Option 4: Load from custom directory (with fallback to embedded)
-svc, err := md2pdf.New(md2pdf.WithAssetPath("/path/to/assets"))
+conv, err := md2pdf.NewConverter(md2pdf.WithAssetPath("/path/to/assets"))
 
 // Option 5: Provide template set directly
 ts := md2pdf.NewTemplateSet("custom", coverHTML, signatureHTML)
-svc, err := md2pdf.New(md2pdf.WithTemplateSet(ts))
+conv, err := md2pdf.NewConverter(md2pdf.WithTemplateSet(ts))
 
 // Option 6: Full control with custom loader
 loader, err := md2pdf.NewAssetLoader("/path/to/assets")
 if err != nil {
     log.Fatal(err)
 }
-svc, err := md2pdf.New(md2pdf.WithAssetLoader(loader))
+conv, err := md2pdf.NewConverter(md2pdf.WithAssetLoader(loader))
 ```
 
 `WithStyle` accepts a style name, file path, or CSS content:
@@ -270,11 +270,11 @@ Available embedded styles: `default`, `technical`, `creative`, `academic`, `corp
 
 Missing files fall back to embedded defaults silently.
 
-> **Note:** Service-level options (`WithAssetPath`, `WithStyle`, `WithAssetLoader`) configure the base theme for all conversions. To add document-specific CSS on top of the base theme, use `Input.CSS` in the `Convert()` call.
+> **Note:** Converter-level options (`WithAssetPath`, `WithStyle`, `WithAssetLoader`) configure the base theme for all conversions. To add document-specific CSS on top of the base theme, use `Input.CSS` in the `Convert()` call.
 
-### With Service Pool (Parallel Processing)
+### With Converter Pool (Parallel Processing)
 
-For batch conversion, use `ServicePool` to process multiple files in parallel:
+For batch conversion, use `ConverterPool` to process multiple files in parallel:
 
 ```go
 package main
@@ -290,7 +290,7 @@ import (
 
 func main() {
     // Create pool with 4 workers (each has its own browser instance)
-    pool := md2pdf.NewServicePool(4)
+    pool := md2pdf.NewConverterPool(4)
     defer pool.Close()
 
     files := []string{"doc1.md", "doc2.md", "doc3.md", "doc4.md"}
@@ -301,15 +301,15 @@ func main() {
         go func(f string) {
             defer wg.Done()
 
-            svc := pool.Acquire()
-            if svc == nil {
-                log.Printf("failed to acquire service: %v", pool.InitError())
+            conv := pool.Acquire()
+            if conv == nil {
+                log.Printf("failed to acquire converter: %v", pool.InitError())
                 return
             }
-            defer pool.Release(svc)
+            defer pool.Release(conv)
 
             content, _ := os.ReadFile(f)
-            result, err := svc.Convert(context.Background(), md2pdf.Input{
+            result, err := conv.Convert(context.Background(), md2pdf.Input{
                 Markdown: string(content),
             })
             if err != nil {
