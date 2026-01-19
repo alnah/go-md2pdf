@@ -1533,3 +1533,194 @@ func TestConfig_Validate_Assets(t *testing.T) {
 		}
 	})
 }
+
+func TestConfig_Validate_Timeout(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		timeout   string
+		wantErr   bool
+		errSubstr string
+	}{
+		{
+			name:    "empty timeout is valid",
+			timeout: "",
+			wantErr: false,
+		},
+		{
+			name:    "valid seconds",
+			timeout: "30s",
+			wantErr: false,
+		},
+		{
+			name:    "valid minutes",
+			timeout: "2m",
+			wantErr: false,
+		},
+		{
+			name:    "valid combined",
+			timeout: "1m30s",
+			wantErr: false,
+		},
+		{
+			name:    "valid fractional",
+			timeout: "0.5s",
+			wantErr: false,
+		},
+		{
+			name:    "valid long timeout",
+			timeout: "30m",
+			wantErr: false,
+		},
+		{
+			name:      "invalid format",
+			timeout:   "abc",
+			wantErr:   true,
+			errSubstr: "invalid duration",
+		},
+		{
+			name:      "missing unit",
+			timeout:   "30",
+			wantErr:   true,
+			errSubstr: "invalid duration",
+		},
+		{
+			name:      "negative duration",
+			timeout:   "-5s",
+			wantErr:   true,
+			errSubstr: "must be positive",
+		},
+		{
+			name:      "zero duration",
+			timeout:   "0s",
+			wantErr:   true,
+			errSubstr: "must be positive",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cfg := &Config{Timeout: tt.timeout}
+			err := cfg.Validate()
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error for timeout %q", tt.timeout)
+					return
+				}
+				if tt.errSubstr != "" && !strings.Contains(err.Error(), tt.errSubstr) {
+					t.Errorf("error should contain %q, got: %v", tt.errSubstr, err)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("unexpected error for timeout %q: %v", tt.timeout, err)
+				}
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestLoadConfig_Timeout - YAML loading with timeout field
+// ---------------------------------------------------------------------------
+
+func TestLoadConfig_Timeout(t *testing.T) {
+	t.Parallel()
+
+	t.Run("loads valid timeout from YAML", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "test.yaml")
+		content := `timeout: "2m"
+style: "default"
+`
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		cfg, err := LoadConfig(configPath)
+		if err != nil {
+			t.Fatalf("LoadConfig() error = %v", err)
+		}
+		if cfg.Timeout != "2m" {
+			t.Errorf("Timeout = %q, want %q", cfg.Timeout, "2m")
+		}
+	})
+
+	t.Run("loads combined duration from YAML", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "test.yaml")
+		content := `timeout: "1m30s"
+`
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		cfg, err := LoadConfig(configPath)
+		if err != nil {
+			t.Fatalf("LoadConfig() error = %v", err)
+		}
+		if cfg.Timeout != "1m30s" {
+			t.Errorf("Timeout = %q, want %q", cfg.Timeout, "1m30s")
+		}
+	})
+
+	t.Run("rejects invalid timeout in YAML", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "test.yaml")
+		content := `timeout: "invalid"
+`
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		_, err := LoadConfig(configPath)
+		if err == nil {
+			t.Error("expected error for invalid timeout, got nil")
+		}
+		if !strings.Contains(err.Error(), "invalid duration") {
+			t.Errorf("error should mention 'invalid duration', got: %v", err)
+		}
+	})
+
+	t.Run("rejects negative timeout in YAML", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "test.yaml")
+		content := `timeout: "-5s"
+`
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		_, err := LoadConfig(configPath)
+		if err == nil {
+			t.Error("expected error for negative timeout, got nil")
+		}
+		if !strings.Contains(err.Error(), "must be positive") {
+			t.Errorf("error should mention 'must be positive', got: %v", err)
+		}
+	})
+
+	t.Run("empty timeout is valid", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "test.yaml")
+		content := `style: "default"
+`
+		if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		cfg, err := LoadConfig(configPath)
+		if err != nil {
+			t.Fatalf("LoadConfig() error = %v", err)
+		}
+		if cfg.Timeout != "" {
+			t.Errorf("Timeout = %q, want empty string", cfg.Timeout)
+		}
+	})
+}
