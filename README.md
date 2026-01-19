@@ -342,6 +342,8 @@ Input/Output:
   -o, --output <path>       Output file or directory
   -c, --config <name>       Config file name or path
   -w, --workers <n>         Parallel workers (0 = auto)
+  -t, --timeout <duration>  PDF generation timeout (default: 30s)
+                            Examples: 30s, 2m, 1m30s
 
 Author:
       --author-name <s>     Author name
@@ -514,6 +516,7 @@ Supported formats: `.yaml`, `.yml`
 | `document.documentID`   | string | -            | Document ID (e.g., "DOC-2025-001")       |
 | `document.description`  | string | -            | Brief document summary                   |
 | `input.defaultDir`      | string | -            | Default input directory                  |
+| `timeout`               | string | `"30s"`      | PDF generation timeout (e.g., "30s", "2m") |
 | `page.size`             | string | `"letter"`   | letter, a4, legal                        |
 | `page.orientation`      | string | `"portrait"` | portrait, landscape                      |
 | `page.margin`           | float  | `0.5`        | Margin in inches (0.25-3.0)              |
@@ -556,6 +559,10 @@ input:
 
 output:
   defaultDir: './docs/pdf' # Default output when no -o flag
+
+# PDF generation timeout (default: 30s)
+# Use Go duration format: 30s, 2m, 1m30s
+timeout: '1m'
 
 # Shared author info (used by cover and signature)
 author:
