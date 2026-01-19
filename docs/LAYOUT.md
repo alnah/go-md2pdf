@@ -3,18 +3,13 @@
 ```
 go-md2pdf/                      # package md2pdf (library)
 │
-├── service.go                  # New(), Convert(), Close()
+├── service.go                  # New(), Convert(), Close() - facade
 ├── pool.go                     # ServicePool, ResolvePoolSize()
 ├── types.go                    # Input, PageSettings, Footer, Signature, Watermark, Cover, TOC, PageBreaks, Options
 ├── assets.go                   # AssetLoader, TemplateSet, NewAssetLoader(), NewTemplateSet()
 ├── errors.go                   # Sentinel errors
-├── date.go                     # Date formatting (auto:FORMAT)
-│
-├── mdtransform.go              # MD -> MD (preprocessing)
-├── md2html.go                  # MD -> HTML (Goldmark)
-├── htmlinject.go               # HTML -> HTML (CSS, watermark, cover, TOC, signature)
 ├── html2pdf.go                 # HTML -> PDF (Rod/Chrome)
-├── process_{unix,windows}.go   # killProcessGroup per platform
+├── cssbuilders.go              # Watermark/PageBreaks CSS (depend on public types)
 │
 ├── cmd/md2pdf/                 # CLI (md2pdf convert|version|help)
 │   ├── main.go                 # Entry point, command dispatch
@@ -27,8 +22,15 @@ go-md2pdf/                      # package md2pdf (library)
 ├── internal/
 │   ├── assets/                 # Asset loading (styles, templates)
 │   ├── config/                 # YAML config, validation
-│   ├── dateutil/               # Date format parsing
+│   ├── dateutil/               # Date format parsing, ResolveDate()
 │   ├── fileutil/               # File utilities (FileExists, IsFilePath, IsURL)
+│   ├── pipeline/               # Conversion pipeline components
+│   │   ├── mdtransform.go      # MD -> MD (preprocessing)
+│   │   ├── md2html.go          # MD -> HTML (Goldmark)
+│   │   └── htmlinject.go       # HTML -> HTML (CSS, cover, TOC, signature)
+│   ├── process/                # OS-specific process management
+│   │   ├── kill_unix.go        # killProcessGroup (Unix)
+│   │   └── kill_windows.go     # killProcessGroup (Windows)
 │   └── yamlutil/               # YAML wrapper with limits
 │
 └── docs/
@@ -37,7 +39,8 @@ go-md2pdf/                      # package md2pdf (library)
 ## Conventions
 
 - **Library at root** - `import "github.com/alnah/go-md2pdf"`
-- **Files named by transformation** - `mdtransform`, `md2html`, `htmlinject`, `html2pdf`
+- **Public API only at root** - Service, Input, types, errors
+- **Pipeline in internal/** - mdtransform, md2html, htmlinject
 - **Platform suffix** - `_unix.go`, `_windows.go` for OS-specific code
-- **internal/** - Private code (assets, config, utilities)
+- **internal/** - Private implementation (pipeline, assets, config, utilities)
 - **cmd/** - Binaries

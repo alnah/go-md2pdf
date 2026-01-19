@@ -10,10 +10,11 @@
        ┌───────────┬───────────┼───────────┬───────────┐
        ▼           ▼           ▼           ▼           ▼
    mdtransform   md2html   htmlinject   html2pdf    assets
+   (internal)   (internal)  (internal)   (root)    (internal)
 ```
 
 - **Service Facade** - Single entry point, owns browser lifecycle
-- **Pipeline** - Chained transformations with context propagation
+- **Pipeline** - Chained transformations in `internal/pipeline/`
 - **ServicePool** - Lazy browser init, parallel batch processing
 - **Dependency Injection** - Components via interfaces
 
@@ -32,12 +33,12 @@ Markdown ──▶ mdtransform ──▶ md2html ──▶ htmlinject ──▶ 
                                           Signature
 ```
 
-| Stage           | Transformation | Tool            |
-| --------------- | -------------- | --------------- |
-| **mdtransform** | MD -> MD       | Regex           |
-| **md2html**     | MD -> HTML     | Goldmark (GFM)  |
-| **htmlinject**  | HTML -> HTML   | String/template |
-| **html2pdf**    | HTML -> PDF    | Rod (Chrome)    |
+| Stage           | Transformation | Location                     | Tool            |
+| --------------- | -------------- | ---------------------------- | --------------- |
+| **mdtransform** | MD -> MD       | `internal/pipeline/`         | Regex           |
+| **md2html**     | MD -> HTML     | `internal/pipeline/`         | Goldmark (GFM)  |
+| **htmlinject**  | HTML -> HTML   | `internal/pipeline/`         | String/template |
+| **html2pdf**    | HTML -> PDF    | root (depends on PageSettings) | Rod (Chrome)  |
 
 ---
 
@@ -58,5 +59,6 @@ Markdown ──▶ mdtransform ──▶ md2html ──▶ htmlinject ──▶ 
 ## Browser Lifecycle
 
 - Browsers created lazily on first `Acquire()` from pool
-- `killProcessGroup()` terminates Chrome + all child processes (GPU, renderer)
+- `process.KillProcessGroup()` terminates Chrome + all child processes (GPU, renderer)
 - Platform-specific: `syscall.Kill(-pid)` on Unix, `taskkill /T` on Windows
+- Implementation in `internal/process/`
