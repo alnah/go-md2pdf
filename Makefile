@@ -32,7 +32,7 @@ test-cover: ## Run unit tests with coverage report
 	go test -v -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 
-test-cover-all: ## Run all tests with coverage report (requires pandoc)
+test-cover-all: ## Run all tests with coverage report
 	go test -v -tags=integration -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 
