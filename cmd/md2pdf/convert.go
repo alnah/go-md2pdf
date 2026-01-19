@@ -14,6 +14,7 @@ import (
 
 	md2pdf "github.com/alnah/go-md2pdf"
 	"github.com/alnah/go-md2pdf/internal/config"
+	"github.com/alnah/go-md2pdf/internal/dateutil"
 	"github.com/alnah/go-md2pdf/internal/fileutil"
 )
 
@@ -285,7 +286,7 @@ func mergeFlags(flags *convertFlags, cfg *config.Config) {
 
 // resolveDateWithTime resolves "auto" and "auto:FORMAT" to formatted date.
 func resolveDateWithTime(date string, now func() time.Time) (string, error) {
-	return md2pdf.ResolveDate(date, now())
+	return dateutil.ResolveDate(date, now())
 }
 
 // resolveInputPath determines the input path from args or config.
