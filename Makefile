@@ -1,6 +1,6 @@
 BINARY := md2pdf
 
-.PHONY: help build test test-integration test-cover test-cover-all bench bench-cpu bench-mem run clean fmt vet lint sec check check-all tools
+.PHONY: help build test test-integration test-cover test-cover-all bench bench-cpu bench-mem run clean fmt vet lint sec check check-all tools examples
 
 .DEFAULT_GOAL := help
 
@@ -70,3 +70,11 @@ sec: ## Run gosec security scanner
 check: fmt vet lint sec test ## Run all checks (unit tests only)
 
 check-all: fmt vet lint sec test-integration ## Run all checks including integration tests
+
+examples: build ## Regenerate example PDFs in examples/
+	./$(BINARY) convert examples/simple-report.md -o examples/simple-default.pdf
+	./$(BINARY) convert examples/simple-report.md --style technical -o examples/simple-technical.pdf
+	./$(BINARY) convert examples/simple-report.md --style academic -o examples/simple-academic.pdf
+	./$(BINARY) convert examples/simple-report.md --style modern -o examples/simple-modern.pdf
+	./$(BINARY) convert -c examples/full-featured examples/full-featured.md -o examples/full-featured.pdf
+	@echo "Done. Review with 'git diff examples/' and commit if needed."
