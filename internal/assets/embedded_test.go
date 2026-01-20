@@ -147,3 +147,57 @@ func TestEmbeddedLoader_ImplementsAssetLoader(t *testing.T) {
 
 	var _ AssetLoader = (*EmbeddedLoader)(nil)
 }
+
+func TestAvailableStyles(t *testing.T) {
+	t.Parallel()
+
+	styles := AvailableStyles()
+
+	if len(styles) == 0 {
+		t.Fatal("AvailableStyles() returned empty list")
+	}
+
+	// Check that expected styles are present
+	expectedStyles := []string{"default", "technical", "creative", "academic"}
+	for _, expected := range expectedStyles {
+		found := false
+		for _, s := range styles {
+			if s == expected {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("AvailableStyles() missing expected style %q", expected)
+		}
+	}
+
+	// Check that list is sorted
+	for i := 1; i < len(styles); i++ {
+		if styles[i] < styles[i-1] {
+			t.Errorf("AvailableStyles() not sorted: %q comes after %q", styles[i], styles[i-1])
+		}
+	}
+}
+
+func TestLoadStyle_ErrorIncludesAvailableStyles(t *testing.T) {
+	t.Parallel()
+
+	loader := NewEmbeddedLoader()
+	_, err := loader.LoadStyle("nonexistent-style")
+
+	if err == nil {
+		t.Fatal("expected error for nonexistent style")
+	}
+
+	errMsg := err.Error()
+	if !strings.Contains(errMsg, "hint:") {
+		t.Error("error should contain hint")
+	}
+	if !strings.Contains(errMsg, "available:") {
+		t.Error("error should list available styles")
+	}
+	if !strings.Contains(errMsg, "default") {
+		t.Error("error hint should include 'default' style")
+	}
+}

@@ -3,6 +3,11 @@ package assets
 import (
 	"embed"
 	"fmt"
+	"path/filepath"
+	"sort"
+	"strings"
+
+	"github.com/alnah/go-md2pdf/internal/hints"
 )
 
 //go:embed styles/*
@@ -10,6 +15,28 @@ var styles embed.FS
 
 //go:embed templates/*/*
 var templates embed.FS
+
+// AvailableStyles returns the names of all embedded styles (without .css extension).
+// The list is sorted alphabetically.
+func AvailableStyles() []string {
+	entries, err := styles.ReadDir("styles")
+	if err != nil {
+		return nil
+	}
+
+	var names []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if strings.HasSuffix(name, ".css") {
+			names = append(names, strings.TrimSuffix(name, filepath.Ext(name)))
+		}
+	}
+	sort.Strings(names)
+	return names
+}
 
 // EmbeddedLoader loads assets from embedded filesystem.
 // Implements AssetLoader interface.
@@ -29,7 +56,7 @@ func (e *EmbeddedLoader) LoadStyle(name string) (string, error) {
 
 	content, err := styles.ReadFile("styles/" + name + ".css")
 	if err != nil {
-		return "", fmt.Errorf("%w: %q", ErrStyleNotFound, name)
+		return "", fmt.Errorf("%w: %q%s", ErrStyleNotFound, name, hints.ForStyleNotFound(AvailableStyles()))
 	}
 
 	return string(content), nil
