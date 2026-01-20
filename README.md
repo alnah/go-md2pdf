@@ -478,6 +478,29 @@ md2pdf completion fish > ~/.config/fish/completions/md2pdf.fish
 md2pdf completion powershell | Out-String | Invoke-Expression
 ```
 
+### Exit Codes
+
+| Code | Name | Description |
+|------|------|-------------|
+| 0 | Success | Conversion completed successfully |
+| 1 | General | Unexpected or unclassified error |
+| 2 | Usage | Invalid flags, configuration, or validation failure |
+| 3 | I/O | File not found, permission denied, write failure |
+| 4 | Browser | Chrome not found, connection failed, timeout |
+
+Example usage in scripts:
+
+```bash
+md2pdf convert document.md
+case $? in
+    0) echo "Success" ;;
+    2) echo "Check your flags or config" ;;
+    3) echo "Check file permissions" ;;
+    4) echo "Check Chrome installation" ;;
+    *) echo "Unknown error" ;;
+esac
+```
+
 ### Docker
 
 ```bash
