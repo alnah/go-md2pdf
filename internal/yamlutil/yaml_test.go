@@ -1,9 +1,17 @@
-package yamlutil
+package yamlutil_test
+
+// Notes:
+// - Marshal error branch (line 46-48 in yaml.go): not tested because yaml.Marshal
+//   only fails with unmarshalable types (channels, functions) which are compile-time
+//   detectable and not realistic in production usage.
+// These are acceptable gaps: we test observable behavior, not implementation details.
 
 import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/alnah/go-md2pdf/internal/yamlutil"
 )
 
 type testConfig struct {
@@ -12,7 +20,13 @@ type testConfig struct {
 	Enabled bool   `yaml:"enabled"`
 }
 
+// ---------------------------------------------------------------------------
+// TestUnmarshal - Parses YAML into Go structs
+// ---------------------------------------------------------------------------
+
 func TestUnmarshal(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		data    []byte
@@ -41,19 +55,19 @@ func TestUnmarshal(t *testing.T) {
 			name:    "nil data",
 			data:    nil,
 			dest:    &testConfig{},
-			wantErr: ErrNilData,
+			wantErr: yamlutil.ErrNilData,
 		},
 		{
 			name:    "empty data",
 			data:    []byte{},
 			dest:    &testConfig{},
-			wantErr: ErrNilData,
+			wantErr: yamlutil.ErrNilData,
 		},
 		{
 			name:    "nil destination",
 			data:    []byte("name: test"),
 			dest:    nil,
-			wantErr: ErrNilDestination,
+			wantErr: yamlutil.ErrNilDestination,
 		},
 		{
 			name:    "invalid YAML syntax",
@@ -76,7 +90,9 @@ func TestUnmarshal(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := Unmarshal(tt.data, tt.dest)
+			t.Parallel()
+
+			err := yamlutil.Unmarshal(tt.data, tt.dest)
 			if tt.wantErr != nil {
 				if err == nil {
 					t.Fatalf("expected error containing %q, got nil", tt.wantErr)
@@ -99,7 +115,13 @@ func TestUnmarshal(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestUnmarshalStrict - Parses YAML and rejects unknown fields
+// ---------------------------------------------------------------------------
+
 func TestUnmarshalStrict(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		data    []byte
@@ -131,25 +153,27 @@ func TestUnmarshalStrict(t *testing.T) {
 			name:    "nil data",
 			data:    nil,
 			dest:    &testConfig{},
-			wantErr: ErrNilData,
+			wantErr: yamlutil.ErrNilData,
 		},
 		{
 			name:    "empty data",
 			data:    []byte{},
 			dest:    &testConfig{},
-			wantErr: ErrNilData,
+			wantErr: yamlutil.ErrNilData,
 		},
 		{
 			name:    "nil destination",
 			data:    []byte("name: test"),
 			dest:    nil,
-			wantErr: ErrNilDestination,
+			wantErr: yamlutil.ErrNilDestination,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := UnmarshalStrict(tt.data, tt.dest)
+			t.Parallel()
+
+			err := yamlutil.UnmarshalStrict(tt.data, tt.dest)
 			if tt.wantErr != nil {
 				if err == nil {
 					t.Fatalf("expected error containing %q, got nil", tt.wantErr)
@@ -172,7 +196,13 @@ func TestUnmarshalStrict(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestMarshal - Serializes Go structs to YAML
+// ---------------------------------------------------------------------------
+
 func TestMarshal(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		input   any
@@ -218,7 +248,9 @@ func TestMarshal(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			data, err := Marshal(tt.input)
+			t.Parallel()
+
+			data, err := yamlutil.Marshal(tt.input)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -235,20 +267,26 @@ func TestMarshal(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestRoundTrip - Verifies Marshal/Unmarshal symmetry
+// ---------------------------------------------------------------------------
+
 func TestRoundTrip(t *testing.T) {
+	t.Parallel()
+
 	original := testConfig{
 		Name:    "roundtrip",
 		Count:   99,
 		Enabled: true,
 	}
 
-	data, err := Marshal(original)
+	data, err := yamlutil.Marshal(original)
 	if err != nil {
 		t.Fatalf("Marshal failed: %v", err)
 	}
 
 	var decoded testConfig
-	if err := Unmarshal(data, &decoded); err != nil {
+	if err := yamlutil.Unmarshal(data, &decoded); err != nil {
 		t.Fatalf("Unmarshal failed: %v", err)
 	}
 
@@ -263,23 +301,35 @@ func TestRoundTrip(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestErrorWrapping - Verifies error types are detectable via errors.Is
+// ---------------------------------------------------------------------------
+
 func TestErrorWrapping(t *testing.T) {
+	t.Parallel()
+
 	t.Run("ErrNilData is detectable via errors.Is", func(t *testing.T) {
-		err := Unmarshal(nil, &testConfig{})
-		if !errors.Is(err, ErrNilData) {
+		t.Parallel()
+
+		err := yamlutil.Unmarshal(nil, &testConfig{})
+		if !errors.Is(err, yamlutil.ErrNilData) {
 			t.Errorf("errors.Is(err, ErrNilData) = false, want true")
 		}
 	})
 
 	t.Run("ErrNilDestination is detectable via errors.Is", func(t *testing.T) {
-		err := Unmarshal([]byte("name: test"), nil)
-		if !errors.Is(err, ErrNilDestination) {
+		t.Parallel()
+
+		err := yamlutil.Unmarshal([]byte("name: test"), nil)
+		if !errors.Is(err, yamlutil.ErrNilDestination) {
 			t.Errorf("errors.Is(err, ErrNilDestination) = false, want true")
 		}
 	})
 
 	t.Run("wrapped errors have yamlutil prefix", func(t *testing.T) {
-		err := Unmarshal([]byte("invalid: [unclosed"), &testConfig{})
+		t.Parallel()
+
+		err := yamlutil.Unmarshal([]byte("invalid: [unclosed"), &testConfig{})
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -289,38 +339,45 @@ func TestErrorWrapping(t *testing.T) {
 	})
 }
 
+// ---------------------------------------------------------------------------
+// TestInputSizeLimit - Verifies MaxInputSize enforcement
+// ---------------------------------------------------------------------------
+
+// Note: This test modifies the global MaxInputSize variable, so it cannot
+// run in parallel with other tests to avoid data races.
+
 func TestInputSizeLimit(t *testing.T) {
 	// Save and restore original MaxInputSize
-	originalMax := MaxInputSize
-	t.Cleanup(func() { MaxInputSize = originalMax })
+	originalMax := yamlutil.MaxInputSize
+	t.Cleanup(func() { yamlutil.MaxInputSize = originalMax })
 
 	t.Run("input at limit succeeds", func(t *testing.T) {
-		MaxInputSize = 100
+		yamlutil.MaxInputSize = 100
 		data := make([]byte, 100)
 		copy(data, []byte("name: x"))
 		var cfg testConfig
-		err := Unmarshal(data, &cfg)
+		err := yamlutil.Unmarshal(data, &cfg)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
 	})
 
 	t.Run("input exceeding limit fails", func(t *testing.T) {
-		MaxInputSize = 100
+		yamlutil.MaxInputSize = 100
 		data := make([]byte, 101)
 		copy(data, []byte("name: x"))
 		var cfg testConfig
-		err := Unmarshal(data, &cfg)
-		if !errors.Is(err, ErrInputTooLarge) {
+		err := yamlutil.Unmarshal(data, &cfg)
+		if !errors.Is(err, yamlutil.ErrInputTooLarge) {
 			t.Errorf("errors.Is(err, ErrInputTooLarge) = false, got: %v", err)
 		}
 	})
 
 	t.Run("error message includes sizes", func(t *testing.T) {
-		MaxInputSize = 50
+		yamlutil.MaxInputSize = 50
 		data := make([]byte, 100)
 		var cfg testConfig
-		err := Unmarshal(data, &cfg)
+		err := yamlutil.Unmarshal(data, &cfg)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -334,12 +391,12 @@ func TestInputSizeLimit(t *testing.T) {
 	})
 
 	t.Run("UnmarshalStrict also enforces limit", func(t *testing.T) {
-		MaxInputSize = 100
+		yamlutil.MaxInputSize = 100
 		data := make([]byte, 101)
 		copy(data, []byte("name: x"))
 		var cfg testConfig
-		err := UnmarshalStrict(data, &cfg)
-		if !errors.Is(err, ErrInputTooLarge) {
+		err := yamlutil.UnmarshalStrict(data, &cfg)
+		if !errors.Is(err, yamlutil.ErrInputTooLarge) {
 			t.Errorf("errors.Is(err, ErrInputTooLarge) = false, got: %v", err)
 		}
 	})
