@@ -76,5 +76,5 @@ examples: build ## Regenerate example PDFs in examples/
 	./$(BINARY) convert examples/simple-report.md --style technical -o examples/simple-technical.pdf
 	./$(BINARY) convert examples/simple-report.md --style academic -o examples/simple-academic.pdf
 	./$(BINARY) convert examples/simple-report.md --style modern -o examples/simple-modern.pdf
-	./$(BINARY) convert -c examples/full-featured examples/full-featured.md -o examples/full-featured.pdf
+	./$(BINARY) convert -c examples/full-featured.yaml examples/full-featured.md -o examples/full-featured.pdf
 	@echo "Done. Review with 'git diff examples/' and commit if needed."

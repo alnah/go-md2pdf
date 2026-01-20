@@ -125,7 +125,7 @@ jobs:
       - name: Generate example PDFs
         run: |
           ./md2pdf convert examples/simple-report.md -o /tmp/simple-test.pdf
-          ./md2pdf convert -c examples/full-featured examples/full-featured.md -o /tmp/full-test.pdf
+          ./md2pdf convert -c examples/full-featured.yaml examples/full-featured.md -o /tmp/full-test.pdf
         env:
           ROD_NO_SANDBOX: "1"
 
