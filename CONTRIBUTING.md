@@ -29,7 +29,12 @@ git lfs pull     # Download example PDFs
 
 ### Bug Reports
 
-Please open an issue with:
+Before reporting a bug, please check:
+
+- [Known Limitations](README.md#known-limitations) - your issue may be documented
+- Existing issues - someone may have reported it already
+
+If the issue is not documented, please open an issue with:
 
 - OS and Go version
 - Minimal reproduction steps

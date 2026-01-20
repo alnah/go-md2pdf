@@ -35,7 +35,7 @@ Download pre-built binaries from [GitHub Releases](https://github.com/alnah/go-m
 - **Batch conversion** - Process directories with parallel workers
 - **Cover pages** - Title, subtitle, logo, author, organization, date, version
 - **Table of contents** - Auto-generated from headings with configurable depth
-- **Custom styling** - Embedded themes or your own CSS
+- **Custom styling** - Embedded themes or your own CSS ([some limitations](#known-limitations))
 - **Page settings** - Size (letter, A4, legal), orientation, margins
 - **Signatures** - Name, title, email, photo, links
 - **Footers** - Page numbers, dates, status text
@@ -514,6 +514,8 @@ docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf convert -o output.pdf in
 docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf convert ./docs/ -o ./pdfs/
 ```
 
+> **Note:** The official Docker image has all dependencies pre-installed. For custom images, see [Troubleshooting](#troubleshooting).
+
 ## Configuration
 
 Config files are loaded from `~/.config/go-md2pdf/` or current directory.
@@ -719,6 +721,8 @@ Full API documentation: [pkg.go.dev/github.com/alnah/go-md2pdf](https://pkg.go.d
 - Go 1.25+
 - Chrome/Chromium (downloaded automatically on first run)
 
+> **Docker/CI users:** See [Troubleshooting](#troubleshooting) for setup instructions.
+
 ## Environment Variables
 
 | Variable | Default | Description |
@@ -727,6 +731,124 @@ Full API documentation: [pkg.go.dev/github.com/alnah/go-md2pdf](https://pkg.go.d
 | `ROD_BROWSER_BIN` | - | Path to custom Chrome/Chromium binary |
 
 These are used by the underlying [go-rod](https://github.com/go-rod/rod) browser automation library. Error messages will suggest these variables when browser issues are detected in CI/Docker environments.
+
+## Troubleshooting
+
+### Docker and CI/CD
+
+#### "Failed to connect to browser" or blank PDF
+
+Chrome requires disabling its sandbox in containerized environments:
+
+```bash
+export ROD_NO_SANDBOX=1
+md2pdf convert document.md
+```
+
+Or in Docker:
+```bash
+docker run -e ROD_NO_SANDBOX=1 -v $(pwd):/data ghcr.io/alnah/go-md2pdf convert doc.md
+```
+
+#### Missing dependencies on Linux
+
+If Chrome fails to start, install required libraries:
+
+```bash
+# Debian/Ubuntu
+sudo apt-get update
+sudo apt-get install -y \
+    libnss3 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2
+
+# Alpine
+apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
+```
+
+> **Note:** Dependency lists may change with Chrome versions. See [chromedp dependencies](https://github.com/chromedp/chromedp#dependencies) for the latest requirements.
+
+#### Using custom Chrome/Chromium
+
+Point to a specific browser binary:
+
+```bash
+export ROD_BROWSER_BIN=/usr/bin/chromium-browser
+md2pdf convert document.md
+```
+
+### Common Errors
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| "failed to connect to browser" | Chrome not installed or sandbox issue | Install Chrome or set `ROD_NO_SANDBOX=1` |
+| "page load failed" | Timeout on large document | Use `--timeout 2m` or longer |
+| Blank PDF | Missing system libraries | Install Chrome dependencies (see above) |
+| "style not found" | Invalid style name | Use: default, technical, creative, academic, corporate, legal, invoice, manuscript |
+| Fonts look different | System fonts vary | Use Docker image for consistent fonts |
+
+### Platform Notes
+
+- **macOS/Windows:** Chrome is downloaded automatically. No special setup needed.
+- **Linux:** May require installing Chrome dependencies (see above).
+- **Docker/CI:** Always set `ROD_NO_SANDBOX=1` and install dependencies, or use the official Docker image.
+
+## Known Limitations
+
+### Markdown Features
+
+The following Markdown extensions are **not supported**:
+
+- **LaTeX/MathJax** - Math equations like `$x^2$` or `$$\sum_{i=1}^n$$`
+  - *Workaround*: Pre-render equations as PNG/SVG images
+- **Wikilinks** - `[[Page Name]]` syntax
+  - *Workaround*: Use standard `[text](url)` links
+- **Admonitions** - `:::warning` or `:::note` blocks
+  - *Workaround*: Use blockquotes with bold headers
+- **YAML front-matter** - Metadata at top of markdown files
+  - *Workaround*: Use config files for document metadata
+
+### PDF Rendering
+
+| Issue | Description | Workaround |
+|-------|-------------|------------|
+| **Relative images** | Images with paths like `./img/logo.png` may not render | Use absolute paths or URLs |
+| **Code overflow** | Long code lines may extend past page margins | Limit lines to ~80 characters |
+| **Page breaks** | `break-before`/`break-after` CSS may be ignored | Use explicit page break divs |
+| **Font differences** | Same document looks different on macOS vs Linux | Use Docker image for consistency |
+
+### Environment Requirements
+
+**Docker and CI/CD:**
+- Chrome sandbox must be disabled: `ROD_NO_SANDBOX=1`
+- See [Troubleshooting](#troubleshooting) for details
+
+**System fonts:**
+- PDF appearance depends on installed fonts
+- The Docker image includes Inter and JetBrains Mono for consistent rendering
+
+### Feature Boundaries
+
+These are **intentionally not supported** (Chrome PDF limitations):
+
+- PDF/A archival format
+- Multi-column page layouts
+- Per-page headers/footers
+- Mixed portrait/landscape in one document
+- Embedded fonts (uses system fonts)
 
 ## Contributing
 
