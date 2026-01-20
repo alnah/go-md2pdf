@@ -388,7 +388,9 @@ Signature:
 
 Table of Contents:
       --toc-title <s>       TOC heading text
-      --toc-depth <n>       Max heading depth (1-6)
+      --toc-min-depth <n>   Min heading depth (1-6, default: 2)
+                            1=H1, 2=H2, etc. Use 2 to skip title
+      --toc-max-depth <n>   Max heading depth (1-6, default: 3)
       --no-toc              Disable table of contents
 
 Watermark:
