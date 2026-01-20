@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/alnah/go-md2pdf#readme
+    about: Check the README for usage instructions
+  - name: Known Limitations
+    url: https://github.com/alnah/go-md2pdf#known-limitations
+    about: See if your issue is a known limitation

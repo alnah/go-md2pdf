@@ -1,0 +1,133 @@
+name: Bug Report
+description: Report a bug in go-md2pdf
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Before submitting:
+        - Check [Known Limitations](https://github.com/alnah/go-md2pdf#known-limitations)
+        - Search [existing issues](https://github.com/alnah/go-md2pdf/issues)
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission checklist
+      options:
+        - label: I have checked the Known Limitations section
+          required: true
+        - label: I have searched existing issues for duplicates
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: What happened? Be specific.
+      placeholder: "When I run `md2pdf convert doc.md`, the PDF..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should have happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction Steps
+      description: Minimal steps to reproduce the issue
+      value: |
+        1. Create a file `test.md` with content: ...
+        2. Run: `md2pdf convert test.md`
+        3. Observe: ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      description: Where are you running md2pdf?
+      options:
+        - Local (macOS)
+        - Local (Windows)
+        - Local (Linux)
+        - Docker container
+        - GitHub Actions
+        - GitLab CI
+        - Other CI/CD
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: OS Version
+      description: e.g., macOS 14.2, Ubuntu 22.04, Windows 11 (helps us debug faster)
+      placeholder: "Ubuntu 22.04"
+
+  - type: input
+    id: version
+    attributes:
+      label: md2pdf Version
+      description: Run `md2pdf version` to check
+      placeholder: "v1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: go-version
+    attributes:
+      label: Go Version
+      description: Run `go version` to check (if building from source)
+      placeholder: "go1.22.0"
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Error Message
+      description: Copy-paste the exact error from your terminal
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Config File
+      description: If using a config file, paste relevant sections
+      placeholder: "Paste your config.yaml content here (remove sensitive data)"
+      render: yaml
+
+  - type: textarea
+    id: env-vars
+    attributes:
+      label: Environment Variables
+      description: Relevant environment variables
+      placeholder: |
+        ROD_NO_SANDBOX=1
+        ROD_BROWSER_BIN=/usr/bin/chromium
+      render: shell
+
+  - type: textarea
+    id: sample
+    attributes:
+      label: Sample Input
+      description: Minimal markdown file that reproduces the issue
+      placeholder: |
+        # Title
+
+        Some content that triggers the bug...
+      render: markdown
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Screenshots, logs, related issues, or anything else helpful
