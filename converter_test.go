@@ -2131,3 +2131,162 @@ func TestWithStyle(t *testing.T) {
 		}
 	})
 }
+
+// ---------------------------------------------------------------------------
+// TestConvert_SourceDir - Relative Path Rewriting
+// ---------------------------------------------------------------------------
+
+func TestConvert_SourceDir_RewritesRelativePaths(t *testing.T) {
+	t.Parallel()
+
+	// Mock HTML converter that produces HTML with relative image
+	mockHTML := &mockHTMLConverter{
+		output: `<html><body><img src="./images/logo.png"></body></html>`,
+	}
+
+	service := &Service{
+		preprocessor:      &mockPreprocessor{},
+		htmlConverter:     mockHTML,
+		cssInjector:       &mockCSSInjector{},
+		coverInjector:     &mockCoverInjector{},
+		tocInjector:       &mockTOCInjector{},
+		signatureInjector: &mockSignatureInjector{},
+		pdfConverter:      &mockPDFConverter{},
+	}
+
+	result, err := service.Convert(context.Background(), Input{
+		Markdown:  "# Test\n![logo](./images/logo.png)",
+		SourceDir: "/docs",
+		HTMLOnly:  true,
+	})
+	if err != nil {
+		t.Fatalf("Convert() error = %v", err)
+	}
+
+	html := string(result.HTML)
+
+	// Relative path should be rewritten to absolute file:// URL
+	if !strings.Contains(html, "file://") {
+		t.Errorf("Expected relative path to be rewritten to file://, got: %s", html)
+	}
+
+	// Original relative path should NOT be present
+	if strings.Contains(html, `src="./images/logo.png"`) {
+		t.Error("Original relative path should be rewritten")
+	}
+}
+
+func TestConvert_SourceDir_EmptySourceDirNoRewrite(t *testing.T) {
+	t.Parallel()
+
+	mockHTML := &mockHTMLConverter{
+		output: `<html><body><img src="./images/logo.png"></body></html>`,
+	}
+
+	service := &Service{
+		preprocessor:      &mockPreprocessor{},
+		htmlConverter:     mockHTML,
+		cssInjector:       &mockCSSInjector{},
+		coverInjector:     &mockCoverInjector{},
+		tocInjector:       &mockTOCInjector{},
+		signatureInjector: &mockSignatureInjector{},
+		pdfConverter:      &mockPDFConverter{},
+	}
+
+	result, err := service.Convert(context.Background(), Input{
+		Markdown:  "# Test",
+		SourceDir: "", // Empty - no rewriting
+		HTMLOnly:  true,
+	})
+	if err != nil {
+		t.Fatalf("Convert() error = %v", err)
+	}
+
+	html := string(result.HTML)
+
+	// Relative path should remain unchanged when SourceDir is empty
+	if !strings.Contains(html, `src="./images/logo.png"`) {
+		t.Errorf("Relative path should remain unchanged when SourceDir is empty, got: %s", html)
+	}
+}
+
+func TestConvert_SourceDir_AbsolutePathsUnchanged(t *testing.T) {
+	t.Parallel()
+
+	mockHTML := &mockHTMLConverter{
+		output: `<html><body><img src="https://example.com/logo.png"></body></html>`,
+	}
+
+	service := &Service{
+		preprocessor:      &mockPreprocessor{},
+		htmlConverter:     mockHTML,
+		cssInjector:       &mockCSSInjector{},
+		coverInjector:     &mockCoverInjector{},
+		tocInjector:       &mockTOCInjector{},
+		signatureInjector: &mockSignatureInjector{},
+		pdfConverter:      &mockPDFConverter{},
+	}
+
+	result, err := service.Convert(context.Background(), Input{
+		Markdown:  "# Test",
+		SourceDir: "/docs",
+		HTMLOnly:  true,
+	})
+	if err != nil {
+		t.Fatalf("Convert() error = %v", err)
+	}
+
+	html := string(result.HTML)
+
+	// HTTPS URLs should remain unchanged
+	if !strings.Contains(html, `src="https://example.com/logo.png"`) {
+		t.Errorf("HTTPS URL should remain unchanged, got: %s", html)
+	}
+}
+
+func TestConvert_SourceDir_MultipleImages(t *testing.T) {
+	t.Parallel()
+
+	mockHTML := &mockHTMLConverter{
+		output: `<html><body><img src="./a.png"><img src="./b.png"><img src="https://x.com/c.png"></body></html>`,
+	}
+
+	service := &Service{
+		preprocessor:      &mockPreprocessor{},
+		htmlConverter:     mockHTML,
+		cssInjector:       &mockCSSInjector{},
+		coverInjector:     &mockCoverInjector{},
+		tocInjector:       &mockTOCInjector{},
+		signatureInjector: &mockSignatureInjector{},
+		pdfConverter:      &mockPDFConverter{},
+	}
+
+	result, err := service.Convert(context.Background(), Input{
+		Markdown:  "# Test",
+		SourceDir: "/docs",
+		HTMLOnly:  true,
+	})
+	if err != nil {
+		t.Fatalf("Convert() error = %v", err)
+	}
+
+	html := string(result.HTML)
+
+	// Both relative paths should be rewritten
+	if strings.Contains(html, `src="./a.png"`) {
+		t.Error("./a.png should be rewritten")
+	}
+	if strings.Contains(html, `src="./b.png"`) {
+		t.Error("./b.png should be rewritten")
+	}
+
+	// HTTPS URL should remain unchanged
+	if !strings.Contains(html, `src="https://x.com/c.png"`) {
+		t.Error("HTTPS URL should remain unchanged")
+	}
+
+	// Should have two file:// URLs
+	if strings.Count(html, "file://") != 2 {
+		t.Errorf("Expected 2 file:// URLs, got %d in: %s", strings.Count(html, "file://"), html)
+	}
+}
