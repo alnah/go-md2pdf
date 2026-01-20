@@ -138,6 +138,7 @@ func convertFile(ctx context.Context, service CLIConverter, f FileToConvert, par
 
 	convResult, err := service.Convert(ctx, md2pdf.Input{
 		Markdown:   string(content),
+		SourceDir:  filepath.Dir(f.InputPath), // Auto-set for relative image resolution
 		CSS:        params.css,
 		Footer:     params.footer,
 		Signature:  params.signature,
