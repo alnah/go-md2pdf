@@ -1,17 +1,17 @@
 # Contributing
 
-Contributions are welcome! go-md2pdf aims to be the best Markdown-to-PDF tool for professional documents.
+Contributions are welcome! go-md2pdf aims to be one of the best Markdown-to-PDF tool for professional documents.
 
 ## What I'm Looking For
 
 **Actively seeking:**
 
-- New CSS styles (see Contributing Styles below)
 - Documentation improvements
 - Bug fixes with tests
 
 **Requires discussion first:**
 
+- New stylesP (see Contributing Styles below)
 - New features: open an issue before coding
 - Architectural changes
 - New dependencies
@@ -54,7 +54,7 @@ Open an issue to discuss before implementing. This ensures alignment and avoids 
 
 ### Contributing Styles
 
-New CSS styles in `internal/assets/styles/` are especially welcome. Follow the established structure (see `technical.css` as reference):
+New CSS styles in `internal/assets/styles/` are also welcome. Follow the established structure (see `technical.css` as reference):
 
 1. CSS Variables: Central configuration
 2. Reset and base styles
@@ -77,6 +77,47 @@ Requirements:
 - Use CSS variables for colors and spacing
 - Include `-webkit-print-color-adjust: exact` for color preservation
 - Test with actual PDF generation before submitting
+
+## Issue Labels
+
+When you open an issue, maintainers will add appropriate labels to help with triage.
+
+### Area (blue) - Which part of the codebase
+
+- `area/cli` - CLI commands and flags
+- `area/pdf` - PDF generation and rendering
+- `area/markdown` - Markdown parsing
+- `area/css` - Styles and CSS themes
+- `area/config` - Configuration files
+
+### Platform (yellow/orange) - Where the issue occurs
+
+- `os/linux`, `os/macos`, `os/windows` - OS-specific
+- `env/docker`, `env/ci` - Environment-specific
+
+### Priority (red) - How urgent
+
+- `priority/critical` - Blocks core functionality
+- `priority/high` - Important issue
+
+Looking to contribute? Filter by `good first issue` or `help wanted`.
+
+## Label Policy
+
+### Why no priority/low?
+
+We intentionally don't use `priority/low`. Issues are either:
+
+- `priority/critical` - blocks core functionality
+- `priority/high` - important, address soon
+- No priority label - normal backlog, addressed as time permits
+- `wontfix` - won't be addressed
+
+This prevents an ever-growing backlog of "someday" issues.
+
+### Who can apply labels?
+
+Only maintainers can apply labels. Contributors are welcome to suggest appropriate labels in issue comments.
 
 ## Code of Conduct
 
