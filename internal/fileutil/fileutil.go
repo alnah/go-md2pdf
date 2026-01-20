@@ -79,6 +79,10 @@ func IsFilePath(s string) bool {
 }
 
 // IsURL returns true if the string looks like a URL.
+//
+// SECURITY NOTE: URLs are passed to the headless Chrome browser which may make
+// network requests. This affects cover logos and markdown images with URL sources.
+// If this behavior changes, update SECURITY.md accordingly.
 func IsURL(s string) bool {
 	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
 }

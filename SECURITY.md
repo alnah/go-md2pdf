@@ -19,10 +19,26 @@ You can expect a response within 7 days. If confirmed, a fix will be released as
 
 ## Scope
 
-go-md2pdf processes local Markdown files and generates PDFs using headless Chrome. The main security considerations are:
+go-md2pdf processes Markdown files and generates PDFs using headless Chrome.
 
-- File path handling (path traversal)
-- HTML/CSS injection in generated output
-- Dependencies (go-rod, Goldmark)
+### Security Considerations
 
-The tool does not handle authentication, network requests to external services, or sensitive user data.
+- **File path handling**: Asset names are validated to prevent path traversal attacks.
+- **HTML/CSS injection**: User-provided content is escaped in generated output.
+- **Dependencies**: go-rod (browser automation), Goldmark (markdown parsing).
+
+### Network Requests
+
+The tool may make network requests in these cases:
+
+- **Cover logo**: When `cover.logo` is a URL (e.g., `https://example.com/logo.png`)
+- **Markdown images**: When image sources are URLs (e.g., `![img](https://...)`)
+- **Chromium download**: On first run, go-rod may download Chromium from Google's mirrors if not present
+
+These requests are initiated by the headless Chrome browser, not the Go code directly.
+
+### Data Handling
+
+- The tool does not handle authentication
+- The tool does not store or transmit user data
+- Temporary files (HTML, screenshots) are created in the system temp directory and cleaned up after conversion
