@@ -50,6 +50,7 @@ Open an issue to discuss before implementing. This ensures alignment and avoids 
 2. Follow existing code patterns
 3. Add tests for new functionality
 4. Run `make check-all` before submitting
+5. Enable "Allow edits from maintainers" when creating your PR - this lets me make small fixes directly instead of requesting changes, speeding up the review process
 
 ### Contributing Styles
 
