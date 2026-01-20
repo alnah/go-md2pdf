@@ -29,6 +29,7 @@ go-md2pdf/                      # package md2pdf (library)
 │   ├── config/                 # YAML config, validation
 │   ├── dateutil/               # Date format parsing, ResolveDate()
 │   ├── fileutil/               # File utilities (FileExists, IsFilePath, IsURL)
+│   ├── hints/                  # Actionable error message hints
 │   ├── pipeline/               # Conversion pipeline components
 │   │   ├── mdtransform.go      # MD -> MD (preprocessing)
 │   │   ├── md2html.go          # MD -> HTML (Goldmark)

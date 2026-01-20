@@ -22,41 +22,7 @@
 
 ## Package Structure
 
-```
-md2pdf/                     # Root: public API + PDF generation
-├── types.go                # Public types: Input, Cover, Footer, etc.
-├── converter.go            # Converter facade, pipeline orchestration
-├── pool.go                 # ConverterPool for parallel processing
-├── pdf.go                  # HTML->PDF via headless Chrome (go-rod)
-├── cssbuilders.go          # CSS generation (watermark, page breaks)
-├── assets.go               # Public AssetLoader interface
-├── errors.go               # Public sentinel errors
-│
-├── cmd/md2pdf/             # CLI application
-│   ├── main.go             # Entry point, command routing
-│   ├── convert*.go         # Convert command (batch, discovery, params)
-│   ├── flags.go            # CLI flag definitions (pflag)
-│   ├── completion*.go      # Shell completion generators
-│   └── signal_*.go         # OS signal handling (Unix/Windows)
-│
-└── internal/
-    ├── pipeline/           # MD->HTML pipeline (see doc.go)
-    │   ├── mdtransform.go  # Preprocessing (normalize, highlights)
-    │   ├── md2html.go      # Goldmark conversion
-    │   └── htmlinject.go   # CSS/cover/TOC/signature injection
-    │
-    ├── assets/             # Asset loading (styles, templates)
-    │   ├── embedded.go     # Embedded FS loader
-    │   ├── filesystem.go   # Filesystem loader
-    │   ├── resolver.go     # Custom-first with embedded fallback
-    │   └── styles/         # Built-in CSS styles
-    │
-    ├── config/             # YAML configuration
-    ├── dateutil/           # Date format parsing (auto:FORMAT)
-    ├── fileutil/           # File utilities
-    ├── yamlutil/           # YAML wrapper (goccy/go-yaml)
-    └── process/            # Process management (kill Chrome)
-```
+See [LAYOUT.md](LAYOUT.md) for the complete project layout.
 
 **Design decision**: PDF generation (`pdf.go`) stays in root rather than `internal/pipeline/` to avoid circular dependencies. It depends on root types (`PageSettings`, `Watermark`) and the clean separation keeps `internal/pipeline/` focused on document structure (MD->HTML) while root handles rendering concerns (HTML->PDF).
 
