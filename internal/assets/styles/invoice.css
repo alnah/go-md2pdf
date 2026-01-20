@@ -33,6 +33,9 @@
   --color-syntax-function: #2563eb;
   --color-syntax-variable: #d97706;
 
+  /* Highlight */
+  --color-mark-bg: #fef08a;
+
   /* Standard spacing */
   --spacing-xs: 0.25em;
   --spacing-sm: 0.5em;
@@ -133,7 +136,7 @@ strong em, em strong, b i, i b {
 }
 
 mark {
-  background-color: #fef08a;
+  background-color: var(--color-mark-bg);
   color: var(--color-fg-default);
   padding: 0.1em 0.2em;
 }

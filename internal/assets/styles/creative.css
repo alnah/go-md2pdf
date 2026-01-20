@@ -22,6 +22,34 @@
   --background-code: #f6f6f6;
   --border-light: #e5e5e7;
 
+  /* === Standard Variables === */
+  --color-fg-default: var(--text-primary);
+  --color-fg-muted: var(--text-muted);
+  --color-fg-subtle: var(--text-muted);
+  --color-fg-on-emphasis: #ffffff;
+  --color-canvas-default: var(--background);
+  --color-canvas-subtle: var(--background-code);
+  --color-border-default: var(--border-light);
+  --color-border-muted: var(--border-light);
+  --color-accent-fg: var(--text-accent);
+  --color-accent-emphasis: var(--text-accent);
+
+  /* Status colors */
+  --color-success-fg: var(--heading-green);
+  --color-attention-fg: var(--heading-yellow);
+  --color-danger-fg: var(--heading-red);
+
+  /* Syntax highlighting (Nord palette - matches .sourceCode rules) */
+  --color-syntax-comment: #616e88;
+  --color-syntax-keyword: #b48ead;
+  --color-syntax-string: #a3be8c;
+  --color-syntax-number: #d08770;
+  --color-syntax-function: #88c0d0;
+  --color-syntax-variable: #5e81ac;
+
+  /* Highlight */
+  --color-mark-bg: rgba(235, 203, 139, 0.4);
+
   /* Spacing */
   --spacing-xs: 0.25em;
   --spacing-sm: 0.5em;
@@ -135,7 +163,7 @@ strong em, em strong, b i, i b {
 }
 
 mark {
-  background-color: rgba(235, 203, 139, 0.4);
+  background-color: var(--color-mark-bg);
   color: var(--text-primary);
   padding: 0.1em 0.2em;
   border-radius: 2px;

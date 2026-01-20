@@ -55,6 +55,9 @@
   --color-prettylights-syntax-meta-diff-range: #8250df;
   --color-prettylights-syntax-sublimelinter-gutter-mark: #8c959f;
 
+  /* Highlight */
+  --color-mark-bg: #fff8c5;
+
   /* Standard spacing */
   --spacing-xs: 0.25em;
   --spacing-sm: 0.5em;
@@ -168,7 +171,7 @@ i b {
 
 /* Highlight */
 mark {
-  background-color: #fff8c5;
+  background-color: var(--color-mark-bg);
   color: var(--color-fg-default);
   padding: 0.1em 0.2em;
   border-radius: 3px;
