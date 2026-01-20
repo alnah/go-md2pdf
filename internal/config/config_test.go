@@ -439,6 +439,33 @@ unknownField: "should fail"
 		}
 	})
 
+	t.Run("config name not found includes searched paths and hint", func(t *testing.T) {
+		dir := t.TempDir()
+		originalWd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("failed to get working directory: %v", err)
+		}
+		defer os.Chdir(originalWd)
+		if err := os.Chdir(dir); err != nil {
+			t.Fatalf("chdir: %v", err)
+		}
+
+		_, err = LoadConfig("nonexistent")
+		if err == nil {
+			t.Fatal("expected error for nonexistent config")
+		}
+		errMsg := err.Error()
+		if !strings.Contains(errMsg, "searched:") {
+			t.Error("error should include searched paths")
+		}
+		if !strings.Contains(errMsg, "hint:") {
+			t.Error("error should include hint")
+		}
+		if !strings.Contains(errMsg, "--config") {
+			t.Error("error hint should mention --config flag")
+		}
+	})
+
 	t.Run("loads page settings", func(t *testing.T) {
 		dir := t.TempDir()
 		configPath := filepath.Join(dir, "test.yaml")

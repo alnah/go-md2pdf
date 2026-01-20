@@ -11,6 +11,7 @@ import (
 	md2pdf "github.com/alnah/go-md2pdf"
 	"github.com/alnah/go-md2pdf/internal/dateutil"
 	"github.com/alnah/go-md2pdf/internal/fileutil"
+	"github.com/alnah/go-md2pdf/internal/hints"
 	"github.com/alnah/go-md2pdf/internal/yamlutil"
 )
 
@@ -558,7 +559,7 @@ func resolveConfigPath(name string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("%w: tried %s", ErrConfigNotFound, strings.Join(triedPaths, ", "))
+	return "", fmt.Errorf("%w\n  searched: %s%s", ErrConfigNotFound, strings.Join(triedPaths, ", "), hints.ForConfigNotFound(triedPaths))
 }
 
 // fileExists delegates to fileutil.FileExists for path existence check.
