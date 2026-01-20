@@ -11,6 +11,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Commands:")
 	fmt.Fprintln(w, "  convert      Convert markdown files to PDF")
+	fmt.Fprintln(w, "  doctor       Check system configuration")
 	fmt.Fprintln(w, "  completion   Generate shell completion script")
 	fmt.Fprintln(w, "  version      Show version information")
 	fmt.Fprintln(w, "  help         Show help for a command")
@@ -144,6 +145,30 @@ func printConvertUsage(w io.Writer) {
 	fmt.Fprintln(w, "  4  Browser      Chrome not found, connection failed")
 }
 
+// printDoctorUsage prints usage for the doctor command.
+func printDoctorUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage: md2pdf doctor [flags]")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Check system configuration for PDF generation.")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Flags:")
+	fmt.Fprintln(w, "  --json    Output in JSON format (for CI/scripts)")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Checks performed:")
+	fmt.Fprintln(w, "  - Chrome/Chromium: binary exists, version, sandbox status")
+	fmt.Fprintln(w, "  - Environment: container detection (Docker, Podman, Kubernetes)")
+	fmt.Fprintln(w, "  - System: temp directory writability")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Environment variables:")
+	fmt.Fprintln(w, "  MD2PDF_CONTAINER=1    Force container detection")
+	fmt.Fprintln(w, "  ROD_BROWSER_BIN       Explicit path to Chrome binary")
+	fmt.Fprintln(w, "  ROD_NO_SANDBOX=1      Disable Chrome sandbox (required in containers)")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Exit codes:")
+	fmt.Fprintln(w, "  0  All checks passed (including warnings)")
+	fmt.Fprintln(w, "  1  Errors found (conversion will likely fail)")
+}
+
 // runHelp prints help for a specific command.
 func runHelp(args []string, env *Environment) {
 	if len(args) == 0 {
@@ -154,6 +179,8 @@ func runHelp(args []string, env *Environment) {
 	switch args[0] {
 	case "convert":
 		printConvertUsage(env.Stdout)
+	case "doctor":
+		printDoctorUsage(env.Stdout)
 	case "completion":
 		printCompletionUsage(env.Stdout)
 	case "version":
