@@ -76,7 +76,10 @@ func runConvert(ctx context.Context, positionalArgs []string, flags *convertFlag
 	}
 
 	// Build TOC data
-	tocData := buildTOCData(cfg, flags.toc)
+	tocData, err := buildTOCData(cfg, flags.toc)
+	if err != nil {
+		return err
+	}
 
 	// Build page breaks data
 	pageBreaksData := buildPageBreaksData(cfg)
@@ -219,8 +222,12 @@ func mergeFlags(flags *convertFlags, cfg *config.Config) {
 		cfg.TOC.Title = flags.toc.title
 		cfg.TOC.Enabled = true
 	}
-	if flags.toc.depth > 0 {
-		cfg.TOC.MaxDepth = flags.toc.depth
+	if flags.toc.minDepth > 0 {
+		cfg.TOC.MinDepth = flags.toc.minDepth
+		cfg.TOC.Enabled = true
+	}
+	if flags.toc.maxDepth > 0 {
+		cfg.TOC.MaxDepth = flags.toc.maxDepth
 		cfg.TOC.Enabled = true
 	}
 

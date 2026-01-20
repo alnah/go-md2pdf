@@ -74,7 +74,8 @@ type signatureFlags struct {
 // tocFlags holds table of contents flags.
 type tocFlags struct {
 	title    string
-	depth    int
+	minDepth int
+	maxDepth int
 	disabled bool
 }
 
@@ -191,7 +192,8 @@ func addSignatureFlags(fs *flag.FlagSet, f *signatureFlags) {
 // addTOCFlags adds TOC flags to a FlagSet.
 func addTOCFlags(fs *flag.FlagSet, f *tocFlags) {
 	fs.StringVar(&f.title, "toc-title", "", "table of contents heading")
-	fs.IntVar(&f.depth, "toc-depth", 0, "max heading depth for TOC (1-6)")
+	fs.IntVar(&f.minDepth, "toc-min-depth", 0, "min heading depth for TOC (1-6, default: 2)")
+	fs.IntVar(&f.maxDepth, "toc-max-depth", 0, "max heading depth for TOC (1-6, default: 3)")
 	fs.BoolVar(&f.disabled, "no-toc", false, "disable table of contents")
 }
 

@@ -216,9 +216,9 @@ func buildCoverData(cfg *config.Config, markdownContent, filename string) (*md2p
 }
 
 // buildTOCData creates md2pdf.TOC from config.
-func buildTOCData(cfg *config.Config, tocFlags tocFlags) *md2pdf.TOC {
+func buildTOCData(cfg *config.Config, tocFlags tocFlags) (*md2pdf.TOC, error) {
 	if tocFlags.disabled || !cfg.TOC.Enabled {
-		return nil
+		return nil, nil
 	}
 
 	maxDepth := cfg.TOC.MaxDepth
@@ -226,11 +226,17 @@ func buildTOCData(cfg *config.Config, tocFlags tocFlags) *md2pdf.TOC {
 		maxDepth = md2pdf.DefaultTOCMaxDepth
 	}
 
-	return &md2pdf.TOC{
+	toc := &md2pdf.TOC{
 		Title:    cfg.TOC.Title,
 		MinDepth: cfg.TOC.MinDepth, // 0 = library defaults to 2
 		MaxDepth: maxDepth,
 	}
+
+	if err := toc.Validate(); err != nil {
+		return nil, err
+	}
+
+	return toc, nil
 }
 
 // buildPageBreaksData creates md2pdf.PageBreaks from config.
