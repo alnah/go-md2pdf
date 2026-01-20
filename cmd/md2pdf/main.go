@@ -24,7 +24,7 @@ func main() {
 func runMain(args []string, env *Environment) int {
 	if len(args) < 2 {
 		printUsage(env.Stderr)
-		return 1
+		return ExitUsage
 	}
 
 	cmd := args[1]
@@ -41,7 +41,7 @@ func runMain(args []string, env *Environment) int {
 	case "convert":
 		if err := runConvertCmd(cmdArgs, env); err != nil {
 			fmt.Fprintln(env.Stderr, err)
-			return 1
+			return exitCodeFor(err)
 		}
 	case "version":
 		fmt.Fprintf(env.Stdout, "md2pdf %s\n", Version)
@@ -50,15 +50,15 @@ func runMain(args []string, env *Environment) int {
 	case "completion":
 		if err := runCompletion(cmdArgs, env); err != nil {
 			fmt.Fprintln(env.Stderr, err)
-			return 1
+			return exitCodeFor(err)
 		}
 	default:
 		fmt.Fprintf(env.Stderr, "unknown command: %s\n", cmd)
 		printUsage(env.Stderr)
-		return 1
+		return ExitUsage
 	}
 
-	return 0
+	return ExitSuccess
 }
 
 // isCommand checks if a string is a known command.
