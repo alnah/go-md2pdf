@@ -174,6 +174,14 @@ func (c *Converter) Convert(ctx context.Context, input Input) (result *ConvertRe
 		return nil, fmt.Errorf("converting to HTML: %w", err)
 	}
 
+	// Rewrite relative paths to absolute file:// URLs (if source directory provided)
+	if input.SourceDir != "" {
+		htmlContent, err = pipeline.RewriteRelativePaths(htmlContent, input.SourceDir)
+		if err != nil {
+			return nil, fmt.Errorf("rewriting relative paths: %w", err)
+		}
+	}
+
 	// Convert highlight placeholders to <mark> tags.
 	// This completes the ==text== feature started in preprocessing.
 	// Done after Goldmark to avoid needing html.WithUnsafe().
