@@ -83,10 +83,19 @@ func runConvertCmd(args []string, env *Environment) error {
 		return err
 	}
 
-	// Validate worker count early
-	if err := validateWorkers(flags.workers); err != nil {
+	// Load environment variables (before config, for MD2PDF_CONFIG)
+	envCfg := loadEnvConfig()
+	warnUnknownEnvVars(env.Stderr)
+
+	// Validate worker count early (flag > env > default)
+	workers := flags.workers
+	if workers == 0 && envCfg.Workers > 0 {
+		workers = envCfg.Workers
+	}
+	if err := validateWorkers(workers); err != nil {
 		return err
 	}
+	flags.workers = workers // Update for later use
 
 	// Configure GOMAXPROCS with conditional logging
 	if flags.common.verbose {
@@ -97,16 +106,27 @@ func runConvertCmd(args []string, env *Environment) error {
 		_, _ = maxprocs.Set(maxprocs.Logger(func(string, ...interface{}) {}))
 	}
 
+	// Resolve config path: CLI flag > MD2PDF_CONFIG env > default search
+	configPath := flags.common.config
+	if configPath == "" && envCfg.ConfigPath != "" {
+		configPath = envCfg.ConfigPath
+	}
+
 	// Load config once into env (shared across pipeline)
 	if env.Config == nil {
 		env.Config = config.DefaultConfig()
 	}
-	if flags.common.config != "" {
-		env.Config, err = config.LoadConfig(flags.common.config)
+	if configPath != "" {
+		env.Config, err = config.LoadConfig(configPath)
 		if err != nil {
 			return fmt.Errorf("loading config: %w", err)
 		}
 	}
+
+	// Apply environment variable overrides to config
+	// Priority: CLI flags > env vars > config file > defaults
+	// Env vars are applied here; CLI flags are merged later in mergeFlags()
+	applyEnvConfig(envCfg, env.Config)
 
 	// Resolve asset path: CLI flag > config > embedded (default)
 	assetBasePath := env.Config.Assets.BasePath
@@ -135,8 +155,8 @@ func runConvertCmd(args []string, env *Environment) error {
 		fmt.Fprintf(env.Stderr, "Using template set: %s\n", templateSet.Name)
 	}
 
-	// Resolve timeout: CLI flag > config > library default
-	timeout, err := resolveTimeout(flags.timeout, env.Config.Timeout)
+	// Resolve timeout: CLI flag > env var > config > library default
+	timeout, err := resolveTimeoutWithEnv(flags.timeout, envCfg.Timeout, env.Config.Timeout)
 	if err != nil {
 		return err
 	}
@@ -194,23 +214,37 @@ func (a *poolAdapter) Size() int {
 	return a.pool.Size()
 }
 
-// resolveTimeout parses timeout from flag or config.
-// Returns 0 if neither is set (use library default).
-// Flag takes precedence over config.
-func resolveTimeout(flagValue, configValue string) (time.Duration, error) {
-	value := flagValue
-	if value == "" {
-		value = configValue
+// resolveTimeoutWithEnv parses timeout with priority: flag > env > config.
+// Returns 0 if none is set (use library default).
+func resolveTimeoutWithEnv(flagValue string, envValue time.Duration, configValue string) (time.Duration, error) {
+	// Flag takes highest priority
+	if flagValue != "" {
+		d, err := time.ParseDuration(flagValue)
+		if err != nil {
+			return 0, fmt.Errorf("invalid timeout %q (use format like \"30s\", \"2m\")", flagValue)
+		}
+		if d <= 0 {
+			return 0, fmt.Errorf("timeout must be positive, got %q", flagValue)
+		}
+		return d, nil
 	}
-	if value == "" {
-		return 0, nil
+
+	// Env var is second priority (already parsed as duration)
+	if envValue > 0 {
+		return envValue, nil
 	}
-	d, err := time.ParseDuration(value)
-	if err != nil {
-		return 0, fmt.Errorf("invalid timeout %q (use format like \"30s\", \"2m\")", value)
+
+	// Config file is third priority
+	if configValue != "" {
+		d, err := time.ParseDuration(configValue)
+		if err != nil {
+			return 0, fmt.Errorf("invalid timeout %q (use format like \"30s\", \"2m\")", configValue)
+		}
+		if d <= 0 {
+			return 0, fmt.Errorf("timeout must be positive, got %q", configValue)
+		}
+		return d, nil
 	}
-	if d <= 0 {
-		return 0, fmt.Errorf("timeout must be positive, got %q", value)
-	}
-	return d, nil
+
+	return 0, nil
 }

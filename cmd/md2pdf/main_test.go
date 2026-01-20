@@ -6,7 +6,7 @@ package main
 // - looksLikeMarkdown: we test file extension detection.
 // - runMain: we test exit codes for various scenarios. We don't test actual
 //   file conversion here (covered by integration tests).
-// - resolveTimeout: we test duration parsing and validation.
+// - resolveTimeoutWithEnv: we test duration parsing, validation, and priority.
 // These are acceptable gaps: we test observable behavior, not implementation details.
 
 import (
@@ -153,23 +153,25 @@ func TestIsCommand(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// TestResolveTimeout - Timeout duration resolution
+// TestResolveTimeoutWithEnv - Timeout duration resolution with env var support
 // ---------------------------------------------------------------------------
 
-func TestResolveTimeout(t *testing.T) {
+func TestResolveTimeoutWithEnv(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name        string
 		flagValue   string
+		envValue    time.Duration
 		configValue string
 		want        time.Duration
 		wantErr     bool
 		errSubstr   string
 	}{
 		{
-			name:        "both empty uses default",
+			name:        "all empty uses default",
 			flagValue:   "",
+			envValue:    0,
 			configValue: "",
 			want:        0,
 			wantErr:     false,
@@ -177,27 +179,47 @@ func TestResolveTimeout(t *testing.T) {
 		{
 			name:        "flag only",
 			flagValue:   "2m",
+			envValue:    0,
 			configValue: "",
 			want:        2 * time.Minute,
 			wantErr:     false,
 		},
 		{
+			name:        "env only",
+			flagValue:   "",
+			envValue:    45 * time.Second,
+			configValue: "",
+			want:        45 * time.Second,
+			wantErr:     false,
+		},
+		{
 			name:        "config only",
 			flagValue:   "",
+			envValue:    0,
 			configValue: "30s",
 			want:        30 * time.Second,
 			wantErr:     false,
 		},
 		{
-			name:        "flag overrides config",
+			name:        "flag overrides env and config",
 			flagValue:   "5m",
+			envValue:    45 * time.Second,
 			configValue: "30s",
 			want:        5 * time.Minute,
 			wantErr:     false,
 		},
 		{
+			name:        "env overrides config",
+			flagValue:   "",
+			envValue:    2 * time.Minute,
+			configValue: "30s",
+			want:        2 * time.Minute,
+			wantErr:     false,
+		},
+		{
 			name:        "combined duration",
 			flagValue:   "1m30s",
+			envValue:    0,
 			configValue: "",
 			want:        90 * time.Second,
 			wantErr:     false,
@@ -205,6 +227,7 @@ func TestResolveTimeout(t *testing.T) {
 		{
 			name:        "invalid flag format",
 			flagValue:   "abc",
+			envValue:    0,
 			configValue: "",
 			wantErr:     true,
 			errSubstr:   "invalid timeout",
@@ -212,6 +235,7 @@ func TestResolveTimeout(t *testing.T) {
 		{
 			name:        "invalid config format",
 			flagValue:   "",
+			envValue:    0,
 			configValue: "xyz",
 			wantErr:     true,
 			errSubstr:   "invalid timeout",
@@ -219,6 +243,7 @@ func TestResolveTimeout(t *testing.T) {
 		{
 			name:        "negative duration",
 			flagValue:   "-5s",
+			envValue:    0,
 			configValue: "",
 			wantErr:     true,
 			errSubstr:   "must be positive",
@@ -226,6 +251,7 @@ func TestResolveTimeout(t *testing.T) {
 		{
 			name:        "zero duration",
 			flagValue:   "0s",
+			envValue:    0,
 			configValue: "",
 			wantErr:     true,
 			errSubstr:   "must be positive",
@@ -233,6 +259,7 @@ func TestResolveTimeout(t *testing.T) {
 		{
 			name:        "hours duration",
 			flagValue:   "1h",
+			envValue:    0,
 			configValue: "",
 			want:        time.Hour,
 			wantErr:     false,
@@ -240,6 +267,7 @@ func TestResolveTimeout(t *testing.T) {
 		{
 			name:        "fractional seconds",
 			flagValue:   "500ms",
+			envValue:    0,
 			configValue: "",
 			want:        500 * time.Millisecond,
 			wantErr:     false,
@@ -247,20 +275,23 @@ func TestResolveTimeout(t *testing.T) {
 		{
 			name:        "complex duration",
 			flagValue:   "1h30m45s",
+			envValue:    0,
 			configValue: "",
 			want:        time.Hour + 30*time.Minute + 45*time.Second,
 			wantErr:     false,
 		},
 		{
-			name:        "invalid flag overrides valid config",
+			name:        "invalid flag overrides valid env and config",
 			flagValue:   "invalid",
+			envValue:    time.Minute,
 			configValue: "30s",
 			wantErr:     true,
 			errSubstr:   "invalid timeout",
 		},
 		{
-			name:        "zero flag overrides valid config",
+			name:        "zero flag overrides valid env and config",
 			flagValue:   "0s",
+			envValue:    time.Minute,
 			configValue: "30s",
 			wantErr:     true,
 			errSubstr:   "must be positive",
@@ -270,7 +301,7 @@ func TestResolveTimeout(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got, err := resolveTimeout(tt.flagValue, tt.configValue)
+			got, err := resolveTimeoutWithEnv(tt.flagValue, tt.envValue, tt.configValue)
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("expected error, got nil")
@@ -286,7 +317,8 @@ func TestResolveTimeout(t *testing.T) {
 				return
 			}
 			if got != tt.want {
-				t.Errorf("resolveTimeout(%q, %q) = %v, want %v", tt.flagValue, tt.configValue, got, tt.want)
+				t.Errorf("resolveTimeoutWithEnv(%q, %v, %q) = %v, want %v",
+					tt.flagValue, tt.envValue, tt.configValue, got, tt.want)
 			}
 		})
 	}

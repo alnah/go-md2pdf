@@ -1,0 +1,447 @@
+package main
+
+// Notes:
+// - loadEnvConfig: we test all 15 environment variables across 3 tiers.
+//   Invalid/negative values for timeout and workers are tested to verify
+//   graceful handling (ignored, not errors).
+// - warnUnknownEnvVars: we test typo detection and that known vars don't warn.
+// - applyEnvConfig: we test priority behavior (env doesn't override config)
+//   and auto-enable behavior for watermark and cover.
+// - Tests use t.Setenv() which prevents t.Parallel() at parent level.
+// These are acceptable gaps: we test observable behavior, not implementation details.
+
+import (
+	"bytes"
+	"testing"
+	"time"
+
+	"github.com/alnah/go-md2pdf/internal/config"
+)
+
+// ---------------------------------------------------------------------------
+// TestLoadEnvConfig - Environment variable loading
+// ---------------------------------------------------------------------------
+
+func TestLoadEnvConfig(t *testing.T) {
+	t.Run("Tier 1 - Essential", func(t *testing.T) {
+		t.Setenv("MD2PDF_CONFIG", "/path/to/config.yaml")
+		t.Setenv("MD2PDF_STYLE", "technical")
+		t.Setenv("MD2PDF_TIMEOUT", "2m")
+
+		cfg := loadEnvConfig()
+
+		if cfg.ConfigPath != "/path/to/config.yaml" {
+			t.Errorf("ConfigPath = %q, want /path/to/config.yaml", cfg.ConfigPath)
+		}
+		if cfg.Style != "technical" {
+			t.Errorf("Style = %q, want technical", cfg.Style)
+		}
+		if cfg.Timeout != 2*time.Minute {
+			t.Errorf("Timeout = %v, want 2m", cfg.Timeout)
+		}
+	})
+
+	t.Run("Tier 2 - I/O and identity", func(t *testing.T) {
+		t.Setenv("MD2PDF_INPUT_DIR", "/input")
+		t.Setenv("MD2PDF_OUTPUT_DIR", "/output")
+		t.Setenv("MD2PDF_AUTHOR_NAME", "John Doe")
+		t.Setenv("MD2PDF_AUTHOR_ORG", "Acme Corp")
+		t.Setenv("MD2PDF_AUTHOR_EMAIL", "john@acme.com")
+
+		cfg := loadEnvConfig()
+
+		if cfg.InputDir != "/input" {
+			t.Errorf("InputDir = %q, want /input", cfg.InputDir)
+		}
+		if cfg.OutputDir != "/output" {
+			t.Errorf("OutputDir = %q, want /output", cfg.OutputDir)
+		}
+		if cfg.AuthorName != "John Doe" {
+			t.Errorf("AuthorName = %q, want John Doe", cfg.AuthorName)
+		}
+		if cfg.AuthorOrg != "Acme Corp" {
+			t.Errorf("AuthorOrg = %q, want Acme Corp", cfg.AuthorOrg)
+		}
+		if cfg.AuthorEmail != "john@acme.com" {
+			t.Errorf("AuthorEmail = %q, want john@acme.com", cfg.AuthorEmail)
+		}
+	})
+
+	t.Run("Tier 3 - Extended", func(t *testing.T) {
+		t.Setenv("MD2PDF_PAGE_SIZE", "a4")
+		t.Setenv("MD2PDF_WATERMARK_TEXT", "DRAFT")
+		t.Setenv("MD2PDF_COVER_LOGO", "https://example.com/logo.png")
+		t.Setenv("MD2PDF_DOC_VERSION", "1.0.0")
+		t.Setenv("MD2PDF_DOC_DATE", "2024-01-15")
+		t.Setenv("MD2PDF_DOC_ID", "DOC-2024-001")
+		t.Setenv("MD2PDF_WORKERS", "4")
+
+		cfg := loadEnvConfig()
+
+		if cfg.PageSize != "a4" {
+			t.Errorf("PageSize = %q, want a4", cfg.PageSize)
+		}
+		if cfg.WatermarkText != "DRAFT" {
+			t.Errorf("WatermarkText = %q, want DRAFT", cfg.WatermarkText)
+		}
+		if cfg.CoverLogo != "https://example.com/logo.png" {
+			t.Errorf("CoverLogo = %q, want https://example.com/logo.png", cfg.CoverLogo)
+		}
+		if cfg.DocVersion != "1.0.0" {
+			t.Errorf("DocVersion = %q, want 1.0.0", cfg.DocVersion)
+		}
+		if cfg.DocDate != "2024-01-15" {
+			t.Errorf("DocDate = %q, want 2024-01-15", cfg.DocDate)
+		}
+		if cfg.DocID != "DOC-2024-001" {
+			t.Errorf("DocID = %q, want DOC-2024-001", cfg.DocID)
+		}
+		if cfg.Workers != 4 {
+			t.Errorf("Workers = %d, want 4", cfg.Workers)
+		}
+	})
+
+	t.Run("invalid timeout ignored", func(t *testing.T) {
+		t.Setenv("MD2PDF_TIMEOUT", "invalid")
+
+		cfg := loadEnvConfig()
+
+		if cfg.Timeout != 0 {
+			t.Errorf("Timeout = %v, want 0 (invalid value ignored)", cfg.Timeout)
+		}
+	})
+
+	t.Run("negative timeout ignored", func(t *testing.T) {
+		t.Setenv("MD2PDF_TIMEOUT", "-5s")
+
+		cfg := loadEnvConfig()
+
+		if cfg.Timeout != 0 {
+			t.Errorf("Timeout = %v, want 0 (negative value ignored)", cfg.Timeout)
+		}
+	})
+
+	t.Run("invalid workers ignored", func(t *testing.T) {
+		t.Setenv("MD2PDF_WORKERS", "abc")
+
+		cfg := loadEnvConfig()
+
+		if cfg.Workers != 0 {
+			t.Errorf("Workers = %d, want 0 (invalid value ignored)", cfg.Workers)
+		}
+	})
+
+	t.Run("negative workers ignored", func(t *testing.T) {
+		t.Setenv("MD2PDF_WORKERS", "-2")
+
+		cfg := loadEnvConfig()
+
+		if cfg.Workers != 0 {
+			t.Errorf("Workers = %d, want 0 (negative value ignored)", cfg.Workers)
+		}
+	})
+
+	t.Run("empty env returns zero values", func(t *testing.T) {
+		// No env vars set in this subtest
+
+		cfg := loadEnvConfig()
+
+		if cfg.ConfigPath != "" {
+			t.Errorf("ConfigPath = %q, want empty", cfg.ConfigPath)
+		}
+		if cfg.Style != "" {
+			t.Errorf("Style = %q, want empty", cfg.Style)
+		}
+		if cfg.Timeout != 0 {
+			t.Errorf("Timeout = %v, want 0", cfg.Timeout)
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
+// TestWarnUnknownEnvVars - Unknown variable detection
+// ---------------------------------------------------------------------------
+
+func TestWarnUnknownEnvVars(t *testing.T) {
+	t.Run("warns on unknown MD2PDF_ vars", func(t *testing.T) {
+		t.Setenv("MD2PDF_TYPO", "value")
+		t.Setenv("MD2PDF_AUTOR_NAME", "typo")
+
+		var buf bytes.Buffer
+		warnUnknownEnvVars(&buf)
+
+		output := buf.String()
+		if !bytes.Contains(buf.Bytes(), []byte("MD2PDF_TYPO")) {
+			t.Errorf("should warn about MD2PDF_TYPO, got: %s", output)
+		}
+		if !bytes.Contains(buf.Bytes(), []byte("MD2PDF_AUTOR_NAME")) {
+			t.Errorf("should warn about MD2PDF_AUTOR_NAME, got: %s", output)
+		}
+		if !bytes.Contains(buf.Bytes(), []byte("typo?")) {
+			t.Errorf("should suggest typo, got: %s", output)
+		}
+	})
+
+	t.Run("no warning for known vars", func(t *testing.T) {
+		t.Setenv("MD2PDF_CONFIG", "/path")
+		t.Setenv("MD2PDF_STYLE", "technical")
+		t.Setenv("MD2PDF_TIMEOUT", "2m")
+		t.Setenv("MD2PDF_INPUT_DIR", "/input")
+		t.Setenv("MD2PDF_OUTPUT_DIR", "/output")
+		t.Setenv("MD2PDF_AUTHOR_NAME", "John")
+		t.Setenv("MD2PDF_AUTHOR_ORG", "Acme")
+		t.Setenv("MD2PDF_AUTHOR_EMAIL", "john@acme.com")
+		t.Setenv("MD2PDF_PAGE_SIZE", "a4")
+		t.Setenv("MD2PDF_WATERMARK_TEXT", "DRAFT")
+		t.Setenv("MD2PDF_COVER_LOGO", "/logo.png")
+		t.Setenv("MD2PDF_DOC_VERSION", "1.0")
+		t.Setenv("MD2PDF_DOC_DATE", "auto")
+		t.Setenv("MD2PDF_DOC_ID", "DOC-001")
+		t.Setenv("MD2PDF_WORKERS", "4")
+
+		var buf bytes.Buffer
+		warnUnknownEnvVars(&buf)
+
+		if buf.Len() > 0 {
+			t.Errorf("should not warn for known vars, got: %s", buf.String())
+		}
+	})
+
+	t.Run("ignores non-MD2PDF vars", func(t *testing.T) {
+		t.Setenv("PATH", "/usr/bin")
+		t.Setenv("HOME", "/home/user")
+		t.Setenv("SOME_OTHER_VAR", "value")
+
+		var buf bytes.Buffer
+		warnUnknownEnvVars(&buf)
+
+		// Should not warn about unrelated env vars
+		if bytes.Contains(buf.Bytes(), []byte("PATH")) {
+			t.Errorf("should not warn about PATH")
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
+// TestApplyEnvConfig - Config application with priority
+// ---------------------------------------------------------------------------
+
+func TestApplyEnvConfig(t *testing.T) {
+	t.Run("applies env to empty config", func(t *testing.T) {
+		env := &envConfig{
+			Style:         "technical",
+			InputDir:      "/input",
+			OutputDir:     "/output",
+			AuthorName:    "John Doe",
+			AuthorOrg:     "Acme",
+			AuthorEmail:   "john@acme.com",
+			PageSize:      "a4",
+			WatermarkText: "DRAFT",
+			CoverLogo:     "/logo.png",
+			DocVersion:    "1.0",
+			DocDate:       "auto",
+			DocID:         "DOC-001",
+		}
+		cfg := config.DefaultConfig()
+
+		applyEnvConfig(env, cfg)
+
+		if cfg.Style != "technical" {
+			t.Errorf("Style = %q, want technical", cfg.Style)
+		}
+		if cfg.Input.DefaultDir != "/input" {
+			t.Errorf("Input.DefaultDir = %q, want /input", cfg.Input.DefaultDir)
+		}
+		if cfg.Output.DefaultDir != "/output" {
+			t.Errorf("Output.DefaultDir = %q, want /output", cfg.Output.DefaultDir)
+		}
+		if cfg.Author.Name != "John Doe" {
+			t.Errorf("Author.Name = %q, want John Doe", cfg.Author.Name)
+		}
+		if cfg.Author.Organization != "Acme" {
+			t.Errorf("Author.Organization = %q, want Acme", cfg.Author.Organization)
+		}
+		if cfg.Author.Email != "john@acme.com" {
+			t.Errorf("Author.Email = %q, want john@acme.com", cfg.Author.Email)
+		}
+		if cfg.Page.Size != "a4" {
+			t.Errorf("Page.Size = %q, want a4", cfg.Page.Size)
+		}
+		if cfg.Watermark.Text != "DRAFT" {
+			t.Errorf("Watermark.Text = %q, want DRAFT", cfg.Watermark.Text)
+		}
+		if !cfg.Watermark.Enabled {
+			t.Error("Watermark.Enabled should be true (auto-enabled)")
+		}
+		if cfg.Cover.Logo != "/logo.png" {
+			t.Errorf("Cover.Logo = %q, want /logo.png", cfg.Cover.Logo)
+		}
+		if !cfg.Cover.Enabled {
+			t.Error("Cover.Enabled should be true (auto-enabled)")
+		}
+		if cfg.Document.Version != "1.0" {
+			t.Errorf("Document.Version = %q, want 1.0", cfg.Document.Version)
+		}
+		if cfg.Document.Date != "auto" {
+			t.Errorf("Document.Date = %q, want auto", cfg.Document.Date)
+		}
+		if cfg.Document.DocumentID != "DOC-001" {
+			t.Errorf("Document.DocumentID = %q, want DOC-001", cfg.Document.DocumentID)
+		}
+	})
+
+	t.Run("does not override existing config values", func(t *testing.T) {
+		env := &envConfig{
+			Style:      "env-style",
+			AuthorName: "Env Author",
+			PageSize:   "a4",
+		}
+		cfg := config.DefaultConfig()
+		cfg.Style = "config-style"
+		cfg.Author.Name = "Config Author"
+		cfg.Page.Size = "letter"
+
+		applyEnvConfig(env, cfg)
+
+		// Config values should be preserved (env only fills empty values)
+		if cfg.Style != "config-style" {
+			t.Errorf("Style = %q, want config-style (should not override)", cfg.Style)
+		}
+		if cfg.Author.Name != "Config Author" {
+			t.Errorf("Author.Name = %q, want Config Author (should not override)", cfg.Author.Name)
+		}
+		if cfg.Page.Size != "letter" {
+			t.Errorf("Page.Size = %q, want letter (should not override)", cfg.Page.Size)
+		}
+	})
+
+	t.Run("watermark auto-enable preserves existing enabled state", func(t *testing.T) {
+		env := &envConfig{
+			WatermarkText: "DRAFT",
+		}
+		cfg := config.DefaultConfig()
+		cfg.Watermark.Enabled = true
+		cfg.Watermark.Text = "CONFIDENTIAL"
+
+		applyEnvConfig(env, cfg)
+
+		// Existing text should be preserved
+		if cfg.Watermark.Text != "CONFIDENTIAL" {
+			t.Errorf("Watermark.Text = %q, want CONFIDENTIAL", cfg.Watermark.Text)
+		}
+		// Enabled should still be true
+		if !cfg.Watermark.Enabled {
+			t.Error("Watermark.Enabled should remain true")
+		}
+	})
+
+	t.Run("watermark env applies when config enabled but text empty", func(t *testing.T) {
+		env := &envConfig{
+			WatermarkText: "DRAFT",
+		}
+		cfg := config.DefaultConfig()
+		cfg.Watermark.Enabled = true // Enabled but no text
+		cfg.Watermark.Text = ""
+
+		applyEnvConfig(env, cfg)
+
+		// Env text should be applied
+		if cfg.Watermark.Text != "DRAFT" {
+			t.Errorf("Watermark.Text = %q, want DRAFT", cfg.Watermark.Text)
+		}
+		// Enabled should still be true
+		if !cfg.Watermark.Enabled {
+			t.Error("Watermark.Enabled should remain true")
+		}
+	})
+
+	t.Run("cover logo auto-enable preserves existing enabled state", func(t *testing.T) {
+		env := &envConfig{
+			CoverLogo: "/env-logo.png",
+		}
+		cfg := config.DefaultConfig()
+		cfg.Cover.Enabled = true
+		cfg.Cover.Logo = "/config-logo.png"
+
+		applyEnvConfig(env, cfg)
+
+		// Existing logo should be preserved
+		if cfg.Cover.Logo != "/config-logo.png" {
+			t.Errorf("Cover.Logo = %q, want /config-logo.png", cfg.Cover.Logo)
+		}
+		// Enabled should still be true
+		if !cfg.Cover.Enabled {
+			t.Error("Cover.Enabled should remain true")
+		}
+	})
+
+	t.Run("cover env applies when config enabled but logo empty", func(t *testing.T) {
+		env := &envConfig{
+			CoverLogo: "/env-logo.png",
+		}
+		cfg := config.DefaultConfig()
+		cfg.Cover.Enabled = true // Enabled but no logo
+		cfg.Cover.Logo = ""
+
+		applyEnvConfig(env, cfg)
+
+		// Env logo should be applied
+		if cfg.Cover.Logo != "/env-logo.png" {
+			t.Errorf("Cover.Logo = %q, want /env-logo.png", cfg.Cover.Logo)
+		}
+		// Enabled should still be true
+		if !cfg.Cover.Enabled {
+			t.Error("Cover.Enabled should remain true")
+		}
+	})
+
+	t.Run("empty env values do not affect config", func(t *testing.T) {
+		env := &envConfig{} // All empty
+		cfg := config.DefaultConfig()
+		cfg.Style = "existing"
+		cfg.Author.Name = "Existing Author"
+
+		applyEnvConfig(env, cfg)
+
+		if cfg.Style != "existing" {
+			t.Errorf("Style = %q, want existing", cfg.Style)
+		}
+		if cfg.Author.Name != "Existing Author" {
+			t.Errorf("Author.Name = %q, want Existing Author", cfg.Author.Name)
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
+// TestKnownEnvVars - Known variable list completeness
+// ---------------------------------------------------------------------------
+
+func TestKnownEnvVars(t *testing.T) {
+	expected := []string{
+		"MD2PDF_CONFIG",
+		"MD2PDF_STYLE",
+		"MD2PDF_TIMEOUT",
+		"MD2PDF_INPUT_DIR",
+		"MD2PDF_OUTPUT_DIR",
+		"MD2PDF_AUTHOR_NAME",
+		"MD2PDF_AUTHOR_ORG",
+		"MD2PDF_AUTHOR_EMAIL",
+		"MD2PDF_PAGE_SIZE",
+		"MD2PDF_WATERMARK_TEXT",
+		"MD2PDF_COVER_LOGO",
+		"MD2PDF_DOC_VERSION",
+		"MD2PDF_DOC_DATE",
+		"MD2PDF_DOC_ID",
+		"MD2PDF_WORKERS",
+	}
+
+	for _, name := range expected {
+		if !knownEnvVars[name] {
+			t.Errorf("knownEnvVars missing %s", name)
+		}
+	}
+
+	if len(knownEnvVars) != len(expected) {
+		t.Errorf("knownEnvVars has %d entries, want %d", len(knownEnvVars), len(expected))
+	}
+}
