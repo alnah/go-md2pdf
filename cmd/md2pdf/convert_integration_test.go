@@ -747,7 +747,7 @@ func TestIntegration_NewCLIFlags(t *testing.T) {
 			"md2pdf",
 			"--config", configPath,
 			"--toc-title", "Contents",
-			"--toc-depth", "4",
+			"--toc-max-depth", "4",
 			inputPath,
 		})
 		if err != nil {
@@ -756,5 +756,73 @@ func TestIntegration_NewCLIFlags(t *testing.T) {
 
 		// Verify PDF was created with TOC
 		assertValidPDFFile(t, expectedOutput)
+	})
+
+	t.Run("toc-min-depth flag works", func(t *testing.T) {
+		t.Parallel()
+
+		tempDir := setupTestDir(t, map[string]string{
+			"doc.md": "# Document Title\n\nIntro.\n\n## Chapter 1\n\nContent.\n\n### Section 1.1\n\nMore content.",
+		})
+
+		// Create config with TOC enabled
+		configContent := `toc:
+  enabled: true
+`
+		configPath := filepath.Join(tempDir, "test.yaml")
+		if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+			t.Fatalf("failed to write config: %v", err)
+		}
+
+		inputPath := filepath.Join(tempDir, "doc.md")
+		expectedOutput := filepath.Join(tempDir, "doc.pdf")
+
+		err := runIntegration([]string{
+			"md2pdf",
+			"--config", configPath,
+			"--toc-min-depth", "2",
+			"--toc-max-depth", "3",
+			inputPath,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// Verify PDF was created with TOC (H1 skipped, H2-H3 included)
+		assertValidPDFFile(t, expectedOutput)
+	})
+
+	t.Run("toc-min-depth validation error", func(t *testing.T) {
+		t.Parallel()
+
+		tempDir := setupTestDir(t, map[string]string{
+			"doc.md": "# Test\n\nContent.",
+		})
+
+		// Create config with TOC enabled
+		configContent := `toc:
+  enabled: true
+`
+		configPath := filepath.Join(tempDir, "test.yaml")
+		if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+			t.Fatalf("failed to write config: %v", err)
+		}
+
+		inputPath := filepath.Join(tempDir, "doc.md")
+
+		// minDepth > maxDepth should error
+		err := runIntegration([]string{
+			"md2pdf",
+			"--config", configPath,
+			"--toc-min-depth", "4",
+			"--toc-max-depth", "3",
+			inputPath,
+		})
+		if err == nil {
+			t.Fatal("expected error when minDepth > maxDepth, got nil")
+		}
+		if !strings.Contains(err.Error(), "MinDepth") {
+			t.Errorf("error should mention MinDepth, got: %v", err)
+		}
 	})
 }

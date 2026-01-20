@@ -528,11 +528,20 @@ func TestParseConvertFlags_NewFlags(t *testing.T) {
 			},
 		},
 		{
-			name: "toc-depth flag",
-			args: []string{"--toc-depth", "4"},
+			name: "toc-min-depth flag",
+			args: []string{"--toc-min-depth", "2"},
 			check: func(t *testing.T, f *convertFlags) {
-				if f.toc.depth != 4 {
-					t.Errorf("toc.depth = %d, want %d", f.toc.depth, 4)
+				if f.toc.minDepth != 2 {
+					t.Errorf("toc.minDepth = %d, want %d", f.toc.minDepth, 2)
+				}
+			},
+		},
+		{
+			name: "toc-max-depth flag",
+			args: []string{"--toc-max-depth", "4"},
+			check: func(t *testing.T, f *convertFlags) {
+				if f.toc.maxDepth != 4 {
+					t.Errorf("toc.maxDepth = %d, want %d", f.toc.maxDepth, 4)
 				}
 			},
 		},

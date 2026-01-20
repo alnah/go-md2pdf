@@ -209,8 +209,18 @@ func TestMergeFlags(t *testing.T) {
 			},
 		},
 		{
-			name:  "toc.depth overrides config",
-			flags: &convertFlags{toc: tocFlags{depth: 4}},
+			name:  "toc.minDepth overrides config",
+			flags: &convertFlags{toc: tocFlags{minDepth: 2}},
+			cfg:   &Config{TOC: TOCConfig{MinDepth: 1}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.TOC.MinDepth != 2 {
+					t.Errorf("TOC.MinDepth = %d, want %d", cfg.TOC.MinDepth, 2)
+				}
+			},
+		},
+		{
+			name:  "toc.maxDepth overrides config",
+			flags: &convertFlags{toc: tocFlags{maxDepth: 4}},
 			cfg:   &Config{TOC: TOCConfig{MaxDepth: 2}},
 			check: func(t *testing.T, cfg *Config) {
 				if cfg.TOC.MaxDepth != 4 {
@@ -483,12 +493,51 @@ func TestMergeFlags_AutoEnable(t *testing.T) {
 			},
 		},
 		{
-			name:  "toc.depth auto-enables TOC",
-			flags: &convertFlags{toc: tocFlags{depth: 3}},
+			name:  "toc.minDepth auto-enables TOC",
+			flags: &convertFlags{toc: tocFlags{minDepth: 2}},
 			cfg:   &Config{TOC: TOCConfig{Enabled: false}},
 			check: func(t *testing.T, cfg *Config) {
 				if !cfg.TOC.Enabled {
-					t.Error("TOC.Enabled should be true when toc.depth is set")
+					t.Error("TOC.Enabled should be true when toc.minDepth is set")
+				}
+				if cfg.TOC.MinDepth != 2 {
+					t.Errorf("TOC.MinDepth = %d, want %d", cfg.TOC.MinDepth, 2)
+				}
+			},
+		},
+		{
+			name:  "toc.minDepth negative ignored",
+			flags: &convertFlags{toc: tocFlags{minDepth: -1}},
+			cfg:   &Config{TOC: TOCConfig{Enabled: false, MinDepth: 3}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.TOC.Enabled {
+					t.Error("TOC.Enabled should remain false when minDepth is negative")
+				}
+				if cfg.TOC.MinDepth != 3 {
+					t.Errorf("TOC.MinDepth = %d, want %d (config value preserved)", cfg.TOC.MinDepth, 3)
+				}
+			},
+		},
+		{
+			name:  "toc.maxDepth negative ignored",
+			flags: &convertFlags{toc: tocFlags{maxDepth: -2}},
+			cfg:   &Config{TOC: TOCConfig{Enabled: false, MaxDepth: 4}},
+			check: func(t *testing.T, cfg *Config) {
+				if cfg.TOC.Enabled {
+					t.Error("TOC.Enabled should remain false when maxDepth is negative")
+				}
+				if cfg.TOC.MaxDepth != 4 {
+					t.Errorf("TOC.MaxDepth = %d, want %d (config value preserved)", cfg.TOC.MaxDepth, 4)
+				}
+			},
+		},
+		{
+			name:  "toc.maxDepth auto-enables TOC",
+			flags: &convertFlags{toc: tocFlags{maxDepth: 3}},
+			cfg:   &Config{TOC: TOCConfig{Enabled: false}},
+			check: func(t *testing.T, cfg *Config) {
+				if !cfg.TOC.Enabled {
+					t.Error("TOC.Enabled should be true when toc.maxDepth is set")
 				}
 				if cfg.TOC.MaxDepth != 3 {
 					t.Errorf("TOC.MaxDepth = %d, want %d", cfg.TOC.MaxDepth, 3)

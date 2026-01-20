@@ -7,7 +7,8 @@ package main
 // - buildPageSettings: we test page size/orientation/margin combinations.
 // - buildWatermarkData: we test watermark text, color, opacity, and angle validation.
 // - buildCoverData: we test title extraction from config, markdown H1, and filename.
-// - buildTOCData: we test enabled/disabled and depth configuration.
+// - buildTOCData: we test enabled/disabled, minDepth/maxDepth configuration,
+//   and cross-validation (minDepth <= maxDepth). Boundary values 1-6 tested.
 // - buildPageBreaksData: we test heading break before and orphan/widow settings.
 // These are acceptable gaps: we test observable behavior, not implementation details.
 
@@ -1502,7 +1503,9 @@ func TestBuildTOCData(t *testing.T) {
 		flags        tocFlags
 		wantNil      bool
 		wantTitle    string
+		wantMinDepth int
 		wantMaxDepth int
+		wantErr      string
 	}{
 		{
 			name:    "noTOC flag returns nil",
@@ -1555,13 +1558,74 @@ func TestBuildTOCData(t *testing.T) {
 			flags:        tocFlags{},
 			wantMaxDepth: 6,
 		},
+		// MinDepth tests
+		{
+			name:         "minDepth 1 includes H1",
+			cfg:          &Config{TOC: TOCConfig{Enabled: true, MinDepth: 1, MaxDepth: 3}},
+			flags:        tocFlags{},
+			wantMinDepth: 1,
+			wantMaxDepth: 3,
+		},
+		{
+			name:         "minDepth 2 skips H1",
+			cfg:          &Config{TOC: TOCConfig{Enabled: true, MinDepth: 2, MaxDepth: 4}},
+			flags:        tocFlags{},
+			wantMinDepth: 2,
+			wantMaxDepth: 4,
+		},
+		{
+			name:         "minDepth equals maxDepth valid",
+			cfg:          &Config{TOC: TOCConfig{Enabled: true, MinDepth: 3, MaxDepth: 3}},
+			flags:        tocFlags{},
+			wantMinDepth: 3,
+			wantMaxDepth: 3,
+		},
+		{
+			name:    "minDepth greater than maxDepth errors",
+			cfg:     &Config{TOC: TOCConfig{Enabled: true, MinDepth: 4, MaxDepth: 3}},
+			flags:   tocFlags{},
+			wantErr: "MinDepth 4 > MaxDepth 3",
+		},
+		{
+			name:         "minDepth 0 uses default",
+			cfg:          &Config{TOC: TOCConfig{Enabled: true, MinDepth: 0, MaxDepth: 3}},
+			flags:        tocFlags{},
+			wantMinDepth: 0, // 0 = library applies default (2)
+			wantMaxDepth: 3,
+		},
+		{
+			name:         "minDepth 6 boundary valid",
+			cfg:          &Config{TOC: TOCConfig{Enabled: true, MinDepth: 6, MaxDepth: 6}},
+			flags:        tocFlags{},
+			wantMinDepth: 6,
+			wantMaxDepth: 6,
+		},
+		{
+			name:    "minDepth 7 out of range errors",
+			cfg:     &Config{TOC: TOCConfig{Enabled: true, MinDepth: 7, MaxDepth: 6}},
+			flags:   tocFlags{},
+			wantErr: "MinDepth 7",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := buildTOCData(tt.cfg, tt.flags)
+			got, err := buildTOCData(tt.cfg, tt.flags)
+
+			if tt.wantErr != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tt.wantErr)
+				}
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Errorf("error = %q, want containing %q", err.Error(), tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
 			if tt.wantNil {
 				if got != nil {
@@ -1575,6 +1639,9 @@ func TestBuildTOCData(t *testing.T) {
 			}
 			if got.Title != tt.wantTitle {
 				t.Errorf("Title = %q, want %q", got.Title, tt.wantTitle)
+			}
+			if got.MinDepth != tt.wantMinDepth {
+				t.Errorf("MinDepth = %d, want %d", got.MinDepth, tt.wantMinDepth)
 			}
 			if got.MaxDepth != tt.wantMaxDepth {
 				t.Errorf("MaxDepth = %d, want %d", got.MaxDepth, tt.wantMaxDepth)
