@@ -2,6 +2,12 @@
 
 package md2pdf
 
+// Notes:
+// - Tests NewConversionService with proper pipeline component initialization
+// - Tests Convert with various page settings and page breaks configurations
+// - Tests file output writing and PDF validity
+// - Uses acquireService helper from integration_setup_test.go for pooled services
+
 import (
 	"bytes"
 	"context"
@@ -11,6 +17,10 @@ import (
 
 	"github.com/alnah/go-md2pdf/internal/pipeline"
 )
+
+// ---------------------------------------------------------------------------
+// TestNewConversionService - Service Initialization
+// ---------------------------------------------------------------------------
 
 func TestNewConversionService(t *testing.T) {
 	t.Parallel()
@@ -44,6 +54,10 @@ func TestNewConversionService(t *testing.T) {
 	// pdfConverter is already *rodConverter (concrete type), type assertion not needed
 }
 
+// ---------------------------------------------------------------------------
+// TestConversionService_Convert_Integration - Basic Conversion
+// ---------------------------------------------------------------------------
+
 func TestConversionService_Convert_Integration(t *testing.T) {
 	t.Parallel()
 
@@ -68,6 +82,10 @@ func TestConversionService_Convert_Integration(t *testing.T) {
 		t.Error("PDF data suspiciously small")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestConversionService_WriteToFile_Integration - File Output
+// ---------------------------------------------------------------------------
 
 func TestConversionService_WriteToFile_Integration(t *testing.T) {
 	t.Parallel()
@@ -98,6 +116,10 @@ func TestConversionService_WriteToFile_Integration(t *testing.T) {
 		t.Error("PDF file is empty")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestConversionService_PageSettings_Integration - Page Settings Variations
+// ---------------------------------------------------------------------------
 
 func TestConversionService_PageSettings_Integration(t *testing.T) {
 	t.Parallel()
@@ -175,6 +197,10 @@ func TestConversionService_PageSettings_Integration(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestConversionService_PageSettingsWithFooter_Integration - Page Settings with Footer
+// ---------------------------------------------------------------------------
+
 func TestConversionService_PageSettingsWithFooter_Integration(t *testing.T) {
 	t.Parallel()
 
@@ -200,6 +226,10 @@ func TestConversionService_PageSettingsWithFooter_Integration(t *testing.T) {
 		t.Error("output does not have PDF magic bytes")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestConversionService_PageBreaks_Integration - Page Breaks Configurations
+// ---------------------------------------------------------------------------
 
 func TestConversionService_PageBreaks_Integration(t *testing.T) {
 	t.Parallel()
@@ -301,6 +331,10 @@ More content here.
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestConversionService_PageBreaksWithOtherFeatures_Integration - Combined Features
+// ---------------------------------------------------------------------------
 
 func TestConversionService_PageBreaksWithOtherFeatures_Integration(t *testing.T) {
 	t.Parallel()

@@ -2,6 +2,12 @@
 
 package md2pdf
 
+// Notes:
+// - Tests PDF generation using go-rod browser automation
+// - Rod automatically downloads Chromium on first run if not found
+// - Tests Service.Convert full pipeline with various input configurations
+// - Verifies PDF magic bytes and minimum size for validity
+
 import (
 	"bytes"
 	"context"
@@ -12,6 +18,10 @@ import (
 
 	"github.com/alnah/go-md2pdf/internal/pipeline"
 )
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 func assertValidPDF(t *testing.T, data []byte) {
 	t.Helper()
@@ -36,8 +46,10 @@ func assertValidPDFFile(t *testing.T, path string) {
 	assertValidPDF(t, data)
 }
 
-// TestRodConverter_ToPDF_Integration tests PDF generation using go-rod.
-// Rod automatically downloads Chromium on first run if not found.
+// ---------------------------------------------------------------------------
+// TestRodConverter_ToPDF_Integration - Rod Converter PDF Generation
+// ---------------------------------------------------------------------------
+
 func TestRodConverter_ToPDF_Integration(t *testing.T) {
 	t.Parallel()
 
@@ -108,7 +120,10 @@ func TestRodConverter_ToPDF_Integration(t *testing.T) {
 	})
 }
 
-// TestService_Integration tests the full conversion pipeline through the public API.
+// ---------------------------------------------------------------------------
+// TestService_Integration - Full Conversion Pipeline
+// ---------------------------------------------------------------------------
+
 func TestService_Integration(t *testing.T) {
 	t.Parallel()
 
@@ -218,7 +233,10 @@ func TestService_Integration(t *testing.T) {
 	})
 }
 
-// TestRodRenderer_EnsureBrowser_CI tests browser launch with CI environment variable.
+// ---------------------------------------------------------------------------
+// TestRodRenderer_EnsureBrowser_CI - Browser Launch in CI Environment
+// ---------------------------------------------------------------------------
+
 func TestRodRenderer_EnsureBrowser_CI(t *testing.T) {
 	t.Setenv("CI", "true")
 
@@ -235,7 +253,10 @@ func TestRodRenderer_EnsureBrowser_CI(t *testing.T) {
 	}
 }
 
-// TestRodRenderer_RenderFromFile_ContextCancelled tests early exit on cancelled context.
+// ---------------------------------------------------------------------------
+// TestRodRenderer_RenderFromFile_ContextCancelled - Context Cancellation
+// ---------------------------------------------------------------------------
+
 func TestRodRenderer_RenderFromFile_ContextCancelled(t *testing.T) {
 	t.Parallel()
 
@@ -255,7 +276,10 @@ func TestRodRenderer_RenderFromFile_ContextCancelled(t *testing.T) {
 	}
 }
 
-// TestRodRenderer_RenderFromFile_ContextDeadlineExceeded tests early exit on expired deadline.
+// ---------------------------------------------------------------------------
+// TestRodRenderer_RenderFromFile_ContextDeadlineExceeded - Deadline Exceeded
+// ---------------------------------------------------------------------------
+
 func TestRodRenderer_RenderFromFile_ContextDeadlineExceeded(t *testing.T) {
 	t.Parallel()
 

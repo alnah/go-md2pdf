@@ -2,6 +2,12 @@
 
 package md2pdf
 
+// Notes:
+// - Tests GoldmarkConverter HTML generation with various markdown features
+// - Verifies syntax highlighting with Chroma classes
+// - Tests highlight ==text== feature through full preprocessing pipeline
+// - Verifies raw HTML sanitization for security (no WithUnsafe)
+
 import (
 	"context"
 	"strings"
@@ -9,6 +15,10 @@ import (
 
 	"github.com/alnah/go-md2pdf/internal/pipeline"
 )
+
+// ---------------------------------------------------------------------------
+// TestGoldmarkConverter_ToHTML_Integration - Goldmark HTML Conversion
+// ---------------------------------------------------------------------------
 
 func TestGoldmarkConverter_ToHTML_Integration(t *testing.T) {
 	t.Parallel()
@@ -201,9 +211,10 @@ Ceci est un test avec des caracteres speciaux.`
 	})
 }
 
-// TestHighlightFullPipeline tests the ==text== highlight feature through
-// the complete preprocessing + HTML conversion + post-processing pipeline.
-// This is a regression test to ensure highlights work end-to-end.
+// ---------------------------------------------------------------------------
+// TestHighlightFullPipeline - Highlight Feature End-to-End
+// ---------------------------------------------------------------------------
+
 func TestHighlightFullPipeline(t *testing.T) {
 	t.Parallel()
 

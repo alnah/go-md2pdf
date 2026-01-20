@@ -2,6 +2,12 @@
 
 package md2pdf
 
+// Notes:
+// - Benchmarks for ServicePool performance
+// - Tests pool size calculation, acquire/release cycle, and contention scenarios
+// - Uses pre-warming to avoid measuring service creation overhead
+// - Tests parallel access patterns with various goroutine counts
+
 import (
 	"fmt"
 	"runtime"
@@ -9,7 +15,10 @@ import (
 	"testing"
 )
 
-// BenchmarkResolvePoolSize benchmarks pool size calculation.
+// ---------------------------------------------------------------------------
+// BenchmarkResolvePoolSize - Pool Size Calculation Performance
+// ---------------------------------------------------------------------------
+
 func BenchmarkResolvePoolSize(b *testing.B) {
 	workers := []int{0, 1, 2, 4, 8}
 
@@ -33,8 +42,10 @@ func workerName(w int) string {
 	return fmt.Sprintf("%d", w)
 }
 
-// BenchmarkServicePoolAcquireRelease benchmarks pool acquire/release cycle.
-// Uses a mock pool to avoid browser overhead.
+// ---------------------------------------------------------------------------
+// BenchmarkServicePoolAcquireRelease - Acquire/Release Cycle Performance
+// ---------------------------------------------------------------------------
+
 func BenchmarkServicePoolAcquireRelease(b *testing.B) {
 	sizes := []int{1, 2, 4, 8}
 
@@ -68,8 +79,10 @@ func poolSizeName(size int) string {
 	return fmt.Sprintf("size_%d", size)
 }
 
-// BenchmarkServicePoolContention benchmarks pool under contention.
-// Simulates multiple goroutines competing for pool resources.
+// ---------------------------------------------------------------------------
+// BenchmarkServicePoolContention - Pool Contention Performance
+// ---------------------------------------------------------------------------
+
 func BenchmarkServicePoolContention(b *testing.B) {
 	poolSize := 4
 	goroutines := []int{4, 8, 16, 32}
@@ -119,7 +132,10 @@ func goroutineName(g int) string {
 	return fmt.Sprintf("goroutines_%d", g)
 }
 
-// BenchmarkServicePoolParallel benchmarks parallel pool access.
+// ---------------------------------------------------------------------------
+// BenchmarkServicePoolParallel - Parallel Pool Access Performance
+// ---------------------------------------------------------------------------
+
 func BenchmarkServicePoolParallel(b *testing.B) {
 	pool := NewServicePool(runtime.GOMAXPROCS(0))
 	// Pre-warm
@@ -146,7 +162,10 @@ func BenchmarkServicePoolParallel(b *testing.B) {
 	pool.Close()
 }
 
-// BenchmarkNewServicePool benchmarks pool creation.
+// ---------------------------------------------------------------------------
+// BenchmarkNewServicePool - Pool Creation Performance
+// ---------------------------------------------------------------------------
+
 func BenchmarkNewServicePool(b *testing.B) {
 	sizes := []int{1, 4, 8}
 

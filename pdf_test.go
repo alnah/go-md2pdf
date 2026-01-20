@@ -1,5 +1,11 @@
 package md2pdf
 
+// Notes:
+// - Tests rodConverter and rodRenderer with mock implementations
+// - Tests buildFooterTemplate with various footer configurations
+// - Tests resolvePageDimensions for all page sizes and orientations
+// - Tests buildPDFOptions for margin calculations with footer
+
 import (
 	"context"
 	"errors"
@@ -10,13 +16,19 @@ import (
 	"github.com/alnah/go-md2pdf/internal/pipeline"
 )
 
-// Compile-time interface checks.
+// ---------------------------------------------------------------------------
+// Compile-Time Interface Checks
+// ---------------------------------------------------------------------------
+
 var (
 	_ pdfConverter = (*rodConverter)(nil)
 	_ pdfRenderer  = (*rodRenderer)(nil)
 )
 
-// mockRenderer implements pdfRenderer for testing.
+// ---------------------------------------------------------------------------
+// Mock Implementations
+// ---------------------------------------------------------------------------
+
 type mockRenderer struct {
 	Result     []byte
 	Err        error
@@ -30,7 +42,6 @@ func (m *mockRenderer) RenderFromFile(ctx context.Context, filePath string, opts
 	return m.Result, m.Err
 }
 
-// testableRodConverter wraps rodConverter for testing with mock renderer.
 type testableRodConverter struct {
 	mock *mockRenderer
 }
@@ -44,6 +55,10 @@ func (c *testableRodConverter) ToPDF(ctx context.Context, htmlContent string, op
 
 	return c.mock.RenderFromFile(ctx, tmpPath, opts)
 }
+
+// ---------------------------------------------------------------------------
+// TestRodConverter_ToPDF - PDF Conversion with Mock Renderer
+// ---------------------------------------------------------------------------
 
 func TestRodConverter_ToPDF(t *testing.T) {
 	t.Parallel()
@@ -122,6 +137,10 @@ func TestRodConverter_ToPDF(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestRodConverter_ToPDF_ContextCancellation - Context Handling
+// ---------------------------------------------------------------------------
+
 func TestRodConverter_ToPDF_ContextCancellation(t *testing.T) {
 	t.Parallel()
 
@@ -142,6 +161,10 @@ func TestRodConverter_ToPDF_ContextCancellation(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestNewRodConverter - Converter Creation
+// ---------------------------------------------------------------------------
+
 func TestNewRodConverter(t *testing.T) {
 	t.Parallel()
 
@@ -155,6 +178,10 @@ func TestNewRodConverter(t *testing.T) {
 		t.Errorf("expected timeout %v, got %v", defaultTimeout, converter.renderer.timeout)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestBuildFooterTemplate - Footer Template Generation
+// ---------------------------------------------------------------------------
 
 func TestBuildFooterTemplate(t *testing.T) {
 	t.Parallel()
@@ -261,6 +288,10 @@ func TestBuildFooterTemplate(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestResolvePageDimensions - Page Dimension Calculation
+// ---------------------------------------------------------------------------
 
 func TestResolvePageDimensions(t *testing.T) {
 	t.Parallel()
@@ -442,6 +473,10 @@ func TestResolvePageDimensions(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestRodRenderer_Close_Idempotent - Close Idempotency
+// ---------------------------------------------------------------------------
+
 func TestRodRenderer_Close_Idempotent(t *testing.T) {
 	t.Parallel()
 
@@ -463,6 +498,10 @@ func TestRodRenderer_Close_Idempotent(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestRodConverter_Close_NilRenderer - Close with Nil Renderer
+// ---------------------------------------------------------------------------
+
 func TestRodConverter_Close_NilRenderer(t *testing.T) {
 	t.Parallel()
 
@@ -473,6 +512,10 @@ func TestRodConverter_Close_NilRenderer(t *testing.T) {
 		t.Errorf("Close() with nil renderer should not error, got %v", err)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestBuildPDFOptions - PDF Options Construction
+// ---------------------------------------------------------------------------
 
 func TestBuildPDFOptions(t *testing.T) {
 	t.Parallel()
@@ -551,6 +594,10 @@ func TestBuildPDFOptions(t *testing.T) {
 	})
 }
 
+// ---------------------------------------------------------------------------
+// TestPageDimensions_AllSizesPresent - Page Dimensions Map Completeness
+// ---------------------------------------------------------------------------
+
 func TestPageDimensions_AllSizesPresent(t *testing.T) {
 	t.Parallel()
 
@@ -562,6 +609,10 @@ func TestPageDimensions_AllSizesPresent(t *testing.T) {
 		}
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestPageDimensions_ValidValues - Page Dimensions Value Validity
+// ---------------------------------------------------------------------------
 
 func TestPageDimensions_ValidValues(t *testing.T) {
 	t.Parallel()

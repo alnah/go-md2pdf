@@ -1,5 +1,12 @@
 package md2pdf
 
+// Notes:
+// - Tests Service.Convert with mocked pipeline components to isolate unit logic
+// - Mock implementations (mockPreprocessor, mockHTMLConverter, etc.) allow testing
+//   error handling and data flow without real browser or file system access
+// - Internal test options (withPreprocessor, etc.) enable dependency injection
+// - Validation tests cover all Input fields and their error conditions
+
 import (
 	"context"
 	"errors"
@@ -11,7 +18,9 @@ import (
 	"github.com/alnah/go-md2pdf/internal/pipeline"
 )
 
-// Mock implementations for testing.
+// ---------------------------------------------------------------------------
+// Mock Implementations
+// ---------------------------------------------------------------------------
 
 type mockPreprocessor struct {
 	called bool
@@ -187,7 +196,9 @@ func (m *mockAssetLoader) LoadTemplateSet(name string) (*TemplateSet, error) {
 	}, nil
 }
 
-// Test options for dependency injection (not exported).
+// ---------------------------------------------------------------------------
+// Test Options (Internal Dependency Injection)
+// ---------------------------------------------------------------------------
 
 func withPreprocessor(p pipeline.MarkdownPreprocessor) Option {
 	return func(s *Service) {
@@ -231,6 +242,10 @@ func withTOCInjector(t pipeline.TOCInjector) Option {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestValidateInput - Input Validation
+// ---------------------------------------------------------------------------
+
 func TestValidateInput(t *testing.T) {
 	t.Parallel()
 
@@ -273,6 +288,10 @@ func TestValidateInput(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestConvert_Success - Successful Conversion Pipeline
+// ---------------------------------------------------------------------------
 
 func TestConvert_Success(t *testing.T) {
 	t.Parallel()
@@ -355,6 +374,10 @@ func TestConvert_Success(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestConvert_ValidationError - Validation Error Handling
+// ---------------------------------------------------------------------------
+
 func TestConvert_ValidationError(t *testing.T) {
 	t.Parallel()
 
@@ -371,6 +394,10 @@ func TestConvert_ValidationError(t *testing.T) {
 		t.Errorf("Convert() error = %v, want %v", err, ErrEmptyMarkdown)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestConvert_HTMLConverterError - HTML Converter Error Handling
+// ---------------------------------------------------------------------------
 
 func TestConvert_HTMLConverterError(t *testing.T) {
 	t.Parallel()
@@ -400,6 +427,10 @@ func TestConvert_HTMLConverterError(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestConvert_PDFConverterError - PDF Converter Error Handling
+// ---------------------------------------------------------------------------
+
 func TestConvert_PDFConverterError(t *testing.T) {
 	t.Parallel()
 
@@ -428,6 +459,10 @@ func TestConvert_PDFConverterError(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestConvert_SignatureInjectorError - Signature Injector Error Handling
+// ---------------------------------------------------------------------------
+
 func TestConvert_SignatureInjectorError(t *testing.T) {
 	t.Parallel()
 
@@ -455,6 +490,10 @@ func TestConvert_SignatureInjectorError(t *testing.T) {
 		t.Errorf("Convert() error should wrap %v, got %v", sigErr, err)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestConvert_NoCSSByDefault - Default CSS Behavior
+// ---------------------------------------------------------------------------
 
 func TestConvert_NoCSSByDefault(t *testing.T) {
 	t.Parallel()
@@ -490,6 +529,10 @@ func TestConvert_NoCSSByDefault(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestNew - Service Factory
+// ---------------------------------------------------------------------------
+
 func TestNew(t *testing.T) {
 	t.Parallel()
 
@@ -516,6 +559,10 @@ func TestNew(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestWithTimeout - Timeout Option
+// ---------------------------------------------------------------------------
+
 func TestWithTimeout(t *testing.T) {
 	t.Parallel()
 
@@ -529,6 +576,10 @@ func TestWithTimeout(t *testing.T) {
 		t.Errorf("timeout = %v, want %v", service.cfg.timeout, 60*defaultTimeout)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestWithAssetLoader - Asset Loader Option
+// ---------------------------------------------------------------------------
 
 func TestWithAssetLoader(t *testing.T) {
 	t.Parallel()
@@ -552,6 +603,10 @@ func TestWithAssetLoader(t *testing.T) {
 		t.Error("publicAssetLoader should be the custom loader")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestWithAssetLoader_UsedByInjectors - Asset Loader Injector Integration
+// ---------------------------------------------------------------------------
 
 func TestWithAssetLoader_UsedByInjectors(t *testing.T) {
 	t.Parallel()
@@ -577,6 +632,10 @@ func TestWithAssetLoader_UsedByInjectors(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestService_Close - Service Cleanup
+// ---------------------------------------------------------------------------
+
 func TestService_Close(t *testing.T) {
 	t.Parallel()
 
@@ -595,6 +654,10 @@ func TestService_Close(t *testing.T) {
 		t.Errorf("Close() second call error = %v", err)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestToSignatureData - Signature Data Conversion
+// ---------------------------------------------------------------------------
 
 func TestToSignatureData(t *testing.T) {
 	t.Parallel()
@@ -666,6 +729,10 @@ func TestToSignatureData(t *testing.T) {
 	})
 }
 
+// ---------------------------------------------------------------------------
+// TestToFooterData - Footer Data Conversion
+// ---------------------------------------------------------------------------
+
 func TestToFooterData(t *testing.T) {
 	t.Parallel()
 
@@ -722,6 +789,10 @@ func TestToFooterData(t *testing.T) {
 		}
 	})
 }
+
+// ---------------------------------------------------------------------------
+// TestToCoverData - Cover Data Conversion
+// ---------------------------------------------------------------------------
 
 func TestToCoverData(t *testing.T) {
 	t.Parallel()
@@ -836,6 +907,10 @@ func TestToCoverData(t *testing.T) {
 	})
 }
 
+// ---------------------------------------------------------------------------
+// TestToTOCData - TOC Data Conversion
+// ---------------------------------------------------------------------------
+
 func TestToTOCData(t *testing.T) {
 	t.Parallel()
 
@@ -916,6 +991,10 @@ func TestToTOCData(t *testing.T) {
 	})
 }
 
+// ---------------------------------------------------------------------------
+// TestValidateInput_TOC - TOC Validation
+// ---------------------------------------------------------------------------
+
 func TestValidateInput_TOC(t *testing.T) {
 	t.Parallel()
 
@@ -964,6 +1043,10 @@ func TestValidateInput_TOC(t *testing.T) {
 	})
 }
 
+// ---------------------------------------------------------------------------
+// TestConvert_RecoversPanic - Panic Recovery
+// ---------------------------------------------------------------------------
+
 func TestConvert_RecoversPanic(t *testing.T) {
 	t.Parallel()
 
@@ -989,6 +1072,10 @@ func TestConvert_RecoversPanic(t *testing.T) {
 		t.Errorf("expected 'internal error' in message, got %q", err.Error())
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestConvert_ContextCancellation - Context Cancellation Handling
+// ---------------------------------------------------------------------------
 
 func TestConvert_ContextCancellation(t *testing.T) {
 	t.Parallel()
@@ -1018,6 +1105,10 @@ func TestConvert_ContextCancellation(t *testing.T) {
 		t.Errorf("expected context.Canceled, got %v", err)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestValidateInput_InvalidWatermark - Watermark Validation
+// ---------------------------------------------------------------------------
 
 func TestValidateInput_InvalidWatermark(t *testing.T) {
 	t.Parallel()
@@ -1068,6 +1159,10 @@ func TestValidateInput_InvalidWatermark(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestValidateInput_InvalidPageBreaks - Page Breaks Validation
+// ---------------------------------------------------------------------------
+
 func TestValidateInput_InvalidPageBreaks(t *testing.T) {
 	t.Parallel()
 
@@ -1117,6 +1212,10 @@ func TestValidateInput_InvalidPageBreaks(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestService_CloseNilConverter - Close with Nil Converter
+// ---------------------------------------------------------------------------
+
 func TestService_CloseNilConverter(t *testing.T) {
 	t.Parallel()
 
@@ -1129,6 +1228,10 @@ func TestService_CloseNilConverter(t *testing.T) {
 		t.Errorf("Close() with nil pdfConverter should not error, got %v", err)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestConvert_WatermarkCSSOrder - CSS Ordering with Watermark
+// ---------------------------------------------------------------------------
 
 func TestConvert_WatermarkCSSOrder(t *testing.T) {
 	t.Parallel()
@@ -1196,6 +1299,10 @@ func TestConvert_WatermarkCSSOrder(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestConvert_CoverInjectorError - Cover Injector Error Handling
+// ---------------------------------------------------------------------------
+
 func TestConvert_CoverInjectorError(t *testing.T) {
 	t.Parallel()
 
@@ -1229,6 +1336,10 @@ func TestConvert_CoverInjectorError(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestConvert_TOCInjectorError - TOC Injector Error Handling
+// ---------------------------------------------------------------------------
+
 func TestConvert_TOCInjectorError(t *testing.T) {
 	t.Parallel()
 
@@ -1261,6 +1372,10 @@ func TestConvert_TOCInjectorError(t *testing.T) {
 		t.Errorf("error should mention 'injecting TOC', got %q", err.Error())
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestConvert_PDFOptionsTransmission - PDF Options Passing
+// ---------------------------------------------------------------------------
 
 func TestConvert_PDFOptionsTransmission(t *testing.T) {
 	t.Parallel()
@@ -1330,6 +1445,10 @@ func TestConvert_PDFOptionsTransmission(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestConvert_CoverDataTransmission - Cover Data Passing
+// ---------------------------------------------------------------------------
+
 func TestConvert_CoverDataTransmission(t *testing.T) {
 	t.Parallel()
 
@@ -1382,6 +1501,10 @@ func TestConvert_CoverDataTransmission(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestConvert_TOCDataTransmission - TOC Data Passing
+// ---------------------------------------------------------------------------
+
 func TestConvert_TOCDataTransmission(t *testing.T) {
 	t.Parallel()
 
@@ -1428,6 +1551,10 @@ func TestConvert_TOCDataTransmission(t *testing.T) {
 		t.Errorf("TOC.MaxDepth = %d, want %d", tocInj.inputData.MaxDepth, 4)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestConvert_NilOptionalFieldsNotPassed - Nil Optional Fields Handling
+// ---------------------------------------------------------------------------
 
 func TestConvert_NilOptionalFieldsNotPassed(t *testing.T) {
 	t.Parallel()
@@ -1476,6 +1603,10 @@ func TestConvert_NilOptionalFieldsNotPassed(t *testing.T) {
 		t.Error("TOC data should be nil when no TOC provided")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestValidateInput_InvalidPage - Page Settings Validation
+// ---------------------------------------------------------------------------
 
 func TestValidateInput_InvalidPage(t *testing.T) {
 	t.Parallel()
@@ -1526,6 +1657,10 @@ func TestValidateInput_InvalidPage(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestValidateInput_InvalidFooter - Footer Validation
+// ---------------------------------------------------------------------------
+
 func TestValidateInput_InvalidFooter(t *testing.T) {
 	t.Parallel()
 
@@ -1546,6 +1681,10 @@ func TestValidateInput_InvalidFooter(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestValidateInput_InvalidWatermarkColor - Watermark Color Validation
+// ---------------------------------------------------------------------------
+
 func TestValidateInput_InvalidWatermarkColor(t *testing.T) {
 	t.Parallel()
 
@@ -1565,6 +1704,10 @@ func TestValidateInput_InvalidWatermarkColor(t *testing.T) {
 		t.Errorf("validateInput() error = %v, want ErrInvalidWatermarkColor", err)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestConvert_ReturnsConvertResult - ConvertResult Structure
+// ---------------------------------------------------------------------------
 
 func TestConvert_ReturnsConvertResult(t *testing.T) {
 	t.Parallel()
@@ -1599,6 +1742,10 @@ func TestConvert_ReturnsConvertResult(t *testing.T) {
 		t.Errorf("Convert() result.PDF = %q, want %q", result.PDF, "%PDF-1.4 test")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestConvert_HTMLOnlySkipsPDF - HTML Only Mode
+// ---------------------------------------------------------------------------
 
 func TestConvert_HTMLOnlySkipsPDF(t *testing.T) {
 	t.Parallel()
@@ -1636,6 +1783,10 @@ func TestConvert_HTMLOnlySkipsPDF(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestConvert_HTMLOnlyStillProcessesInjections - HTML Only with Injections
+// ---------------------------------------------------------------------------
+
 func TestConvert_HTMLOnlyStillProcessesInjections(t *testing.T) {
 	t.Parallel()
 
@@ -1672,6 +1823,10 @@ func TestConvert_HTMLOnlyStillProcessesInjections(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestWithTemplateSet - Template Set Option
+// ---------------------------------------------------------------------------
+
 func TestWithTemplateSet(t *testing.T) {
 	t.Parallel()
 
@@ -1694,6 +1849,10 @@ func TestWithTemplateSet(t *testing.T) {
 		t.Fatal("New(WithTemplateSet()) returned nil service")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestWithTemplateSet_UsedByInjectors - Template Set Injector Integration
+// ---------------------------------------------------------------------------
 
 func TestWithTemplateSet_UsedByInjectors(t *testing.T) {
 	t.Parallel()
@@ -1732,6 +1891,10 @@ func TestWithTemplateSet_UsedByInjectors(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestNew_WithoutTemplateSet_LoadsDefault - Default Template Set Loading
+// ---------------------------------------------------------------------------
+
 func TestNew_WithoutTemplateSet_LoadsDefault(t *testing.T) {
 	t.Parallel()
 
@@ -1746,6 +1909,10 @@ func TestNew_WithoutTemplateSet_LoadsDefault(t *testing.T) {
 		t.Fatal("New() returned nil service")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestWithAssetPath - Asset Path Option
+// ---------------------------------------------------------------------------
 
 func TestWithAssetPath(t *testing.T) {
 	t.Parallel()
@@ -1763,6 +1930,10 @@ func TestWithAssetPath(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestWithAssetPath_InvalidPath - Invalid Asset Path Handling
+// ---------------------------------------------------------------------------
+
 func TestWithAssetPath_InvalidPath(t *testing.T) {
 	t.Parallel()
 
@@ -1774,6 +1945,10 @@ func TestWithAssetPath_InvalidPath(t *testing.T) {
 		t.Errorf("New() error = %v, want ErrInvalidAssetPath", err)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestWithAssetPath_LoadsFromFilesystem - Filesystem Asset Loading
+// ---------------------------------------------------------------------------
 
 func TestWithAssetPath_LoadsFromFilesystem(t *testing.T) {
 	t.Parallel()
@@ -1792,6 +1967,10 @@ func TestWithAssetPath_LoadsFromFilesystem(t *testing.T) {
 		t.Fatal("New() returned nil service")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestWithStyle - Style Option
+// ---------------------------------------------------------------------------
 
 func TestWithStyle(t *testing.T) {
 	t.Parallel()

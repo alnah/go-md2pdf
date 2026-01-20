@@ -2,11 +2,19 @@
 
 package md2pdf
 
+// Notes:
+// - Benchmarks CSS building functions with various input configurations
+// - Tests performance of watermark, page breaks, and string escaping
+// - Uses ReportAllocs to track memory allocations
+
 import (
 	"testing"
 )
 
-// BenchmarkBuildWatermarkCSS benchmarks watermark CSS generation.
+// ---------------------------------------------------------------------------
+// BenchmarkBuildWatermarkCSS - Watermark CSS Generation Performance
+// ---------------------------------------------------------------------------
+
 func BenchmarkBuildWatermarkCSS(b *testing.B) {
 	watermarks := []struct {
 		name string
@@ -30,7 +38,10 @@ func BenchmarkBuildWatermarkCSS(b *testing.B) {
 	}
 }
 
-// BenchmarkBuildPageBreaksCSS benchmarks page breaks CSS generation.
+// ---------------------------------------------------------------------------
+// BenchmarkBuildPageBreaksCSS - Page Breaks CSS Generation Performance
+// ---------------------------------------------------------------------------
+
 func BenchmarkBuildPageBreaksCSS(b *testing.B) {
 	configs := []struct {
 		name string
@@ -54,7 +65,10 @@ func BenchmarkBuildPageBreaksCSS(b *testing.B) {
 	}
 }
 
-// BenchmarkEscapeCSSString benchmarks CSS string escaping.
+// ---------------------------------------------------------------------------
+// BenchmarkEscapeCSSString - CSS String Escaping Performance
+// ---------------------------------------------------------------------------
+
 func BenchmarkEscapeCSSString(b *testing.B) {
 	inputs := []struct {
 		name  string

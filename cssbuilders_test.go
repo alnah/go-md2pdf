@@ -1,9 +1,19 @@
 package md2pdf
 
+// Notes:
+// - escapeCSSString: tests CSS string escaping for quotes, backslashes, newlines
+// - buildWatermarkCSS: tests watermark CSS generation with escaping
+// - breakURLPattern: tests URL pattern breaking with dot leader replacement
+// - buildPageBreaksCSS: tests page break CSS generation for headings and orphans/widows
+
 import (
 	"strings"
 	"testing"
 )
+
+// ---------------------------------------------------------------------------
+// TestEscapeCSSString - CSS String Escaping
+// ---------------------------------------------------------------------------
 
 func TestEscapeCSSString(t *testing.T) {
 	t.Parallel()
@@ -81,6 +91,10 @@ func TestEscapeCSSString(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestBuildWatermarkCSS - Watermark CSS Generation
+// ---------------------------------------------------------------------------
 
 func TestBuildWatermarkCSS(t *testing.T) {
 	t.Parallel()
@@ -188,6 +202,10 @@ func TestBuildWatermarkCSS(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestBreakURLPattern - URL Pattern Breaking
+// ---------------------------------------------------------------------------
+
 func TestBreakURLPattern(t *testing.T) {
 	t.Parallel()
 
@@ -246,6 +264,10 @@ func TestBreakURLPattern(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestBuildPageBreaksCSS - Page Breaks CSS Generation
+// ---------------------------------------------------------------------------
 
 func TestBuildPageBreaksCSS(t *testing.T) {
 	t.Parallel()

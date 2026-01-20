@@ -2,11 +2,21 @@
 
 package md2pdf
 
+// Notes:
+// - Benchmarks for Service.Convert pipeline performance
+// - Uses mock PDF converter (benchPDFConverter) to isolate pipeline from browser overhead
+// - Tests scaling with document size and concurrent access patterns
+// - Also benchmarks data conversion helpers (toSignatureData, toCoverData, etc.)
+
 import (
 	"context"
 	"strings"
 	"testing"
 )
+
+// ---------------------------------------------------------------------------
+// Mock Implementations
+// ---------------------------------------------------------------------------
 
 // benchPDFConverter is a mock for benchmarking without actual browser.
 type benchPDFConverter struct{}
@@ -27,8 +37,10 @@ func newBenchService() *Service {
 	return s
 }
 
-// BenchmarkServiceConvert benchmarks the full conversion pipeline.
-// Uses mock PDF converter to isolate pipeline performance from browser.
+// ---------------------------------------------------------------------------
+// BenchmarkServiceConvert - Full Pipeline Performance
+// ---------------------------------------------------------------------------
+
 func BenchmarkServiceConvert(b *testing.B) {
 	service := newBenchService()
 	defer service.Close()
@@ -183,7 +195,10 @@ func BenchmarkServiceConvert(b *testing.B) {
 	}
 }
 
-// BenchmarkServiceConvertBySize benchmarks conversion scaling with document size.
+// ---------------------------------------------------------------------------
+// BenchmarkServiceConvertBySize - Document Size Scaling
+// ---------------------------------------------------------------------------
+
 func BenchmarkServiceConvertBySize(b *testing.B) {
 	service := newBenchService()
 	defer service.Close()
@@ -233,7 +248,10 @@ func sizeName(size int) string {
 	}
 }
 
-// BenchmarkServiceConvertParallel benchmarks concurrent conversions.
+// ---------------------------------------------------------------------------
+// BenchmarkServiceConvertParallel - Concurrent Conversions
+// ---------------------------------------------------------------------------
+
 func BenchmarkServiceConvertParallel(b *testing.B) {
 	service := newBenchService()
 	defer service.Close()
@@ -265,7 +283,10 @@ func BenchmarkServiceConvertParallel(b *testing.B) {
 	})
 }
 
-// BenchmarkValidateInput benchmarks input validation.
+// ---------------------------------------------------------------------------
+// BenchmarkValidateInput - Input Validation Performance
+// ---------------------------------------------------------------------------
+
 func BenchmarkValidateInput(b *testing.B) {
 	service := newBenchService()
 	defer service.Close()
@@ -319,7 +340,10 @@ func BenchmarkValidateInput(b *testing.B) {
 	}
 }
 
-// BenchmarkToSignatureData benchmarks signature data conversion.
+// ---------------------------------------------------------------------------
+// BenchmarkToSignatureData - Signature Data Conversion Performance
+// ---------------------------------------------------------------------------
+
 func BenchmarkToSignatureData(b *testing.B) {
 	sig := &Signature{
 		Name:         "John Doe",
@@ -354,7 +378,10 @@ func BenchmarkToSignatureData(b *testing.B) {
 	})
 }
 
-// BenchmarkToCoverData benchmarks cover data conversion.
+// ---------------------------------------------------------------------------
+// BenchmarkToCoverData - Cover Data Conversion Performance
+// ---------------------------------------------------------------------------
+
 func BenchmarkToCoverData(b *testing.B) {
 	cover := &Cover{
 		Title:        "Document Title",
@@ -388,7 +415,10 @@ func BenchmarkToCoverData(b *testing.B) {
 	})
 }
 
-// BenchmarkToFooterData benchmarks footer data conversion.
+// ---------------------------------------------------------------------------
+// BenchmarkToFooterData - Footer Data Conversion Performance
+// ---------------------------------------------------------------------------
+
 func BenchmarkToFooterData(b *testing.B) {
 	footer := &Footer{
 		Position:       "center",
@@ -419,7 +449,10 @@ func BenchmarkToFooterData(b *testing.B) {
 	})
 }
 
-// BenchmarkToTOCData benchmarks TOC data conversion.
+// ---------------------------------------------------------------------------
+// BenchmarkToTOCData - TOC Data Conversion Performance
+// ---------------------------------------------------------------------------
+
 func BenchmarkToTOCData(b *testing.B) {
 	toc := &TOC{
 		Title:    "Table of Contents",
@@ -447,7 +480,10 @@ func BenchmarkToTOCData(b *testing.B) {
 	})
 }
 
-// Helper function for generating benchmark markdown
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 func generateBenchmarkMarkdown(sections int) string {
 	var sb strings.Builder
 	sb.WriteString("# Document Title\n\n")
