@@ -1,5 +1,12 @@
 package main
 
+// Notes:
+// - DefaultEnv: we test that it returns expected real implementations
+//   (os.Stdout, os.Stderr, real time). We cannot test actual I/O behavior
+//   without affecting the test process itself.
+// - Environment injection: we test the DI pattern works correctly with mocks.
+// These are acceptable gaps: we test observable behavior, not implementation details.
+
 import (
 	"bytes"
 	"os"
@@ -8,6 +15,10 @@ import (
 
 	md2pdf "github.com/alnah/go-md2pdf"
 )
+
+// ---------------------------------------------------------------------------
+// TestDefaultEnv - Default environment factory
+// ---------------------------------------------------------------------------
 
 func TestDefaultEnv(t *testing.T) {
 	t.Parallel()
@@ -42,6 +53,10 @@ func TestDefaultEnv(t *testing.T) {
 		}
 	})
 }
+
+// ---------------------------------------------------------------------------
+// TestEnvironmentInjection - Dependency injection pattern
+// ---------------------------------------------------------------------------
 
 func TestEnvironmentInjection(t *testing.T) {
 	t.Parallel()

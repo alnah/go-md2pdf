@@ -1,5 +1,12 @@
 package main
 
+// Notes:
+// - printUsage/printConvertUsage: we test that required content strings are
+//   present in the output. We don't test exact formatting as that's an
+//   implementation detail.
+// - runHelp: we test routing to the correct help topic.
+// These are acceptable gaps: we test observable behavior, not implementation details.
+
 import (
 	"bytes"
 	"strings"
@@ -7,6 +14,10 @@ import (
 
 	md2pdf "github.com/alnah/go-md2pdf"
 )
+
+// ---------------------------------------------------------------------------
+// TestPrintUsage - Main usage output
+// ---------------------------------------------------------------------------
 
 func TestPrintUsage(t *testing.T) {
 	t.Parallel()
@@ -29,6 +40,10 @@ func TestPrintUsage(t *testing.T) {
 		}
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestPrintConvertUsage - Convert command usage output
+// ---------------------------------------------------------------------------
 
 func TestPrintConvertUsage(t *testing.T) {
 	t.Parallel()
@@ -112,6 +127,10 @@ func TestPrintConvertUsage(t *testing.T) {
 		}
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestRunHelp - Help command routing
+// ---------------------------------------------------------------------------
 
 func TestRunHelp(t *testing.T) {
 	t.Parallel()

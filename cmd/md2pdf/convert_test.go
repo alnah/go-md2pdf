@@ -1,5 +1,15 @@
 package main
 
+// Notes:
+// - resolveCSSContent: we test CSS loading from flag, config style name, and default.
+// - printResultsOutput: we test success/failure counting (actual output formatting
+//   is an implementation detail).
+// - convertFile: we test error paths (read failure, write failure, mkdir failure).
+//   Success paths are covered by integration tests.
+// - loadTemplateSetFromDir: we test directory loading with complete/incomplete templates.
+// - resolveTemplateSet: we test name vs path resolution.
+// These are acceptable gaps: we test observable behavior, not implementation details.
+
 import (
 	"context"
 	"errors"
@@ -11,6 +21,10 @@ import (
 	md2pdf "github.com/alnah/go-md2pdf"
 	"github.com/alnah/go-md2pdf/internal/config"
 )
+
+// ---------------------------------------------------------------------------
+// TestResolveCSSContent - CSS content resolution
+// ---------------------------------------------------------------------------
 
 func TestResolveCSSContent(t *testing.T) {
 	t.Parallel()
@@ -135,6 +149,10 @@ func TestResolveCSSContent(t *testing.T) {
 	})
 }
 
+// ---------------------------------------------------------------------------
+// TestPrintResultsOutput - Conversion result counting
+// ---------------------------------------------------------------------------
+
 func TestPrintResultsOutput(t *testing.T) {
 	t.Parallel()
 
@@ -173,6 +191,10 @@ func TestPrintResultsOutput(t *testing.T) {
 		}
 	})
 }
+
+// ---------------------------------------------------------------------------
+// TestConvertFile_ErrorPaths - File conversion error handling
+// ---------------------------------------------------------------------------
 
 func TestConvertFile_ErrorPaths(t *testing.T) {
 	t.Parallel()
@@ -267,6 +289,10 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 	})
 }
 
+// ---------------------------------------------------------------------------
+// TestHtmlOutputPath - HTML output path generation
+// ---------------------------------------------------------------------------
+
 func TestHtmlOutputPath(t *testing.T) {
 	t.Parallel()
 
@@ -318,6 +344,10 @@ func TestHtmlOutputPath(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestLoadTemplateSetFromDir - Template set loading from filesystem
+// ---------------------------------------------------------------------------
 
 func TestLoadTemplateSetFromDir(t *testing.T) {
 	t.Parallel()
@@ -400,6 +430,10 @@ func TestLoadTemplateSetFromDir(t *testing.T) {
 		}
 	})
 }
+
+// ---------------------------------------------------------------------------
+// TestResolveTemplateSet - Template set resolution by name or path
+// ---------------------------------------------------------------------------
 
 func TestResolveTemplateSet(t *testing.T) {
 	t.Parallel()

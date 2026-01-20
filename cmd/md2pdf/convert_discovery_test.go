@@ -1,10 +1,22 @@
 package main
 
+// Notes:
+// - resolveInputPath: we test precedence (args > config > error).
+// - resolveOutputDir: we test precedence (flag > config > empty).
+// - resolveOutputPath: we test path resolution including directory mirroring.
+// - discoverFiles: we test file discovery with temp directories. We don't test
+//   symlink edge cases as they are rare and platform-specific.
+// These are acceptable gaps: we test observable behavior, not implementation details.
+
 import (
 	"os"
 	"path/filepath"
 	"testing"
 )
+
+// ---------------------------------------------------------------------------
+// TestResolveInputPath - Input path resolution precedence
+// ---------------------------------------------------------------------------
 
 func TestResolveInputPath(t *testing.T) {
 	t.Parallel()
@@ -60,6 +72,10 @@ func TestResolveInputPath(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestResolveOutputDir - Output directory resolution precedence
+// ---------------------------------------------------------------------------
+
 func TestResolveOutputDir(t *testing.T) {
 	t.Parallel()
 
@@ -100,6 +116,10 @@ func TestResolveOutputDir(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestResolveOutputPath - Output path resolution with directory mirroring
+// ---------------------------------------------------------------------------
 
 func TestResolveOutputPath(t *testing.T) {
 	t.Parallel()
@@ -172,6 +192,10 @@ func TestResolveOutputPath(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestValidateMarkdownExtension - Markdown file extension validation
+// ---------------------------------------------------------------------------
+
 func TestValidateMarkdownExtension(t *testing.T) {
 	t.Parallel()
 
@@ -218,6 +242,10 @@ func TestValidateMarkdownExtension(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestDiscoverFiles - File discovery with recursive directory traversal
+// ---------------------------------------------------------------------------
 
 func TestDiscoverFiles(t *testing.T) {
 	t.Parallel()

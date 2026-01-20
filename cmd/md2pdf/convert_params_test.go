@@ -1,5 +1,16 @@
 package main
 
+// Notes:
+// - buildSignatureData: we test all branches including enabled/disabled, URL vs
+//   local image paths, and extended metadata fields.
+// - buildFooterData: we test enabled/disabled states and all footer options.
+// - buildPageSettings: we test page size/orientation/margin combinations.
+// - buildWatermarkData: we test watermark text, color, opacity, and angle validation.
+// - buildCoverData: we test title extraction from config, markdown H1, and filename.
+// - buildTOCData: we test enabled/disabled and depth configuration.
+// - buildPageBreaksData: we test heading break before and orphan/widow settings.
+// These are acceptable gaps: we test observable behavior, not implementation details.
+
 import (
 	"errors"
 	"fmt"
@@ -13,6 +24,10 @@ import (
 	"github.com/alnah/go-md2pdf/internal/dateutil"
 	"github.com/alnah/go-md2pdf/internal/fileutil"
 )
+
+// ---------------------------------------------------------------------------
+// TestBuildSignatureData - Signature block data construction
+// ---------------------------------------------------------------------------
 
 func TestBuildSignatureData(t *testing.T) {
 	t.Parallel()
@@ -207,6 +222,10 @@ func TestBuildSignatureData(t *testing.T) {
 	})
 }
 
+// ---------------------------------------------------------------------------
+// TestIsURL - URL detection helper
+// ---------------------------------------------------------------------------
+
 func TestIsURL(t *testing.T) {
 	t.Parallel()
 
@@ -234,6 +253,10 @@ func TestIsURL(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestBuildFooterData - Footer data construction
+// ---------------------------------------------------------------------------
 
 func TestBuildFooterData(t *testing.T) {
 	t.Parallel()
@@ -374,6 +397,10 @@ func TestBuildFooterData(t *testing.T) {
 		}
 	})
 }
+
+// ---------------------------------------------------------------------------
+// TestBuildPageSettings - Page size, orientation, and margin settings
+// ---------------------------------------------------------------------------
 
 func TestBuildPageSettings(t *testing.T) {
 	t.Parallel()
@@ -546,6 +573,10 @@ func TestBuildPageSettings(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestValidateWorkers - Worker count validation
+// ---------------------------------------------------------------------------
+
 func TestValidateWorkers(t *testing.T) {
 	t.Parallel()
 
@@ -615,6 +646,10 @@ func TestValidateWorkers(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestBuildWatermarkData - Watermark text, color, opacity, and angle
+// ---------------------------------------------------------------------------
 
 func TestBuildWatermarkData(t *testing.T) {
 	t.Parallel()
@@ -909,6 +944,10 @@ func TestBuildWatermarkData(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestExtractFirstHeading - H1 heading extraction from markdown
+// ---------------------------------------------------------------------------
+
 func TestExtractFirstHeading(t *testing.T) {
 	t.Parallel()
 
@@ -975,6 +1014,10 @@ func TestExtractFirstHeading(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestResolveDateWithTime - Date resolution with auto format support
+// ---------------------------------------------------------------------------
 
 func TestResolveDateWithTime(t *testing.T) {
 	t.Parallel()
@@ -1058,6 +1101,10 @@ func TestResolveDateWithTime(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestBuildCoverData - Cover page data construction
+// ---------------------------------------------------------------------------
 
 func TestBuildCoverData(t *testing.T) {
 	t.Parallel()
@@ -1442,6 +1489,10 @@ func TestBuildCoverData(t *testing.T) {
 	})
 }
 
+// ---------------------------------------------------------------------------
+// TestBuildTOCData - Table of contents data construction
+// ---------------------------------------------------------------------------
+
 func TestBuildTOCData(t *testing.T) {
 	t.Parallel()
 
@@ -1531,6 +1582,10 @@ func TestBuildTOCData(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestParseBreakBefore - Page break heading level parsing
+// ---------------------------------------------------------------------------
 
 func TestParseBreakBefore(t *testing.T) {
 	t.Parallel()
@@ -1646,6 +1701,10 @@ func TestParseBreakBefore(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestBuildPageBreaksData - Page breaks data construction
+// ---------------------------------------------------------------------------
 
 func TestBuildPageBreaksData(t *testing.T) {
 	t.Parallel()

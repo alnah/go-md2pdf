@@ -1,5 +1,14 @@
 package main
 
+// Notes:
+// - poolAdapter: we test Acquire/Release/Size and panic on wrong type.
+// - isCommand: we test command name matching.
+// - looksLikeMarkdown: we test file extension detection.
+// - runMain: we test exit codes for various scenarios. We don't test actual
+//   file conversion here (covered by integration tests).
+// - resolveTimeout: we test duration parsing and validation.
+// These are acceptable gaps: we test observable behavior, not implementation details.
+
 import (
 	"bytes"
 	"context"
@@ -11,12 +20,20 @@ import (
 	md2pdf "github.com/alnah/go-md2pdf"
 )
 
+// ---------------------------------------------------------------------------
+// Test Infrastructure - Mock converter
+// ---------------------------------------------------------------------------
+
 // wrongTypeConverter is a Converter that is NOT *md2pdf.Service.
 type wrongTypeConverter struct{}
 
 func (w *wrongTypeConverter) Convert(_ context.Context, _ md2pdf.Input) (*md2pdf.ConvertResult, error) {
 	return &md2pdf.ConvertResult{PDF: []byte("%PDF-1.4 mock")}, nil
 }
+
+// ---------------------------------------------------------------------------
+// TestPoolAdapter_Release_WrongType - Pool adapter type safety
+// ---------------------------------------------------------------------------
 
 func TestPoolAdapter_Release_WrongType(t *testing.T) {
 	t.Parallel()
@@ -46,6 +63,10 @@ func TestPoolAdapter_Release_WrongType(t *testing.T) {
 	adapter.Release(wrongType)
 }
 
+// ---------------------------------------------------------------------------
+// TestPoolAdapter_Size - Pool size reporting
+// ---------------------------------------------------------------------------
+
 func TestPoolAdapter_Size(t *testing.T) {
 	t.Parallel()
 
@@ -58,6 +79,10 @@ func TestPoolAdapter_Size(t *testing.T) {
 		t.Errorf("Size() = %d, want 3", adapter.Size())
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestPoolAdapter_AcquireRelease - Pool acquire and release
+// ---------------------------------------------------------------------------
 
 func TestPoolAdapter_AcquireRelease(t *testing.T) {
 	t.Parallel()
@@ -77,6 +102,10 @@ func TestPoolAdapter_AcquireRelease(t *testing.T) {
 	adapter.Release(svc)
 }
 
+// ---------------------------------------------------------------------------
+// TestVersion - Version variable
+// ---------------------------------------------------------------------------
+
 func TestVersion(t *testing.T) {
 	t.Parallel()
 
@@ -89,6 +118,10 @@ func TestVersion(t *testing.T) {
 	expected := fmt.Sprintf("go-md2pdf %s\n", Version)
 	_ = expected // Used in actual main() but we can't easily test that
 }
+
+// ---------------------------------------------------------------------------
+// TestIsCommand - Command name detection
+// ---------------------------------------------------------------------------
 
 func TestIsCommand(t *testing.T) {
 	t.Parallel()
@@ -118,6 +151,10 @@ func TestIsCommand(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestResolveTimeout - Timeout duration resolution
+// ---------------------------------------------------------------------------
 
 func TestResolveTimeout(t *testing.T) {
 	t.Parallel()
@@ -255,6 +292,10 @@ func TestResolveTimeout(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// TestLooksLikeMarkdown - Markdown file extension detection
+// ---------------------------------------------------------------------------
+
 func TestLooksLikeMarkdown(t *testing.T) {
 	t.Parallel()
 
@@ -286,6 +327,10 @@ func TestLooksLikeMarkdown(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestRunMain - Main entry point exit codes
+// ---------------------------------------------------------------------------
 
 func TestRunMain(t *testing.T) {
 	t.Parallel()

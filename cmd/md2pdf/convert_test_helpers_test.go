@@ -1,5 +1,10 @@
 package main
 
+// Notes:
+// - This file contains test helpers and type aliases used across convert tests.
+// - These are not functions under test themselves, but supporting infrastructure.
+// No coverage gaps: this is test infrastructure, not production code.
+
 import (
 	"context"
 	"fmt"
@@ -7,6 +12,10 @@ import (
 	md2pdf "github.com/alnah/go-md2pdf"
 	"github.com/alnah/go-md2pdf/internal/config"
 )
+
+// ---------------------------------------------------------------------------
+// Type Aliases - For cleaner test code
+// ---------------------------------------------------------------------------
 
 // Type aliases for cleaner test code.
 type (
@@ -24,6 +33,10 @@ type (
 	PageBreaksConfig = config.PageBreaksConfig
 	Link             = config.Link
 )
+
+// ---------------------------------------------------------------------------
+// Compatibility Wrappers - For backward compatibility with tests
+// ---------------------------------------------------------------------------
 
 // cliFlags is an alias for convertFlags (backward compatibility for tests).
 type cliFlags = convertFlags
@@ -46,6 +59,10 @@ func printResults(results []ConversionResult, quiet, verbose bool) int {
 	env := DefaultEnv()
 	return printResultsWithWriter(results, quiet, verbose, env)
 }
+
+// ---------------------------------------------------------------------------
+// Mock Implementations - For unit testing
+// ---------------------------------------------------------------------------
 
 // staticMockConverter is a simple mock that returns a fixed result.
 type staticMockConverter struct {
