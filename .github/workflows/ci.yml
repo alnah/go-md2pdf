@@ -52,12 +52,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/rod
-          key: rod-${{ runner.os }}-${{ hashFiles('go.sum') }}
+          key: rod-${{ runner.os }}-${{ hashFiles('go.sum') }}-v2
+          restore-keys: |
+            rod-${{ runner.os }}-
 
       - name: Run integration tests with coverage
-        run: go test -race -tags=integration -coverprofile=coverage-integration.out -covermode=atomic ./...
+        run: |
+          echo "ROD_NO_SANDBOX=$ROD_NO_SANDBOX"
+          go test -race -tags=integration -coverprofile=coverage-integration.out -covermode=atomic ./...
         env:
-          ROD_NO_SANDBOX: "1"
+          ROD_NO_SANDBOX: 1
 
       - name: Upload integration coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -117,7 +121,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/rod
-          key: rod-${{ runner.os }}-${{ hashFiles('go.sum') }}
+          key: rod-${{ runner.os }}-${{ hashFiles('go.sum') }}-v2
+          restore-keys: |
+            rod-${{ runner.os }}-
 
       - name: Build md2pdf
         run: go build -o md2pdf ./cmd/md2pdf
@@ -127,7 +133,7 @@ jobs:
           ./md2pdf convert examples/simple-report.md -o /tmp/simple-test.pdf
           ./md2pdf convert -c examples/full-featured.yaml examples/full-featured.md -o /tmp/full-test.pdf
         env:
-          ROD_NO_SANDBOX: "1"
+          ROD_NO_SANDBOX: 1
 
       - name: Verify PDFs generated
         run: |

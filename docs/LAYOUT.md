@@ -11,13 +11,14 @@ go-md2pdf/                      # package md2pdf (library)
 ├── pdf.go                      # HTML -> PDF (Rod/Chrome)
 ├── cssbuilders.go              # Watermark/PageBreaks CSS (depend on public types)
 │
-├── cmd/md2pdf/                 # CLI (md2pdf convert|version|help|completion)
+├── cmd/md2pdf/                 # CLI (md2pdf convert|doctor|version|help|completion)
 │   ├── main.go                 # Entry point, command dispatch
 │   ├── exit_codes.go           # Semantic exit codes (0-4) and exitCodeFor()
 │   ├── convert.go              # Convert command orchestration
 │   ├── convert_batch.go        # Batch processing, worker pool
 │   ├── convert_params.go       # Parameter builders (cover, signature, footer, etc.)
 │   ├── convert_discovery.go    # File discovery, output path resolution
+│   ├── doctor.go               # Doctor command (system diagnostics)
 │   ├── flags.go                # Flag definitions by category
 │   ├── help.go                 # Usage text
 │   ├── env.go                  # Environment (Now, Stdout, Stderr, AssetLoader)

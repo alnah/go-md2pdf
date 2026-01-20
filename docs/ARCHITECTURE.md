@@ -123,6 +123,24 @@ Root package interface:
 
 ---
 
+## CLI Commands
+
+| Command      | Purpose                                | Location              |
+| ------------ | -------------------------------------- | --------------------- |
+| `convert`    | Markdown to PDF conversion             | `cmd/md2pdf/convert.go` |
+| `doctor`     | System diagnostics (Chrome, container) | `cmd/md2pdf/doctor.go`  |
+| `completion` | Shell completion scripts               | `cmd/md2pdf/completion.go` |
+| `version`    | Show version information               | `cmd/md2pdf/main.go`  |
+| `help`       | Command help                           | `cmd/md2pdf/help.go`  |
+
+The `doctor` command performs system checks without starting a conversion:
+- Chrome/Chromium detection (binary, version, sandbox status)
+- Container detection (Docker, Podman, Kubernetes via multi-signal approach)
+- CI environment detection (GitHub Actions, GitLab CI, Jenkins, CircleCI)
+- Temp directory writability
+
+---
+
 ## Adding Features
 
 | Feature Type        | Location                          | Example                      |
@@ -131,6 +149,7 @@ Root package interface:
 | New HTML injection  | `internal/pipeline/htmlinject.go` | New metadata block           |
 | New Input field     | `types.go` + `converter.go`       | Add to `Input` struct        |
 | New CLI flag        | `cmd/md2pdf/flags.go`             | Add flag definition          |
+| New CLI command     | `cmd/md2pdf/{name}.go`            | Add `doctor.go`              |
 | New config option   | `internal/config/config.go`       | Add to `Config` struct       |
 | New CSS style       | `internal/assets/styles/`         | Add `{name}.css`             |
 | New template        | `internal/assets/templates/`      | Add `{name}/cover.html`      |
@@ -143,3 +162,11 @@ Root package interface:
 5. Add config support in `internal/config/`
 6. Add tests: unit + integration
 7. Update README.md documentation
+
+**Checklist for new CLI commands:**
+1. Create `cmd/md2pdf/{name}.go` with command logic
+2. Register in `cmd/md2pdf/main.go` switch statement
+3. Add to `isCommand()` function
+4. Add help text in `cmd/md2pdf/help.go`
+5. Add tests in `cmd/md2pdf/{name}_test.go`
+6. Update README.md documentation
