@@ -13,6 +13,7 @@ go-md2pdf/                      # package md2pdf (library)
 │
 ├── cmd/md2pdf/                 # CLI (md2pdf convert|version|help|completion)
 │   ├── main.go                 # Entry point, command dispatch
+│   ├── exit_codes.go           # Semantic exit codes (0-4) and exitCodeFor()
 │   ├── convert.go              # Convert command orchestration
 │   ├── convert_batch.go        # Batch processing, worker pool
 │   ├── convert_params.go       # Parameter builders (cover, signature, footer, etc.)
