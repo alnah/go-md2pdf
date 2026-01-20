@@ -9,6 +9,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -140,6 +141,62 @@ func TestPrintConvertUsage(t *testing.T) {
 	for _, s := range exitCodesSection {
 		if !strings.Contains(output, s) {
 			t.Errorf("printConvertUsage output should contain %q", s)
+		}
+	}
+
+	// Check for EXAMPLES section
+	if !strings.Contains(output, "EXAMPLES") {
+		t.Error("printConvertUsage output should contain EXAMPLES section")
+	}
+
+	examples := []string{
+		"md2pdf convert document.md",
+		"md2pdf convert -o report.pdf",
+		"md2pdf convert ./docs/",
+		"md2pdf convert -c work",
+		"--style technical --timeout 2m",
+		"-p a4 --orientation landscape --wm-text DRAFT",
+	}
+
+	for _, ex := range examples {
+		if !strings.Contains(output, ex) {
+			t.Errorf("printConvertUsage output should contain example: %q", ex)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestHelpDefaultsMatchConstants - Verify documented defaults match actual values
+// ---------------------------------------------------------------------------
+
+func TestHelpDefaultsMatchConstants(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	printConvertUsage(&buf)
+	output := buf.String()
+
+	// Map of documented defaults to actual constants
+	// This ensures help stays in sync with code
+	defaults := []struct {
+		name     string
+		expected string
+	}{
+		{"page-size", fmt.Sprintf("default: %s", md2pdf.PageSizeLetter)},
+		{"orientation", fmt.Sprintf("default: %s", md2pdf.OrientationPortrait)},
+		{"margin", fmt.Sprintf("default: %.1f", md2pdf.DefaultMargin)},
+		{"toc-min-depth", fmt.Sprintf("default: %d", md2pdf.DefaultTOCMinDepth)},
+		{"toc-max-depth", fmt.Sprintf("default: %d", md2pdf.DefaultTOCMaxDepth)},
+		{"wm-color", fmt.Sprintf("default: %s", md2pdf.DefaultWatermarkColor)},
+		{"wm-opacity", fmt.Sprintf("default: %.1f", md2pdf.DefaultWatermarkOpacity)},
+		{"wm-angle", fmt.Sprintf("default: %.0f", md2pdf.DefaultWatermarkAngle)},
+		{"orphans", fmt.Sprintf("default: %d", md2pdf.DefaultOrphans)},
+		{"widows", fmt.Sprintf("default: %d", md2pdf.DefaultWidows)},
+	}
+
+	for _, d := range defaults {
+		if !strings.Contains(output, d.expected) {
+			t.Errorf("help for --%s should document %q", d.name, d.expected)
 		}
 	}
 }
