@@ -596,6 +596,24 @@ The `document.date` field supports auto-generation with customizable formats:
 ## Library Usage
 
 <details>
+<summary>With Relative Images</summary>
+
+When your markdown contains relative image paths like `![logo](./images/logo.png)`, specify the source directory so they resolve correctly:
+
+```go
+content, _ := os.ReadFile("docs/report.md")
+
+result, err := conv.Convert(ctx, md2pdf.Input{
+    Markdown:  string(content),
+    SourceDir: "docs/", // Images resolve relative to this directory
+})
+```
+
+The CLI automatically sets `SourceDir` to the input file's directory, so relative images work out of the box.
+
+</details>
+
+<details>
 <summary>With Cover Page</summary>
 
 ```go
@@ -967,7 +985,6 @@ Inherited from the browser's print-to-PDF:
 
 | Issue | Solution |
 |-------|----------|
-| Relative images don't render | Use absolute paths or URLs |
 | Long code lines overflow | Keep lines under ~80 chars |
 | Fonts differ across systems | Use Docker for consistency |
 | Docker/CI fails | Set `ROD_NO_SANDBOX=1` (see [Troubleshooting](#troubleshooting)) |
