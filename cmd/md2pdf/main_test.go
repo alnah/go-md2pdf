@@ -343,39 +343,39 @@ func TestRunMain(t *testing.T) {
 		wantInStderr []string
 	}{
 		{
-			name:         "no args shows usage and exits 1",
+			name:         "no args shows usage and exits with ExitUsage",
 			args:         []string{"md2pdf"},
-			wantCode:     1,
+			wantCode:     ExitUsage,
 			wantInStderr: []string{"Usage: md2pdf"},
 		},
 		{
 			name:         "version command exits 0",
 			args:         []string{"md2pdf", "version"},
-			wantCode:     0,
+			wantCode:     ExitSuccess,
 			wantInStdout: []string{"md2pdf"},
 		},
 		{
 			name:         "help command exits 0",
 			args:         []string{"md2pdf", "help"},
-			wantCode:     0,
+			wantCode:     ExitSuccess,
 			wantInStdout: []string{"Usage: md2pdf", "Commands:"},
 		},
 		{
 			name:         "help convert shows convert help",
 			args:         []string{"md2pdf", "help", "convert"},
-			wantCode:     0,
+			wantCode:     ExitSuccess,
 			wantInStdout: []string{"Usage: md2pdf convert"},
 		},
 		{
-			name:         "unknown command exits 1",
+			name:         "unknown command exits with ExitUsage",
 			args:         []string{"md2pdf", "unknown"},
-			wantCode:     1,
+			wantCode:     ExitUsage,
 			wantInStderr: []string{"unknown command: unknown"},
 		},
 		{
 			name:         "legacy .md detection shows deprecation warning",
 			args:         []string{"md2pdf", "nonexistent.md"},
-			wantCode:     1, // Will fail because file doesn't exist
+			wantCode:     ExitIO, // File doesn't exist
 			wantInStderr: []string{"DEPRECATED"},
 		},
 	}
@@ -412,6 +412,77 @@ func TestRunMain(t *testing.T) {
 				if !bytes.Contains([]byte(stderrStr), []byte(want)) {
 					t.Errorf("stderr should contain %q, got %q", want, stderrStr)
 				}
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestRunMain_ExitCodes - Integration tests for semantic exit codes
+// ---------------------------------------------------------------------------
+
+func TestRunMain_ExitCodes(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		args     []string
+		wantCode int
+	}{
+		// ExitSuccess (0)
+		{
+			name:     "version returns ExitSuccess",
+			args:     []string{"md2pdf", "version"},
+			wantCode: ExitSuccess,
+		},
+		{
+			name:     "help returns ExitSuccess",
+			args:     []string{"md2pdf", "help"},
+			wantCode: ExitSuccess,
+		},
+
+		// ExitUsage (2)
+		{
+			name:     "no args returns ExitUsage",
+			args:     []string{"md2pdf"},
+			wantCode: ExitUsage,
+		},
+		{
+			name:     "unknown command returns ExitUsage",
+			args:     []string{"md2pdf", "badcmd"},
+			wantCode: ExitUsage,
+		},
+		{
+			name:     "unsupported shell returns ExitUsage",
+			args:     []string{"md2pdf", "completion", "badshell"},
+			wantCode: ExitUsage,
+		},
+
+		// ExitIO (3)
+		{
+			name:     "nonexistent file returns ExitIO",
+			args:     []string{"md2pdf", "convert", "nonexistent.md"},
+			wantCode: ExitIO,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			loader, _ := md2pdf.NewAssetLoader("")
+			var stdout, stderr bytes.Buffer
+			env := &Environment{
+				Now:         func() time.Time { return time.Now() },
+				Stdout:      &stdout,
+				Stderr:      &stderr,
+				AssetLoader: loader,
+			}
+
+			code := runMain(tt.args, env)
+
+			if code != tt.wantCode {
+				t.Errorf("runMain(%v) = %d, want %d\nstderr: %s", tt.args, code, tt.wantCode, stderr.String())
 			}
 		})
 	}
