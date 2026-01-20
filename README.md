@@ -125,6 +125,7 @@ md2pdf <command> [flags] [args]
 
 Commands:
   convert      Convert markdown files to PDF
+  doctor       Check system configuration
   completion   Generate shell completion script
   version      Show version information
   help         Show help for a command
@@ -306,6 +307,34 @@ esac
 </details>
 
 <details>
+<summary>Doctor Command</summary>
+
+Diagnose system configuration before running conversions:
+
+```bash
+md2pdf doctor           # Human-readable output
+md2pdf doctor --json    # JSON output for CI/scripts
+```
+
+Checks performed:
+- Chrome/Chromium: binary exists, version, sandbox status
+- Environment: container detection (Docker, Podman, Kubernetes)
+- System: temp directory writability
+
+Exit codes:
+- `0` - All checks passed (including warnings)
+- `1` - Errors found (conversion will likely fail)
+
+Example CI usage:
+
+```bash
+# Fail pipeline early if setup is broken
+md2pdf doctor --json | jq -e '.status != "errors"' || exit 1
+```
+
+</details>
+
+<details>
 <summary>Docker</summary>
 
 ```bash
@@ -348,6 +377,7 @@ Environment variables provide CI/CD-friendly configuration without requiring YAM
 | `MD2PDF_DOC_DATE` | Document date (supports `auto`) |
 | `MD2PDF_DOC_ID` | Document ID |
 | `MD2PDF_WORKERS` | Parallel workers (e.g., `4`) |
+| `MD2PDF_CONTAINER` | Set to `1` to force container detection (for `md2pdf doctor`) |
 
 Unknown `MD2PDF_*` variables trigger a warning to catch typos.
 
@@ -883,6 +913,13 @@ Use `md2pdf.ResolvePoolSize(0)` to auto-calculate optimal pool size based on CPU
 Full API documentation: [pkg.go.dev/github.com/alnah/go-md2pdf](https://pkg.go.dev/github.com/alnah/go-md2pdf)
 
 ## Troubleshooting
+
+Run `md2pdf doctor` to diagnose system configuration issues:
+
+```bash
+md2pdf doctor           # Human-readable diagnostics
+md2pdf doctor --json    # JSON output for CI/scripts
+```
 
 ### Docker and CI/CD
 
