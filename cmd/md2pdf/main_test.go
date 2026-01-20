@@ -12,6 +12,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -131,6 +132,8 @@ func TestIsCommand(t *testing.T) {
 		want  bool
 	}{
 		{"convert", true},
+		{"doctor", true},
+		{"completion", true},
 		{"version", true},
 		{"help", true},
 		{"foo", false},
@@ -446,6 +449,91 @@ func TestRunMain(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestRunMain_DoctorCommand - Doctor command integration
+// ---------------------------------------------------------------------------
+
+func TestRunMain_DoctorCommand(t *testing.T) {
+	t.Parallel()
+
+	loader, _ := md2pdf.NewAssetLoader("")
+	var stdout, stderr bytes.Buffer
+	env := &Environment{
+		Now:         func() time.Time { return time.Now() },
+		Stdout:      &stdout,
+		Stderr:      &stderr,
+		AssetLoader: loader,
+	}
+
+	code := runMain([]string{"md2pdf", "doctor"}, env)
+
+	// Doctor should return ExitSuccess (0) or ExitGeneral (1) if Chrome not found
+	// It should never return ExitUsage (2) or other codes
+	if code != ExitSuccess && code != ExitGeneral {
+		t.Errorf("runMain(doctor) = %d, want %d or %d", code, ExitSuccess, ExitGeneral)
+	}
+
+	// Output should contain doctor header
+	if !strings.Contains(stdout.String(), "md2pdf doctor") {
+		t.Error("doctor output should contain 'md2pdf doctor' header")
+	}
+}
+
+func TestRunMain_DoctorJSON(t *testing.T) {
+	t.Parallel()
+
+	loader, _ := md2pdf.NewAssetLoader("")
+	var stdout, stderr bytes.Buffer
+	env := &Environment{
+		Now:         func() time.Time { return time.Now() },
+		Stdout:      &stdout,
+		Stderr:      &stderr,
+		AssetLoader: loader,
+	}
+
+	code := runMain([]string{"md2pdf", "doctor", "--json"}, env)
+
+	// Should return valid exit code
+	if code != ExitSuccess && code != ExitGeneral {
+		t.Errorf("runMain(doctor --json) = %d, want %d or %d", code, ExitSuccess, ExitGeneral)
+	}
+
+	// Output should be valid JSON
+	var result map[string]interface{}
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Errorf("doctor --json should produce valid JSON: %v", err)
+	}
+
+	// JSON should have status field
+	if _, ok := result["status"]; !ok {
+		t.Error("doctor JSON output should have 'status' field")
+	}
+}
+
+func TestRunMain_HelpDoctor(t *testing.T) {
+	t.Parallel()
+
+	loader, _ := md2pdf.NewAssetLoader("")
+	var stdout, stderr bytes.Buffer
+	env := &Environment{
+		Now:         func() time.Time { return time.Now() },
+		Stdout:      &stdout,
+		Stderr:      &stderr,
+		AssetLoader: loader,
+	}
+
+	code := runMain([]string{"md2pdf", "help", "doctor"}, env)
+
+	if code != ExitSuccess {
+		t.Errorf("runMain(help doctor) = %d, want %d", code, ExitSuccess)
+	}
+
+	// Should show doctor usage
+	if !strings.Contains(stdout.String(), "Usage: md2pdf doctor") {
+		t.Error("help doctor should show doctor usage")
 	}
 }
 
