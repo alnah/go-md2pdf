@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/alnah/go-md2pdf/internal/fileutil"
+	"github.com/alnah/go-md2pdf/internal/hints"
 	"github.com/alnah/go-md2pdf/internal/pipeline"
 	"github.com/alnah/go-md2pdf/internal/process"
 	"github.com/go-rod/rod"
@@ -106,7 +107,7 @@ func (r *rodRenderer) ensureBrowser() error {
 
 	u, err := l.Launch()
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrBrowserConnect, err)
+		return fmt.Errorf("%w: %v%s", ErrBrowserConnect, err, hints.ForBrowserConnect())
 	}
 
 	// Store launcher reference for cleanup in Close()
@@ -118,7 +119,7 @@ func (r *rodRenderer) ensureBrowser() error {
 		r.launcher.Cleanup()
 		r.browser = nil
 		r.launcher = nil
-		return fmt.Errorf("%w: %v", ErrBrowserConnect, err)
+		return fmt.Errorf("%w: %v%s", ErrBrowserConnect, err, hints.ForBrowserConnect())
 	}
 	return nil
 }
@@ -201,7 +202,7 @@ func (r *rodRenderer) RenderFromFile(ctx context.Context, filePath string, opts 
 	}
 
 	if err := page.Timeout(timeout).WaitLoad(); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrPageLoad, err)
+		return nil, fmt.Errorf("%w: %v%s", ErrPageLoad, err, hints.ForTimeout())
 	}
 
 	// Check context after page load
