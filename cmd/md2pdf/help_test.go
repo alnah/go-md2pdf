@@ -126,6 +126,22 @@ func TestPrintConvertUsage(t *testing.T) {
 			t.Errorf("printConvertUsage output should contain %q", flag)
 		}
 	}
+
+	// Check for exit codes section
+	exitCodesSection := []string{
+		"Exit Codes:",
+		"0  Success",
+		"1  General",
+		"2  Usage",
+		"3  I/O",
+		"4  Browser",
+	}
+
+	for _, s := range exitCodesSection {
+		if !strings.Contains(output, s) {
+			t.Errorf("printConvertUsage output should contain %q", s)
+		}
+	}
 }
 
 // ---------------------------------------------------------------------------

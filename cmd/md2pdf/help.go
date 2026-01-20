@@ -116,6 +116,13 @@ func printConvertUsage(w io.Writer) {
 	fmt.Fprintln(w, "Output Control:")
 	fmt.Fprintln(w, "  -q, --quiet               Only show errors")
 	fmt.Fprintln(w, "  -v, --verbose             Show detailed timing")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Exit Codes:")
+	fmt.Fprintln(w, "  0  Success      Conversion completed")
+	fmt.Fprintln(w, "  1  General      Unexpected error")
+	fmt.Fprintln(w, "  2  Usage        Invalid flags, config, or validation")
+	fmt.Fprintln(w, "  3  I/O          File not found, permission denied")
+	fmt.Fprintln(w, "  4  Browser      Chrome not found, connection failed")
 }
 
 // runHelp prints help for a specific command.
