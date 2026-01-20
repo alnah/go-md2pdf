@@ -100,8 +100,43 @@ jobs:
       - name: Run gosec
         run: go tool gosec ./...
 
+  examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Cache Rod browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/rod
+          key: rod-${{ runner.os }}-${{ hashFiles('go.sum') }}
+
+      - name: Build md2pdf
+        run: go build -o md2pdf ./cmd/md2pdf
+
+      - name: Generate example PDFs
+        run: |
+          ./md2pdf convert examples/simple-report.md -o /tmp/simple-test.pdf
+          ./md2pdf convert -c examples/full-featured examples/full-featured.md -o /tmp/full-test.pdf
+        env:
+          ROD_NO_SANDBOX: "1"
+
+      - name: Verify PDFs generated
+        run: |
+          test -f /tmp/simple-test.pdf && echo "simple-test.pdf: OK"
+          test -f /tmp/full-test.pdf && echo "full-test.pdf: OK"
+          ls -la /tmp/*.pdf
+
   build:
-    needs: [lint, security, test-unit, test-integration]
+    needs: [lint, security, test-unit, test-integration, examples]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
