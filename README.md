@@ -808,47 +808,37 @@ md2pdf convert document.md
 
 ## Known Limitations
 
-### Markdown Features
+> **Design philosophy:** Professional PDF generation from Markdown. No LaTeX. No complexity.
 
-The following Markdown extensions are **not supported**:
+### By Design
 
-- **LaTeX/MathJax** - Math equations like `$x^2$` or `$$\sum_{i=1}^n$$`
-  - *Workaround*: Pre-render equations as PNG/SVG images
-- **Wikilinks** - `[[Page Name]]` syntax
-  - *Workaround*: Use standard `[text](url)` links
-- **Admonitions** - `:::warning` or `:::note` blocks
-  - *Workaround*: Use blockquotes with bold headers
-- **YAML front-matter** - Metadata at top of markdown files
-  - *Workaround*: Use config files for document metadata
+These are intentional to keep the tool simple:
 
-### PDF Rendering
+| Not Supported | Why | Alternative |
+|---------------|-----|-------------|
+| LaTeX/MathJax | Adds complexity, requires external tools | Pre-render as PNG/SVG |
+| Wikilinks `[[...]]` | Not relevant for PDF output | Use `[text](url)` |
+| Admonitions `:::` | Not implemented | Use blockquotes |
+| YAML front-matter | Separates content from presentation | Use `-c config.yaml` |
 
-| Issue | Description | Workaround |
-|-------|-------------|------------|
-| **Relative images** | Images with paths like `./img/logo.png` may not render | Use absolute paths or URLs |
-| **Code overflow** | Long code lines may extend past page margins | Limit lines to ~80 characters |
-| **Page breaks** | `break-before`/`break-after` CSS may be ignored | Use explicit page break divs |
-| **Font differences** | Same document looks different on macOS vs Linux | Use Docker image for consistency |
+### Chrome PDF Engine
 
-### Environment Requirements
+Inherited from the browser's print-to-PDF:
 
-**Docker and CI/CD:**
-- Chrome sandbox must be disabled: `ROD_NO_SANDBOX=1`
-- See [Troubleshooting](#troubleshooting) for details
+- No PDF/A archival format
+- No multi-column layouts
+- No per-page headers/footers
+- No mixed orientation in one document
+- System fonts only (not embedded)
 
-**System fonts:**
-- PDF appearance depends on installed fonts
-- The Docker image includes Inter and JetBrains Mono for consistent rendering
+### Platform Notes
 
-### Feature Boundaries
-
-These are **intentionally not supported** (Chrome PDF limitations):
-
-- PDF/A archival format
-- Multi-column page layouts
-- Per-page headers/footers
-- Mixed portrait/landscape in one document
-- Embedded fonts (uses system fonts)
+| Issue | Solution |
+|-------|----------|
+| Relative images don't render | Use absolute paths or URLs |
+| Long code lines overflow | Keep lines under ~80 chars |
+| Fonts differ across systems | Use Docker for consistency |
+| Docker/CI fails | Set `ROD_NO_SANDBOX=1` (see [Troubleshooting](#troubleshooting)) |
 
 ## Contributing
 
