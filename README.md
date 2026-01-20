@@ -366,12 +366,12 @@ Document:
       --doc-desc <s>        Document description
 
 Page:
-  -p, --page-size <s>       Page size: letter, a4, legal
-      --orientation <s>     Orientation: portrait, landscape
-      --margin <f>          Margin in inches (0.25-3.0)
+  -p, --page-size <s>       letter, a4, legal (default: letter)
+      --orientation <s>     portrait, landscape (default: portrait)
+      --margin <f>          Margin in inches (default: 0.5)
 
 Footer:
-      --footer-position <s> Position: left, center, right
+      --footer-position <s> left, center, right (default: right)
       --footer-text <s>     Custom footer text
       --footer-page-number  Show page numbers
       --footer-doc-id       Show document ID in footer
@@ -395,19 +395,19 @@ Table of Contents:
 
 Watermark:
       --wm-text <s>         Watermark text
-      --wm-color <s>        Watermark color (hex)
-      --wm-opacity <f>      Watermark opacity (0.0-1.0)
-      --wm-angle <f>        Watermark angle in degrees
+      --wm-color <s>        Color hex (default: #888888)
+      --wm-opacity <f>      Opacity 0.0-1.0 (default: 0.1)
+      --wm-angle <f>        Angle in degrees (default: -45)
       --no-watermark        Disable watermark
 
 Page Breaks:
       --break-before <s>    Break before headings: h1,h2,h3
-      --orphans <n>         Min lines at page bottom (1-5)
-      --widows <n>          Min lines at page top (1-5)
+      --orphans <n>         Min lines at page bottom (default: 2)
+      --widows <n>          Min lines at page top (default: 2)
       --no-page-breaks      Disable page break features
 
 Assets & Styling:
-      --style <name|path>   CSS style name or file path
+      --style <name|path>   CSS style name or file path (default: default)
                             Name: uses embedded or custom asset (e.g., "technical")
                             Path: reads file directly (contains / or \)
       --template <name|path> Template set name or directory path
