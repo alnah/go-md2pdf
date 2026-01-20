@@ -287,6 +287,61 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 			t.Errorf("expected ErrReadMarkdown, got: %v", result.Err)
 		}
 	})
+
+	t.Run("read failure error includes file path", func(t *testing.T) {
+		t.Parallel()
+
+		inputPath := "/nonexistent/specific/doc.md"
+		f := FileToConvert{
+			InputPath:  inputPath,
+			OutputPath: "/tmp/out.pdf",
+		}
+
+		result := convertFile(context.Background(), mockConv, f, &conversionParams{cfg: config.DefaultConfig()})
+
+		if result.Err == nil {
+			t.Fatal("expected error when read fails")
+		}
+		if !strings.Contains(result.Err.Error(), inputPath) {
+			t.Errorf("error should include file path %q, got: %v", inputPath, result.Err)
+		}
+	})
+
+	t.Run("mkdir failure error includes hint", func(t *testing.T) {
+		t.Parallel()
+
+		tempDir := t.TempDir()
+
+		// Create a file where directory should be (blocks mkdir)
+		blockingFile := filepath.Join(tempDir, "blocked")
+		if err := os.WriteFile(blockingFile, []byte("blocker"), 0644); err != nil {
+			t.Fatalf("failed to create blocking file: %v", err)
+		}
+
+		// Create input file
+		inputPath := filepath.Join(tempDir, "doc.md")
+		if err := os.WriteFile(inputPath, []byte("# Test"), 0644); err != nil {
+			t.Fatalf("failed to create input: %v", err)
+		}
+
+		f := FileToConvert{
+			InputPath:  inputPath,
+			OutputPath: filepath.Join(blockingFile, "subdir", "out.pdf"),
+		}
+
+		result := convertFile(context.Background(), mockConv, f, &conversionParams{cfg: config.DefaultConfig()})
+
+		if result.Err == nil {
+			t.Fatal("expected error when mkdir fails")
+		}
+		errMsg := result.Err.Error()
+		if !strings.Contains(errMsg, "hint:") {
+			t.Error("mkdir error should include hint")
+		}
+		if !strings.Contains(errMsg, "parent directory") {
+			t.Errorf("mkdir error hint should mention parent directory, got: %v", result.Err)
+		}
+	})
 }
 
 // ---------------------------------------------------------------------------

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	md2pdf "github.com/alnah/go-md2pdf"
+	"github.com/alnah/go-md2pdf/internal/hints"
 )
 
 // File permission constants.
@@ -115,7 +116,7 @@ func convertFile(ctx context.Context, service CLIConverter, f FileToConvert, par
 
 	content, err := os.ReadFile(f.InputPath) // #nosec G304 -- discovered path
 	if err != nil {
-		result.Err = fmt.Errorf("%w: %v", ErrReadMarkdown, err)
+		result.Err = fmt.Errorf("%w %s: %v", ErrReadMarkdown, f.InputPath, err)
 		result.Duration = time.Since(start)
 		return result
 	}
@@ -130,7 +131,7 @@ func convertFile(ctx context.Context, service CLIConverter, f FileToConvert, par
 
 	outDir := filepath.Dir(f.OutputPath)
 	if err := os.MkdirAll(outDir, dirPermissions); err != nil {
-		result.Err = fmt.Errorf("creating output directory: %w", err)
+		result.Err = fmt.Errorf("cannot create output directory %s: %w%s", outDir, err, hints.ForOutputDirectory())
 		result.Duration = time.Since(start)
 		return result
 	}

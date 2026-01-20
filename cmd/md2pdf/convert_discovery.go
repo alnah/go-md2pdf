@@ -41,7 +41,7 @@ func discoverFiles(inputPath, outputDir string) ([]FileToConvert, error) {
 	var files []FileToConvert
 	err = filepath.WalkDir(inputPath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("scanning %s: %w", path, err)
 		}
 		if d.IsDir() {
 			return nil

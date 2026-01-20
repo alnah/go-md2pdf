@@ -10,6 +10,7 @@ import (
 	md2pdf "github.com/alnah/go-md2pdf"
 	"github.com/alnah/go-md2pdf/internal/config"
 	"github.com/alnah/go-md2pdf/internal/fileutil"
+	"github.com/alnah/go-md2pdf/internal/hints"
 )
 
 // Sentinel errors for CLI param building.
@@ -42,7 +43,7 @@ func buildSignatureData(cfg *config.Config, noSignature bool) (*md2pdf.Signature
 	// Validate image path if set (and not a URL)
 	if cfg.Signature.ImagePath != "" && !fileutil.IsURL(cfg.Signature.ImagePath) {
 		if !fileutil.FileExists(cfg.Signature.ImagePath) {
-			return nil, fmt.Errorf("%w: %s", ErrSignatureImagePath, cfg.Signature.ImagePath)
+			return nil, fmt.Errorf("%w: %s%s", ErrSignatureImagePath, cfg.Signature.ImagePath, hints.ForSignatureImage())
 		}
 	}
 

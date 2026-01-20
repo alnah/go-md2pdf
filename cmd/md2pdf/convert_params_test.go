@@ -148,6 +148,32 @@ func TestBuildSignatureData(t *testing.T) {
 		}
 	})
 
+	t.Run("nonexistent local image error includes hint", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := &Config{
+			Author: AuthorConfig{Name: "Test"},
+			Signature: SignatureConfig{
+				Enabled:   true,
+				ImagePath: "/nonexistent/path/to/image.png",
+			},
+		}
+		_, err := buildSignatureData(cfg, false)
+		if err == nil {
+			t.Fatal("expected error for nonexistent image path")
+		}
+		errMsg := err.Error()
+		if !strings.Contains(errMsg, "hint:") {
+			t.Error("error should include hint")
+		}
+		if !strings.Contains(errMsg, "PNG") {
+			t.Error("error hint should mention PNG format")
+		}
+		if !strings.Contains(errMsg, "URL") {
+			t.Error("error hint should mention URL option")
+		}
+	})
+
 	t.Run("existing local image path is accepted", func(t *testing.T) {
 		t.Parallel()
 
