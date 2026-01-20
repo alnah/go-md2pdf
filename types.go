@@ -128,6 +128,7 @@ func (pb *PageBreaks) Validate() error {
 // Input contains conversion parameters.
 type Input struct {
 	Markdown   string        // Markdown content (required)
+	SourceDir  string        // Base directory for resolving relative paths (optional)
 	CSS        string        // Custom CSS (optional)
 	Footer     *Footer       // Footer config (optional)
 	Signature  *Signature    // Signature config (optional)
