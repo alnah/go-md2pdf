@@ -64,9 +64,82 @@ Markdown ──▶ mdtransform ──▶ md2html ──▶ htmlinject ──▶ 
 
 ---
 
+## Interfaces
+
+Pipeline stages communicate through interfaces defined in `internal/pipeline/`:
+
+| Interface              | Method                          | Purpose                     |
+| ---------------------- | ------------------------------- | --------------------------- |
+| `MarkdownPreprocessor` | `PreprocessMarkdown(ctx, md)`   | MD normalization, highlights |
+| `HTMLConverter`        | `ToHTML(ctx, md)`               | MD -> HTML via Goldmark     |
+| `CSSInjector`          | `InjectCSS(ctx, html, css)`     | CSS into `<head>`           |
+| `CoverInjector`        | `InjectCover(ctx, html, data)`  | Cover after `<body>`        |
+| `TOCInjector`          | `InjectTOC(ctx, html, data)`    | TOC after cover             |
+| `SignatureInjector`    | `InjectSignature(ctx, html, data)` | Signature before `</body>` |
+
+Root package interface:
+
+| Interface      | Method                        | Purpose                     |
+| -------------- | ----------------------------- | --------------------------- |
+| `AssetLoader`  | `LoadStyle(name)`             | Load CSS by name            |
+|                | `LoadTemplateSet(name)`       | Load cover/signature templates |
+
+---
+
+## Concurrency
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    ConverterPool                        │
+│  ┌───────────┐  ┌───────────┐  ┌───────────┐           │
+│  │ Converter │  │ Converter │  │ Converter │  ...      │
+│  │ (Chrome)  │  │ (Chrome)  │  │ (Chrome)  │           │
+│  └───────────┘  └───────────┘  └───────────┘           │
+└─────────────────────────────────────────────────────────┘
+         ▲              ▲              ▲
+         │              │              │
+    Acquire()      Acquire()      Acquire()
+         │              │              │
+    ┌────┴────┐    ┌────┴────┐    ┌────┴────┐
+    │ Worker  │    │ Worker  │    │ Worker  │
+    └─────────┘    └─────────┘    └─────────┘
+```
+
+- Each `Converter` owns one Chrome browser instance (~200MB RAM)
+- `ConverterPool` manages N converters (1-8, based on CPU cores)
+- Converters created **lazily** on first `Acquire()` - no startup delay
+- `Acquire()` blocks when all converters are in use
+- `Release()` returns converter to pool for reuse
+- `context.Context` propagates through all pipeline stages for cancellation
+
+---
+
 ## Browser Lifecycle
 
 - Browsers created lazily on first `Acquire()` from pool
 - `process.KillProcessGroup()` terminates Chrome + all child processes (GPU, renderer)
 - Platform-specific: `syscall.Kill(-pid)` on Unix, `taskkill /T` on Windows
 - Implementation in `internal/process/`
+
+---
+
+## Adding Features
+
+| Feature Type        | Location                          | Example                      |
+| ------------------- | --------------------------------- | ---------------------------- |
+| New MD syntax       | `internal/pipeline/mdtransform.go`| `==highlight==` support      |
+| New HTML injection  | `internal/pipeline/htmlinject.go` | New metadata block           |
+| New Input field     | `types.go` + `converter.go`       | Add to `Input` struct        |
+| New CLI flag        | `cmd/md2pdf/flags.go`             | Add flag definition          |
+| New config option   | `internal/config/config.go`       | Add to `Config` struct       |
+| New CSS style       | `internal/assets/styles/`         | Add `{name}.css`             |
+| New template        | `internal/assets/templates/`      | Add `{name}/cover.html`      |
+
+**Checklist for new features:**
+1. Add types to `types.go` (if public) or internal package
+2. Add validation in `Validate()` method
+3. Wire into `converter.go` pipeline
+4. Add CLI flags in `cmd/md2pdf/flags.go`
+5. Add config support in `internal/config/`
+6. Add tests: unit + integration
+7. Update README.md documentation

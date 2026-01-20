@@ -97,9 +97,9 @@ go-md2pdf/
 | `*_integration_test.go`     | Integration tests (require browser)  | `converter_integration_test.go`|
 | `*_bench_test.go`           | Benchmarks                           | `pool_bench_test.go`           |
 
-- Unit tests: fast, no external dependencies, mock interfaces
-- Integration tests: require Chrome, use `testing.Short()` skip
-- Benchmarks: measure performance, run with `go test -bench=.`
+- Unit tests: `make test` - fast, no external dependencies
+- Integration tests: `make test-integration` - require Chrome, use `-tags=integration`
+- Benchmarks: `make bench` - use `-tags=bench`
 
 ## Embedded Styles
 
