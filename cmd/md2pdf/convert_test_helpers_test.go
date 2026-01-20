@@ -77,6 +77,25 @@ func (m *staticMockConverter) Convert(_ context.Context, _ md2pdf.Input) (*md2pd
 	return &md2pdf.ConvertResult{PDF: m.result}, nil
 }
 
+// capturingMockConverter captures the Input for inspection in tests.
+type capturingMockConverter struct {
+	result      []byte
+	err         error
+	capturedIn  md2pdf.Input
+	convertFunc func(md2pdf.Input) (*md2pdf.ConvertResult, error)
+}
+
+func (m *capturingMockConverter) Convert(_ context.Context, input md2pdf.Input) (*md2pdf.ConvertResult, error) {
+	m.capturedIn = input
+	if m.convertFunc != nil {
+		return m.convertFunc(input)
+	}
+	if m.err != nil {
+		return nil, m.err
+	}
+	return &md2pdf.ConvertResult{PDF: m.result}, nil
+}
+
 // mockTemplateLoader implements md2pdf.AssetLoader for testing resolveTemplateSet.
 type mockTemplateLoader struct {
 	templateSets map[string]*md2pdf.TemplateSet

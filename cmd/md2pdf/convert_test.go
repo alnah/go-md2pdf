@@ -345,6 +345,69 @@ func TestConvertFile_ErrorPaths(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// TestConvertFile_SourceDir - SourceDir auto-setting from input path
+// ---------------------------------------------------------------------------
+
+func TestConvertFile_SourceDir_AutoSet(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+
+	// Create a nested directory structure: tempDir/docs/report.md
+	docsDir := filepath.Join(tempDir, "docs")
+	if err := os.MkdirAll(docsDir, 0750); err != nil {
+		t.Fatalf("failed to create docs dir: %v", err)
+	}
+
+	inputPath := filepath.Join(docsDir, "report.md")
+	if err := os.WriteFile(inputPath, []byte("# Report\n![image](./images/logo.png)"), 0644); err != nil {
+		t.Fatalf("failed to create input: %v", err)
+	}
+
+	// Use capturing mock to verify SourceDir
+	mockConv := &capturingMockConverter{result: []byte("%PDF-1.4 mock")}
+
+	f := FileToConvert{
+		InputPath:  inputPath,
+		OutputPath: filepath.Join(tempDir, "output.pdf"),
+	}
+
+	_ = convertFile(context.Background(), mockConv, f, &conversionParams{cfg: config.DefaultConfig()})
+
+	// Verify SourceDir was set to the directory containing the input file
+	expectedSourceDir := docsDir
+	if mockConv.capturedIn.SourceDir != expectedSourceDir {
+		t.Errorf("SourceDir = %q, want %q", mockConv.capturedIn.SourceDir, expectedSourceDir)
+	}
+}
+
+func TestConvertFile_SourceDir_UsesFilepathDir(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+
+	// Create file in temp root
+	inputPath := filepath.Join(tempDir, "doc.md")
+	if err := os.WriteFile(inputPath, []byte("# Doc"), 0644); err != nil {
+		t.Fatalf("failed to create input: %v", err)
+	}
+
+	mockConv := &capturingMockConverter{result: []byte("%PDF-1.4 mock")}
+
+	f := FileToConvert{
+		InputPath:  inputPath,
+		OutputPath: filepath.Join(tempDir, "doc.pdf"),
+	}
+
+	_ = convertFile(context.Background(), mockConv, f, &conversionParams{cfg: config.DefaultConfig()})
+
+	// SourceDir should be tempDir (the parent directory of the input file)
+	if mockConv.capturedIn.SourceDir != tempDir {
+		t.Errorf("SourceDir = %q, want %q", mockConv.capturedIn.SourceDir, tempDir)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // TestHtmlOutputPath - HTML output path generation
 // ---------------------------------------------------------------------------
 
