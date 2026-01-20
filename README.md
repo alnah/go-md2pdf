@@ -8,6 +8,19 @@
 
 > Markdown to print-ready PDF via CLI or Go library - cover pages, TOC, signatures, footers, watermarks, custom CSS, and parallel batch processing.
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Features](#features)
+- [CLI Reference](#cli-reference)
+- [Environment Variables](#environment-variables)
+- [Configuration](#configuration)
+- [Library Usage](#library-usage)
+- [Troubleshooting](#troubleshooting)
+- [Known Limitations](#known-limitations)
+- [Contributing](#contributing)
+
 ## Installation
 
 ```bash
@@ -29,17 +42,12 @@ Download pre-built binaries from [GitHub Releases](https://github.com/alnah/go-m
 
 </details>
 
-## Features
+## Requirements
 
-- **CLI + Library** - Use as `md2pdf` command or import in Go, with shell completion
-- **Batch conversion** - Process directories with parallel workers
-- **Cover pages** - Title, subtitle, logo, author, organization, date, version
-- **Table of contents** - Auto-generated from headings with configurable depth
-- **Custom styling** - Embedded themes or your own CSS ([some limitations](#known-limitations))
-- **Page settings** - Size (letter, A4, legal), orientation, margins
-- **Signatures** - Name, title, email, photo, links
-- **Footers** - Page numbers, dates, status text
-- **Watermarks** - Diagonal background text (BRAND, etc.)
+- Go 1.25+
+- Chrome/Chromium (downloaded automatically on first run)
+
+> **Docker/CI users:** See [Troubleshooting](#troubleshooting) for setup instructions.
 
 ## Quick Start
 
@@ -88,244 +96,29 @@ The `Convert()` method returns a `ConvertResult` containing:
 
 Use `Input.HTMLOnly: true` to skip PDF generation and only produce HTML.
 
-## Library Usage
+## Features
 
-### With Cover Page
-
-```go
-result, err := conv.Convert(ctx, md2pdf.Input{
-    Markdown: content,
-    Cover: &md2pdf.Cover{
-        Title:        "Project Report",
-        Subtitle:     "Q4 2025 Analysis",
-        Author:       "John Doe",
-        AuthorTitle:  "Senior Analyst",
-        Organization: "Acme Corp",
-        Date:         "2025-12-15",
-        Version:      "v1.0",
-        Logo:         "/path/to/logo.png", // or URL
-        ClientName:   "Client Corp",       // extended metadata
-        ProjectName:  "Project Alpha",
-        DocumentType: "Technical Report",
-        DocumentID:   "DOC-2025-001",
-    },
-})
-```
-
-### With Table of Contents
-
-```go
-result, err := conv.Convert(ctx, md2pdf.Input{
-    Markdown: content,
-    TOC: &md2pdf.TOC{
-        Title:    "Contents",
-        MinDepth: 2, // Start at h2 (skip document title)
-        MaxDepth: 3, // Include up to h3
-    },
-})
-```
-
-### With Footer
-
-```go
-result, err := conv.Convert(ctx, md2pdf.Input{
-    Markdown: content,
-    Footer: &md2pdf.Footer{
-        ShowPageNumber: true,
-        Position:       "center",
-        Date:           "2025-12-15",
-        Status:         "DRAFT",
-    },
-})
-```
-
-### With Signature
-
-```go
-result, err := conv.Convert(ctx, md2pdf.Input{
-    Markdown: content,
-    Signature: &md2pdf.Signature{
-        Name:         "John Doe",
-        Title:        "Senior Developer",
-        Email:        "john@example.com",
-        Organization: "Acme Corp",
-        Phone:        "+1 555-0123",  // extended metadata
-        Department:   "Engineering",
-    },
-})
-```
-
-### With Watermark
-
-```go
-result, err := conv.Convert(ctx, md2pdf.Input{
-    Markdown: content,
-    Watermark: &md2pdf.Watermark{
-        Text:    "CONFIDENTIAL",
-        Color:   "#888888",
-        Opacity: 0.1,
-        Angle:   -45,
-    },
-})
-```
-
-### With Page Settings
-
-```go
-result, err := conv.Convert(ctx, md2pdf.Input{
-    Markdown: content,
-    Page: &md2pdf.PageSettings{
-        Size:        md2pdf.PageSizeA4,
-        Orientation: md2pdf.OrientationLandscape,
-        Margin:      1.0, // inches
-    },
-})
-```
-
-### With Page Breaks
-
-```go
-result, err := conv.Convert(ctx, md2pdf.Input{
-    Markdown: content,
-    PageBreaks: &md2pdf.PageBreaks{
-        BeforeH1: true, // Page break before H1 headings
-        BeforeH2: true, // Page break before H2 headings
-        Orphans:  3,    // Min 3 lines at page bottom
-        Widows:   3,    // Min 3 lines at page top
-    },
-})
-```
-
-### With Custom CSS
-
-The `CSS` field in `Input` accepts a CSS string that is injected into the HTML for this specific conversion:
-
-```go
-// CSS string injected into this document only
-result, err := conv.Convert(ctx, md2pdf.Input{
-    Markdown: content,
-    CSS: `
-        body { font-family: Georgia, serif; }
-        h1 { color: #2c3e50; }
-        code { background: #f8f9fa; }
-    `,
-})
-```
-
-This is useful for:
-- Document-specific styling that differs from the base theme
-- Dynamically generated CSS (e.g., user-selected colors)
-- Quick overrides without changing service configuration
-
-For reusable styles across all conversions, see [With Custom Assets](#with-custom-assets).
-
-### With Custom Assets
-
-Override embedded CSS styles and HTML templates:
-
-```go
-// Option 1: Use embedded style by name
-conv, err := md2pdf.NewConverter(md2pdf.WithStyle("technical"))
-
-// Option 2: Load CSS from file path
-conv, err := md2pdf.NewConverter(md2pdf.WithStyle("./custom.css"))
-
-// Option 3: Provide CSS content directly
-conv, err := md2pdf.NewConverter(md2pdf.WithStyle("body { font-family: Georgia; }"))
-
-// Option 4: Load from custom directory (with fallback to embedded)
-conv, err := md2pdf.NewConverter(md2pdf.WithAssetPath("/path/to/assets"))
-
-// Option 5: Provide template set directly
-ts := md2pdf.NewTemplateSet("custom", coverHTML, signatureHTML)
-conv, err := md2pdf.NewConverter(md2pdf.WithTemplateSet(ts))
-
-// Option 6: Full control with custom loader
-loader, err := md2pdf.NewAssetLoader("/path/to/assets")
-if err != nil {
-    log.Fatal(err)
-}
-conv, err := md2pdf.NewConverter(md2pdf.WithAssetLoader(loader))
-```
-
-`WithStyle` accepts a style name, file path, or CSS content:
-- **Name**: `"technical"` loads the embedded style
-- **Path**: `"./custom.css"` reads from file (detected by `/` or `\`)
-- **CSS**: `"body { ... }"` uses content directly (detected by `{`)
-
-Expected directory structure for `WithAssetPath`:
-
-```
-/path/to/assets/
-├── styles/
-│   ├── default.css      # Override default style
-│   └── technical.css    # Add custom style
-└── templates/
-    └── default/         # Template set directory
-        ├── cover.html       # Cover page template
-        └── signature.html   # Signature block template
-```
-
-Available embedded styles: `default`, `technical`, `creative`, `academic`, `corporate`, `legal`, `invoice`, `manuscript`
-
-Missing files fall back to embedded defaults silently.
-
-> **Note:** Converter-level options (`WithAssetPath`, `WithStyle`, `WithAssetLoader`) configure the base theme for all conversions. To add document-specific CSS on top of the base theme, use `Input.CSS` in the `Convert()` call.
-
-### With Converter Pool (Parallel Processing)
-
-For batch conversion, use `ConverterPool` to process multiple files in parallel:
-
-```go
-package main
-
-import (
-    "context"
-    "log"
-    "os"
-    "sync"
-
-    "github.com/alnah/go-md2pdf"
-)
-
-func main() {
-    // Create pool with 4 workers (each has its own browser instance)
-    pool := md2pdf.NewConverterPool(4)
-    defer pool.Close()
-
-    files := []string{"doc1.md", "doc2.md", "doc3.md", "doc4.md"}
-    var wg sync.WaitGroup
-
-    for _, file := range files {
-        wg.Add(1)
-        go func(f string) {
-            defer wg.Done()
-
-            conv := pool.Acquire()
-            if conv == nil {
-                log.Printf("failed to acquire converter: %v", pool.InitError())
-                return
-            }
-            defer pool.Release(conv)
-
-            content, _ := os.ReadFile(f)
-            result, err := conv.Convert(context.Background(), md2pdf.Input{
-                Markdown: string(content),
-            })
-            if err != nil {
-                log.Printf("convert %s: %v", f, err)
-                return
-            }
-            os.WriteFile(f+".pdf", result.PDF, 0644)
-        }(file)
-    }
-    wg.Wait()
-}
-```
-
-Use `md2pdf.ResolvePoolSize(0)` to auto-calculate optimal pool size based on CPU cores.
+- **CLI + Library** - Use as `md2pdf` command or import in Go, with shell completion
+- **Batch conversion** - Process directories with parallel workers
+- **Cover pages** - Title, subtitle, logo, author, organization, date, version
+- **Table of contents** - Auto-generated from headings with configurable depth
+- **Custom styling** - Embedded themes or your own CSS ([some limitations](#known-limitations))
+- **Page settings** - Size (letter, A4, legal), orientation, margins
+- **Signatures** - Name, title, email, photo, links
+- **Footers** - Page numbers, dates, status text
+- **Watermarks** - Diagonal background text (BRAND, etc.)
 
 ## CLI Reference
+
+```bash
+md2pdf convert document.md                # Single file
+md2pdf convert ./docs/ -o ./output/       # Batch convert
+md2pdf convert -c work document.md        # With config
+md2pdf convert --style technical doc.md   # With style
+```
+
+<details>
+<summary>All flags</summary>
 
 ```
 md2pdf <command> [flags] [args]
@@ -423,7 +216,10 @@ Output Control:
   -v, --verbose             Show detailed timing
 ```
 
-### Examples
+</details>
+
+<details>
+<summary>Examples</summary>
 
 ```bash
 # Single file with custom output
@@ -460,7 +256,10 @@ md2pdf convert --html-only document.md
 md2pdf convert --asset-path ./my-assets document.md
 ```
 
-### Shell Completion
+</details>
+
+<details>
+<summary>Shell Completion</summary>
 
 Generate shell completion scripts for tab-completion of commands, flags, and file arguments:
 
@@ -478,7 +277,10 @@ md2pdf completion fish > ~/.config/fish/completions/md2pdf.fish
 md2pdf completion powershell | Out-String | Invoke-Expression
 ```
 
-### Exit Codes
+</details>
+
+<details>
+<summary>Exit Codes</summary>
 
 | Code | Name | Description |
 |------|------|-------------|
@@ -501,7 +303,10 @@ case $? in
 esac
 ```
 
-### Docker
+</details>
+
+<details>
+<summary>Docker</summary>
 
 ```bash
 # Convert a single file
@@ -515,6 +320,82 @@ docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf convert ./docs/ -o ./pdf
 ```
 
 > **Note:** The official Docker image has all dependencies pre-installed. For custom images, see [Troubleshooting](#troubleshooting).
+
+</details>
+
+## Environment Variables
+
+Environment variables provide CI/CD-friendly configuration without requiring YAML files.
+
+**Priority:** CLI flags > environment variables > config file > defaults
+
+### MD2PDF Variables
+
+| Variable | Description |
+|----------|-------------|
+| `MD2PDF_CONFIG` | Config file path (e.g., `/app/config.yaml`) |
+| `MD2PDF_STYLE` | CSS style name or path (e.g., `technical`) |
+| `MD2PDF_TIMEOUT` | PDF generation timeout (e.g., `2m`, `90s`) |
+| `MD2PDF_INPUT_DIR` | Default input directory |
+| `MD2PDF_OUTPUT_DIR` | Default output directory |
+| `MD2PDF_AUTHOR_NAME` | Author name for cover/signature |
+| `MD2PDF_AUTHOR_ORG` | Organization name |
+| `MD2PDF_AUTHOR_EMAIL` | Author email |
+| `MD2PDF_PAGE_SIZE` | Page size: `letter`, `a4`, `legal` |
+| `MD2PDF_WATERMARK_TEXT` | Watermark text (auto-enables watermark) |
+| `MD2PDF_COVER_LOGO` | Cover logo path/URL (auto-enables cover) |
+| `MD2PDF_DOC_VERSION` | Document version |
+| `MD2PDF_DOC_DATE` | Document date (supports `auto`) |
+| `MD2PDF_DOC_ID` | Document ID |
+| `MD2PDF_WORKERS` | Parallel workers (e.g., `4`) |
+
+Unknown `MD2PDF_*` variables trigger a warning to catch typos.
+
+<details>
+<summary>CI/CD Examples</summary>
+
+**GitHub Actions:**
+```yaml
+- name: Generate PDFs
+  env:
+    MD2PDF_STYLE: technical
+    MD2PDF_AUTHOR_ORG: ${{ github.repository_owner }}
+    MD2PDF_DOC_VERSION: ${{ github.ref_name }}
+    MD2PDF_WATERMARK_TEXT: ${{ github.ref_name == 'main' && '' || 'DRAFT' }}
+  run: md2pdf convert ./docs/ -o ./output/
+```
+
+**GitLab CI:**
+```yaml
+pdf:
+  variables:
+    MD2PDF_STYLE: corporate
+    MD2PDF_OUTPUT_DIR: ./artifacts/pdf
+    MD2PDF_DOC_DATE: auto
+  script:
+    - md2pdf convert ./docs/
+```
+
+**Docker:**
+```bash
+docker run --rm \
+  -e MD2PDF_STYLE=technical \
+  -e MD2PDF_AUTHOR_ORG="Acme Corp" \
+  -e ROD_NO_SANDBOX=1 \
+  -v $(pwd):/data \
+  ghcr.io/alnah/go-md2pdf convert ./docs/
+```
+
+</details>
+
+### Browser Variables (go-rod)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ROD_NO_SANDBOX` | - | Set to `1` to disable Chrome sandbox (required for Docker/CI) |
+| `ROD_BROWSER_BIN` | - | Path to custom Chrome/Chromium binary |
+
+These are used by the underlying [go-rod](https://github.com/go-rod/rod) browser automation library. Error messages will suggest these variables when browser issues are detected in CI/Docker environments.
 
 ## Configuration
 
@@ -712,25 +593,276 @@ The `document.date` field supports auto-generation with customizable formats:
 
 **Escaping:** Use brackets for literal text: `auto:[Date:] YYYY-MM-DD` → "Date: 2026-01-09"
 
+## Library Usage
+
+<details>
+<summary>With Cover Page</summary>
+
+```go
+result, err := conv.Convert(ctx, md2pdf.Input{
+    Markdown: content,
+    Cover: &md2pdf.Cover{
+        Title:        "Project Report",
+        Subtitle:     "Q4 2025 Analysis",
+        Author:       "John Doe",
+        AuthorTitle:  "Senior Analyst",
+        Organization: "Acme Corp",
+        Date:         "2025-12-15",
+        Version:      "v1.0",
+        Logo:         "/path/to/logo.png", // or URL
+        ClientName:   "Client Corp",       // extended metadata
+        ProjectName:  "Project Alpha",
+        DocumentType: "Technical Report",
+        DocumentID:   "DOC-2025-001",
+    },
+})
+```
+
+</details>
+
+<details>
+<summary>With Table of Contents</summary>
+
+```go
+result, err := conv.Convert(ctx, md2pdf.Input{
+    Markdown: content,
+    TOC: &md2pdf.TOC{
+        Title:    "Contents",
+        MinDepth: 2, // Start at h2 (skip document title)
+        MaxDepth: 3, // Include up to h3
+    },
+})
+```
+
+</details>
+
+<details>
+<summary>With Footer</summary>
+
+```go
+result, err := conv.Convert(ctx, md2pdf.Input{
+    Markdown: content,
+    Footer: &md2pdf.Footer{
+        ShowPageNumber: true,
+        Position:       "center",
+        Date:           "2025-12-15",
+        Status:         "DRAFT",
+    },
+})
+```
+
+</details>
+
+<details>
+<summary>With Signature</summary>
+
+```go
+result, err := conv.Convert(ctx, md2pdf.Input{
+    Markdown: content,
+    Signature: &md2pdf.Signature{
+        Name:         "John Doe",
+        Title:        "Senior Developer",
+        Email:        "john@example.com",
+        Organization: "Acme Corp",
+        Phone:        "+1 555-0123",  // extended metadata
+        Department:   "Engineering",
+    },
+})
+```
+
+</details>
+
+<details>
+<summary>With Watermark</summary>
+
+```go
+result, err := conv.Convert(ctx, md2pdf.Input{
+    Markdown: content,
+    Watermark: &md2pdf.Watermark{
+        Text:    "CONFIDENTIAL",
+        Color:   "#888888",
+        Opacity: 0.1,
+        Angle:   -45,
+    },
+})
+```
+
+</details>
+
+<details>
+<summary>With Page Settings</summary>
+
+```go
+result, err := conv.Convert(ctx, md2pdf.Input{
+    Markdown: content,
+    Page: &md2pdf.PageSettings{
+        Size:        md2pdf.PageSizeA4,
+        Orientation: md2pdf.OrientationLandscape,
+        Margin:      1.0, // inches
+    },
+})
+```
+
+</details>
+
+<details>
+<summary>With Page Breaks</summary>
+
+```go
+result, err := conv.Convert(ctx, md2pdf.Input{
+    Markdown: content,
+    PageBreaks: &md2pdf.PageBreaks{
+        BeforeH1: true, // Page break before H1 headings
+        BeforeH2: true, // Page break before H2 headings
+        Orphans:  3,    // Min 3 lines at page bottom
+        Widows:   3,    // Min 3 lines at page top
+    },
+})
+```
+
+</details>
+
+<details>
+<summary>With Custom CSS</summary>
+
+The `CSS` field in `Input` accepts a CSS string that is injected into the HTML for this specific conversion:
+
+```go
+// CSS string injected into this document only
+result, err := conv.Convert(ctx, md2pdf.Input{
+    Markdown: content,
+    CSS: `
+        body { font-family: Georgia, serif; }
+        h1 { color: #2c3e50; }
+        code { background: #f8f9fa; }
+    `,
+})
+```
+
+This is useful for:
+- Document-specific styling that differs from the base theme
+- Dynamically generated CSS (e.g., user-selected colors)
+- Quick overrides without changing service configuration
+
+For reusable styles across all conversions, see [With Custom Assets](#with-custom-assets).
+
+</details>
+
+<details>
+<summary>With Custom Assets</summary>
+
+Override embedded CSS styles and HTML templates:
+
+```go
+// Option 1: Use embedded style by name
+conv, err := md2pdf.NewConverter(md2pdf.WithStyle("technical"))
+
+// Option 2: Load CSS from file path
+conv, err := md2pdf.NewConverter(md2pdf.WithStyle("./custom.css"))
+
+// Option 3: Provide CSS content directly
+conv, err := md2pdf.NewConverter(md2pdf.WithStyle("body { font-family: Georgia; }"))
+
+// Option 4: Load from custom directory (with fallback to embedded)
+conv, err := md2pdf.NewConverter(md2pdf.WithAssetPath("/path/to/assets"))
+
+// Option 5: Provide template set directly
+ts := md2pdf.NewTemplateSet("custom", coverHTML, signatureHTML)
+conv, err := md2pdf.NewConverter(md2pdf.WithTemplateSet(ts))
+
+// Option 6: Full control with custom loader
+loader, err := md2pdf.NewAssetLoader("/path/to/assets")
+if err != nil {
+    log.Fatal(err)
+}
+conv, err := md2pdf.NewConverter(md2pdf.WithAssetLoader(loader))
+```
+
+`WithStyle` accepts a style name, file path, or CSS content:
+- **Name**: `"technical"` loads the embedded style
+- **Path**: `"./custom.css"` reads from file (detected by `/` or `\`)
+- **CSS**: `"body { ... }"` uses content directly (detected by `{`)
+
+Expected directory structure for `WithAssetPath`:
+
+```
+/path/to/assets/
+├── styles/
+│   ├── default.css      # Override default style
+│   └── technical.css    # Add custom style
+└── templates/
+    └── default/         # Template set directory
+        ├── cover.html       # Cover page template
+        └── signature.html   # Signature block template
+```
+
+Available embedded styles: `default`, `technical`, `creative`, `academic`, `corporate`, `legal`, `invoice`, `manuscript`
+
+Missing files fall back to embedded defaults silently.
+
+> **Note:** Converter-level options (`WithAssetPath`, `WithStyle`, `WithAssetLoader`) configure the base theme for all conversions. To add document-specific CSS on top of the base theme, use `Input.CSS` in the `Convert()` call.
+
+</details>
+
+<details>
+<summary>With Converter Pool (Parallel Processing)</summary>
+
+For batch conversion, use `ConverterPool` to process multiple files in parallel:
+
+```go
+package main
+
+import (
+    "context"
+    "log"
+    "os"
+    "sync"
+
+    "github.com/alnah/go-md2pdf"
+)
+
+func main() {
+    // Create pool with 4 workers (each has its own browser instance)
+    pool := md2pdf.NewConverterPool(4)
+    defer pool.Close()
+
+    files := []string{"doc1.md", "doc2.md", "doc3.md", "doc4.md"}
+    var wg sync.WaitGroup
+
+    for _, file := range files {
+        wg.Add(1)
+        go func(f string) {
+            defer wg.Done()
+
+            conv := pool.Acquire()
+            if conv == nil {
+                log.Printf("failed to acquire converter: %v", pool.InitError())
+                return
+            }
+            defer pool.Release(conv)
+
+            content, _ := os.ReadFile(f)
+            result, err := conv.Convert(context.Background(), md2pdf.Input{
+                Markdown: string(content),
+            })
+            if err != nil {
+                log.Printf("convert %s: %v", f, err)
+                return
+            }
+            os.WriteFile(f+".pdf", result.PDF, 0644)
+        }(file)
+    }
+    wg.Wait()
+}
+```
+
+Use `md2pdf.ResolvePoolSize(0)` to auto-calculate optimal pool size based on CPU cores.
+
+</details>
+
 ## Documentation
 
 Full API documentation: [pkg.go.dev/github.com/alnah/go-md2pdf](https://pkg.go.dev/github.com/alnah/go-md2pdf)
-
-## Requirements
-
-- Go 1.25+
-- Chrome/Chromium (downloaded automatically on first run)
-
-> **Docker/CI users:** See [Troubleshooting](#troubleshooting) for setup instructions.
-
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ROD_NO_SANDBOX` | - | Set to `1` to disable Chrome sandbox (required for Docker/CI) |
-| `ROD_BROWSER_BIN` | - | Path to custom Chrome/Chromium binary |
-
-These are used by the underlying [go-rod](https://github.com/go-rod/rod) browser automation library. Error messages will suggest these variables when browser issues are detected in CI/Docker environments.
 
 ## Troubleshooting
 
