@@ -11,7 +11,7 @@ Contributions are welcome! go-md2pdf aims to be one of the best Markdown-to-PDF 
 
 **Requires discussion first:**
 
-- New stylesP (see Contributing Styles below)
+- New styles (see Contributing Styles below)
 - New features: open an issue before coding
 - Architectural changes
 - New dependencies
@@ -77,6 +77,64 @@ Requirements:
 - Use CSS variables for colors and spacing
 - Include `-webkit-print-color-adjust: exact` for color preservation
 - Test with actual PDF generation before submitting
+
+### CSS Variables
+
+All themes must define these core variables in `:root`:
+
+```css
+:root {
+  /* Colors - Semantic */
+  --color-fg-default: #...;      /* Main text */
+  --color-fg-muted: #...;        /* Secondary text */
+  --color-fg-subtle: #...;       /* Tertiary text */
+  --color-fg-on-emphasis: #...;  /* Text on colored backgrounds */
+  --color-canvas-default: #...;  /* Page background */
+  --color-canvas-subtle: #...;   /* Code blocks, subtle backgrounds */
+  --color-border-default: #...;  /* Primary borders */
+  --color-border-muted: #...;    /* Subtle borders */
+  --color-accent-fg: #...;       /* Links, accents */
+  --color-accent-emphasis: #...; /* Strong accents */
+
+  /* Colors - Status */
+  --color-success-fg: #...;
+  --color-attention-fg: #...;
+  --color-danger-fg: #...;
+
+  /* Colors - Syntax highlighting */
+  --color-syntax-comment: #...;
+  --color-syntax-keyword: #...;
+  --color-syntax-string: #...;
+  --color-syntax-number: #...;
+  --color-syntax-function: #...;
+  --color-syntax-variable: #...;
+
+  /* Highlight */
+  --color-mark-bg: #...;  /* <mark> background */
+
+  /* Spacing */
+  --spacing-xs: 0.25em;
+  --spacing-sm: 0.5em;
+  --spacing-md: 1em;
+  --spacing-lg: 1.5em;
+  --spacing-xl: 2em;
+
+  /* Typography */
+  --font-size-base: 11pt;
+  --font-size-small: 0.9em;
+  --font-size-tiny: 0.8em;
+  --line-height: 1.6;
+
+  /* Components */
+  --checkbox-offset-top: -2px;
+  --checkbox-offset-left: 2px;
+  --signature-margin-top: 30px;
+  --signature-image-radius: 4px;  /* or 50% for circular */
+  --cover-logo-radius: 0;
+}
+```
+
+Themes may add additional variables for unique features (e.g., `creative.css` defines `--heading-red`, `--heading-yellow`, etc. for colored heading badges).
 
 ## Issue Labels
 
