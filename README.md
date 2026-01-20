@@ -696,6 +696,15 @@ Full API documentation: [pkg.go.dev/github.com/alnah/go-md2pdf](https://pkg.go.d
 - Go 1.25+
 - Chrome/Chromium (downloaded automatically on first run)
 
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ROD_NO_SANDBOX` | - | Set to `1` to disable Chrome sandbox (required for Docker/CI) |
+| `ROD_BROWSER_BIN` | - | Path to custom Chrome/Chromium binary |
+
+These are used by the underlying [go-rod](https://github.com/go-rod/rod) browser automation library. Error messages will suggest these variables when browser issues are detected in CI/Docker environments.
+
 ## Contributing
 
 See: [CONTRIBUTING.md](CONTRIBUTING.md).
