@@ -1,10 +1,23 @@
-package dateutil
+package dateutil_test
+
+// Notes:
+// - ResolveDate: the error branch at line 114-116 (ParseDateFormat on DefaultDateFormat)
+//   is not covered because DefaultDateFormat is a valid constant. This branch can only
+//   fail if someone modifies the constant to an invalid value, which would be caught
+//   at development time.
+// These are acceptable gaps: we test observable behavior, not implementation details.
 
 import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/alnah/go-md2pdf/internal/dateutil"
 )
+
+// ---------------------------------------------------------------------------
+// TestParseDateFormat - Token conversion and bracket escape syntax
+// ---------------------------------------------------------------------------
 
 func TestParseDateFormat(t *testing.T) {
 	t.Parallel()
@@ -132,7 +145,7 @@ func TestParseDateFormat(t *testing.T) {
 		{
 			name:    "unclosed bracket returns error",
 			format:  "[Date YYYY",
-			wantErr: ErrInvalidDateFormat,
+			wantErr: dateutil.ErrInvalidDateFormat,
 		},
 		{
 			name:   "nested-looking brackets use first close",
@@ -143,17 +156,17 @@ func TestParseDateFormat(t *testing.T) {
 		{
 			name:    "empty format returns error",
 			format:  "",
-			wantErr: ErrInvalidDateFormat,
+			wantErr: dateutil.ErrInvalidDateFormat,
 		},
 		{
 			name:    "format exceeding max length returns error",
-			format:  string(make([]byte, MaxDateFormatLength+1)),
-			wantErr: ErrInvalidDateFormat,
+			format:  string(make([]byte, dateutil.MaxDateFormatLength+1)),
+			wantErr: dateutil.ErrInvalidDateFormat,
 		},
 		{
 			name:   "format at max length is valid",
-			format: string(make([]byte, MaxDateFormatLength)),
-			want:   string(make([]byte, MaxDateFormatLength)),
+			format: string(make([]byte, dateutil.MaxDateFormatLength)),
+			want:   string(make([]byte, dateutil.MaxDateFormatLength)),
 		},
 		{
 			name:   "only literal characters",
@@ -166,7 +179,7 @@ func TestParseDateFormat(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := ParseDateFormat(tt.format)
+			got, err := dateutil.ParseDateFormat(tt.format)
 
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
@@ -186,6 +199,10 @@ func TestParseDateFormat(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// TestResolveDate - Auto date resolution with formats and presets
+// ---------------------------------------------------------------------------
 
 func TestResolveDate(t *testing.T) {
 	t.Parallel()
@@ -298,17 +315,17 @@ func TestResolveDate(t *testing.T) {
 		{
 			name:    "auto: with empty format returns error",
 			value:   "auto:",
-			wantErr: ErrInvalidDateFormat,
+			wantErr: dateutil.ErrInvalidDateFormat,
 		},
 		{
 			name:    "autoX invalid syntax returns error",
 			value:   "autoX",
-			wantErr: ErrInvalidDateFormat,
+			wantErr: dateutil.ErrInvalidDateFormat,
 		},
 		{
 			name:    "auto123 invalid syntax returns error",
 			value:   "auto123",
-			wantErr: ErrInvalidDateFormat,
+			wantErr: dateutil.ErrInvalidDateFormat,
 		},
 	}
 
@@ -316,7 +333,7 @@ func TestResolveDate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := ResolveDate(tt.value, fixedTime)
+			got, err := dateutil.ResolveDate(tt.value, fixedTime)
 
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
