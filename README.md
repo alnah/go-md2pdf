@@ -910,7 +910,7 @@ Use `md2pdf.ResolvePoolSize(0)` to auto-calculate optimal pool size based on CPU
 
 ## Documentation
 
-Full API documentation: [pkg.go.dev/github.com/alnah/go-md2pdf](https://pkg.go.dev/github.com/alnah/go-md2pdf)
+Full API documentation with runnable examples: [pkg.go.dev/github.com/alnah/go-md2pdf](https://pkg.go.dev/github.com/alnah/go-md2pdf)
 
 ## Troubleshooting
 
