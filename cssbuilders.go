@@ -6,7 +6,7 @@ import (
 )
 
 // defaultFontFamily is the standard font stack for PDF footers and generated content.
-const defaultFontFamily = "'Inter', sans-serif"
+const defaultFontFamily = "sans-serif"
 
 // watermarkFontSize is the font size for watermark text overlay.
 const watermarkFontSize = "8rem"

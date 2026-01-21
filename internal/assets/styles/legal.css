@@ -66,7 +66,7 @@
 }
 
 body {
-  font-family: "Times New Roman", Times, serif;
+  font-family: 'Liberation Serif', "Times New Roman", Times, serif;
   font-size: var(--font-size-base);
   line-height: var(--line-height);
   color: var(--color-fg-default);
@@ -84,7 +84,6 @@ p {
 
 /* 3. TYPOGRAPHY - Headings and hierarchy */
 h1, h2, h3, h4, h5, h6 {
-  font-family: "Times New Roman", Times, serif;
   font-weight: bold;
   page-break-after: avoid;
   color: var(--color-fg-default);
@@ -327,7 +326,7 @@ table tbody tr:last-child td {
 
 /* 8. CODE AND SYNTAX HIGHLIGHTING */
 code {
-  font-family: "Courier New", Courier, monospace;
+  font-family: 'Liberation Mono', "Courier New", Courier, monospace;
   font-size: var(--font-size-small);
   background: var(--color-canvas-subtle);
   color: var(--color-fg-default);
@@ -735,7 +734,7 @@ hr.footnotes-sep {
 
 .cover-docid {
   font-size: 10pt;
-  font-family: "Courier New", Courier, monospace;
+  font-family: 'Liberation Mono', "Courier New", Courier, monospace;
   color: var(--color-fg-muted);
   margin-top: var(--spacing-sm);
 }

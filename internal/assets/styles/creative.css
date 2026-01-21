@@ -78,7 +78,7 @@
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Source Sans 3', system-ui, sans-serif;
   font-size: var(--font-size-base);
   line-height: var(--line-height);
   color: var(--text-primary);
@@ -658,7 +658,7 @@ hr.footnotes-sep {
 
 .cover-docid {
   text-align: right;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 0.7em;
   color: var(--text-muted);
 }

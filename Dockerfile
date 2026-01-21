@@ -27,23 +27,27 @@ RUN CGO_ENABLED=0 go build \
 # =============================================================================
 FROM chromedp/headless-shell:stable
 
-# Install CA certificates, fontconfig, emoji, and download quality fonts
-# - Inter: Modern sans-serif, close to Apple's San Francisco
-# - JetBrains Mono: Excellent monospace for code
+# Install CA certificates, fontconfig, emoji, and fonts
+# - fonts-liberation: Metric-compatible with Arial, Times New Roman, Courier New
+# - fonts-texgyre: High-quality alternatives (TeX Gyre Schola for Georgia)
+# - Source Sans 3: Light, modern sans-serif for default/technical/creative styles
+# - JetBrains Mono: Excellent monospace for code blocks
 # - fonts-noto-color-emoji: Color emoji support
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     fontconfig \
+    fonts-liberation \
+    fonts-texgyre \
     fonts-noto-color-emoji \
     curl \
     unzip \
     && rm -rf /var/lib/apt/lists/* \
-    # Download and install Inter font
-    && curl -sL https://github.com/rsms/inter/releases/download/v4.0/Inter-4.0.zip -o /tmp/inter.zip \
-    && unzip -q /tmp/inter.zip -d /tmp/inter \
-    && mkdir -p /usr/share/fonts/truetype/inter \
-    && cp /tmp/inter/Inter.ttc /usr/share/fonts/truetype/inter/ \
-    && rm -rf /tmp/inter /tmp/inter.zip \
+    # Download and install Source Sans 3 font
+    && curl -sL "https://github.com/adobe-fonts/source-sans/releases/download/3.052R/OTF-source-sans-3.052R.zip" -o /tmp/sourcesans.zip \
+    && unzip -q /tmp/sourcesans.zip -d /tmp/sourcesans \
+    && mkdir -p /usr/share/fonts/opentype/source-sans-3 \
+    && cp /tmp/sourcesans/OTF/*.otf /usr/share/fonts/opentype/source-sans-3/ \
+    && rm -rf /tmp/sourcesans /tmp/sourcesans.zip \
     # Download and install JetBrains Mono font
     && curl -sL https://github.com/JetBrains/JetBrainsMono/releases/download/v2.304/JetBrainsMono-2.304.zip -o /tmp/jbmono.zip \
     && unzip -q /tmp/jbmono.zip -d /tmp/jbmono \

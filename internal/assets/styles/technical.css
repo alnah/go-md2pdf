@@ -90,7 +90,7 @@
 }
 
 body {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Source Sans 3', system-ui, sans-serif;
   font-size: var(--font-size-base);
   line-height: var(--line-height);
   color: var(--color-fg-default);
@@ -361,7 +361,7 @@ table tbody tr:nth-child(even) {
 
 /* Inline code */
 code {
-  font-family: 'Courier New', Courier, monospace;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: var(--font-size-small);
   background: rgba(175, 184, 193, 0.2);
   color: var(--color-fg-default);
@@ -922,7 +922,7 @@ hr.footnotes-sep {
 
 .cover-docid {
   font-size: 0.8em;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
   color: var(--color-fg-subtle);
 }
 

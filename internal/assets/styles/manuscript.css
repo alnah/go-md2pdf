@@ -66,7 +66,7 @@
 }
 
 body {
-  font-family: "Courier New", Courier, monospace;
+  font-family: 'Liberation Mono', "Courier New", Courier, monospace;
   font-size: var(--font-size-base);
   line-height: var(--line-height);
   color: var(--color-fg-default);
@@ -84,7 +84,6 @@ p {
 
 /* 3. TYPOGRAPHY - Headings and hierarchy */
 h1, h2, h3, h4, h5, h6 {
-  font-family: "Courier New", Courier, monospace;
   font-weight: normal;
   page-break-after: avoid;
   color: var(--color-fg-default);
@@ -320,7 +319,7 @@ table tbody td {
 
 /* 8. CODE AND SYNTAX HIGHLIGHTING */
 code {
-  font-family: "Courier New", Courier, monospace;
+  font-family: 'Liberation Mono', "Courier New", Courier, monospace;
   font-size: inherit;
   background: transparent;
   color: var(--color-fg-default);
