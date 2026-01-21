@@ -3,6 +3,7 @@
 ```
 go-md2pdf/                      # package md2pdf (library)
 │
+├── doc.go                      # Package documentation (godoc)
 ├── converter.go                # NewConverter(), Convert(), Close() - facade
 ├── pool.go                     # ConverterPool, ResolvePoolSize()
 ├── types.go                    # Input, PageSettings, Footer, Signature, Watermark, Cover, TOC, PageBreaks, Options
@@ -10,6 +11,7 @@ go-md2pdf/                      # package md2pdf (library)
 ├── errors.go                   # Sentinel errors
 ├── pdf.go                      # HTML -> PDF (Rod/Chrome)
 ├── cssbuilders.go              # Watermark/PageBreaks CSS (depend on public types)
+├── example_test.go             # Runnable examples for godoc (Example*, ExampleConverterPool, etc.)
 │
 ├── cmd/md2pdf/                 # CLI (md2pdf convert|doctor|version|help|completion)
 │   ├── main.go                 # Entry point, command dispatch
@@ -97,10 +99,12 @@ go-md2pdf/
 | `*_test.go`                 | Unit tests (same package)            | `converter_test.go`            |
 | `*_integration_test.go`     | Integration tests (require browser)  | `converter_integration_test.go`|
 | `*_bench_test.go`           | Benchmarks                           | `pool_bench_test.go`           |
+| `example_test.go`           | Runnable examples for godoc          | `example_test.go`              |
 
 - Unit tests: `make test` - fast, no external dependencies
 - Integration tests: `make test-integration` - require Chrome, use `-tags=integration`
 - Benchmarks: `make bench` - use `-tags=bench`
+- Examples: `go test -run Example` - appear on pkg.go.dev
 
 ## Embedded Styles
 
