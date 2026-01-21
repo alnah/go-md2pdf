@@ -429,7 +429,14 @@ These are used by the underlying [go-rod](https://github.com/go-rod/rod) browser
 
 ## Configuration
 
-Config files are loaded from `~/.config/go-md2pdf/` or current directory.
+Config files are searched in the current directory first, then in the user config directory:
+
+| OS      | User Config Directory                      |
+| ------- | ------------------------------------------ |
+| Linux   | `~/.config/go-md2pdf/`                     |
+| macOS   | `~/Library/Application Support/go-md2pdf/` |
+| Windows | `%APPDATA%\go-md2pdf\`                     |
+
 Supported formats: `.yaml`, `.yml`
 
 | Option                  | Type   | Default      | Description                              |
