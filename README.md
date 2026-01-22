@@ -8,6 +8,10 @@
 
 > Markdown to print-ready PDF via CLI or Go library - cover pages, TOC, signatures, footers, watermarks, custom CSS, and parallel batch processing.
 
+[See example outputs](examples/)
+
+![Example PDF outputs](examples/illustration.png)
+
 ## Table of Contents
 
 - [Installation](#installation)
