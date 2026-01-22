@@ -363,20 +363,20 @@ Environment variables provide CI/CD-friendly configuration without requiring YAM
 | Variable | Description |
 |----------|-------------|
 | `MD2PDF_CONFIG` | Config file path (e.g., `/app/config.yaml`) |
-| `MD2PDF_STYLE` | CSS style name or path (e.g., `technical`) |
-| `MD2PDF_TIMEOUT` | PDF generation timeout (e.g., `2m`, `90s`) |
 | `MD2PDF_INPUT_DIR` | Default input directory |
 | `MD2PDF_OUTPUT_DIR` | Default output directory |
+| `MD2PDF_TIMEOUT` | PDF generation timeout (e.g., `2m`, `90s`) |
+| `MD2PDF_STYLE` | CSS style name or path (e.g., `technical`) |
+| `MD2PDF_WORKERS` | Parallel workers (e.g., `4`) |
 | `MD2PDF_AUTHOR_NAME` | Author name for cover/signature |
 | `MD2PDF_AUTHOR_ORG` | Organization name |
 | `MD2PDF_AUTHOR_EMAIL` | Author email |
-| `MD2PDF_PAGE_SIZE` | Page size: `letter`, `a4`, `legal` |
-| `MD2PDF_WATERMARK_TEXT` | Watermark text (auto-enables watermark) |
-| `MD2PDF_COVER_LOGO` | Cover logo path/URL (auto-enables cover) |
 | `MD2PDF_DOC_VERSION` | Document version |
 | `MD2PDF_DOC_DATE` | Document date (supports `auto`) |
 | `MD2PDF_DOC_ID` | Document ID |
-| `MD2PDF_WORKERS` | Parallel workers (e.g., `4`) |
+| `MD2PDF_PAGE_SIZE` | Page size: `letter`, `a4`, `legal` |
+| `MD2PDF_COVER_LOGO` | Cover logo path/URL (auto-enables cover) |
+| `MD2PDF_WATERMARK_TEXT` | Watermark text (auto-enables watermark) |
 | `MD2PDF_CONTAINER` | Set to `1` to force container detection (for `md2pdf doctor`) |
 
 Unknown `MD2PDF_*` variables trigger a warning to catch typos.
