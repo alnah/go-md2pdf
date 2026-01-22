@@ -441,7 +441,9 @@ Supported formats: `.yaml`, `.yml`
 
 | Option                  | Type   | Default      | Description                              |
 | ----------------------- | ------ | ------------ | ---------------------------------------- |
+| `input.defaultDir`      | string | -            | Default input directory                  |
 | `output.defaultDir`     | string | -            | Default output directory                 |
+| `timeout`               | string | `"30s"`      | PDF generation timeout (e.g., "30s", "2m") |
 | `style`                 | string | `"default"`  | CSS style name or path                   |
 | `assets.basePath`       | string | -            | Custom assets directory (styles, templates) |
 | `author.name`           | string | -            | Author name (used by cover, signature)   |
@@ -460,8 +462,6 @@ Supported formats: `.yaml`, `.yml`
 | `document.documentType` | string | -            | Document type (e.g., "Specification")    |
 | `document.documentID`   | string | -            | Document ID (e.g., "DOC-2025-001")       |
 | `document.description`  | string | -            | Brief document summary                   |
-| `input.defaultDir`      | string | -            | Default input directory                  |
-| `timeout`               | string | `"30s"`      | PDF generation timeout (e.g., "30s", "2m") |
 | `page.size`             | string | `"letter"`   | letter, a4, legal                        |
 | `page.orientation`      | string | `"portrait"` | portrait, landscape                      |
 | `page.margin`           | float  | `0.5`        | Margin in inches (0.25-3.0)              |
