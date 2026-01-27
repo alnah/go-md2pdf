@@ -6,7 +6,7 @@
 [![Coverage](https://img.shields.io/codecov/c/github/alnah/go-md2pdf)](https://codecov.io/gh/alnah/go-md2pdf)
 [![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](LICENSE.txt)
 
-> Markdown to print-ready PDF via CLI or Go library - cover pages, TOC, signatures, footers, watermarks, custom CSS, and parallel batch processing.
+> Go library and CLI for Markdown to PDF conversion using headless Chrome. Auto-downloads Chromium on first run. Features cover pages, automatic table of contents, footers with page numbers, signatures, watermarks, and 8 built-in CSS themes with custom template support. Supports parallel batch processing.
 
 [See example outputs](examples/)
 
