@@ -80,7 +80,7 @@ go-md2pdf/
 ├── CONTRIBUTING.md             # Contributor guide
 ├── SECURITY.md                 # Security policy
 ├── CODE_OF_CONDUCT.md          # Community guidelines
-└── LICENSE.txt                 # BSD-3-Clause license
+└── LICENSE                 # BSD-3-Clause license
 ```
 
 ## Conventions

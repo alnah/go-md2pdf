@@ -4,7 +4,7 @@
 [![Go Report Card](https://img.shields.io/badge/go%20report-A+-brightgreen)](https://goreportcard.com/report/github.com/alnah/go-md2pdf)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/alnah/go-md2pdf/ci.yml?branch=main)](https://github.com/alnah/go-md2pdf/actions)
 [![Coverage](https://img.shields.io/codecov/c/github/alnah/go-md2pdf)](https://codecov.io/gh/alnah/go-md2pdf)
-[![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](LICENSE.txt)
+[![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](LICENSE)
 
 > Go library and CLI for Markdown to PDF conversion using headless Chrome. Auto-downloads Chromium on first run. Features cover pages, automatic table of contents, footers with page numbers, signatures, watermarks, and 8 built-in CSS themes with custom template support. Supports parallel batch processing.
 
@@ -1043,4 +1043,4 @@ See: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-See: [BSD-3-Clause](LICENSE.txt).
+See: [BSD-3-Clause](LICENSE).
