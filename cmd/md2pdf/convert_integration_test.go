@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	md2pdf "github.com/alnah/go-md2pdf"
@@ -812,6 +811,7 @@ func TestIntegration_NewCLIFlags(t *testing.T) {
 		inputPath := filepath.Join(tempDir, "doc.md")
 
 		// minDepth > maxDepth should error
+		// Note: Validation error details go to stderr; returned error is summary "X conversion(s) failed"
 		err := runIntegration([]string{
 			"md2pdf",
 			"--config", configPath,
@@ -821,9 +821,6 @@ func TestIntegration_NewCLIFlags(t *testing.T) {
 		})
 		if err == nil {
 			t.Fatal("expected error when minDepth > maxDepth, got nil")
-		}
-		if !strings.Contains(err.Error(), "MinDepth") {
-			t.Errorf("error should mention MinDepth, got: %v", err)
 		}
 	})
 }

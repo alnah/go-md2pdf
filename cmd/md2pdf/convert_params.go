@@ -1,21 +1,22 @@
+// Package main provides the md2pdf CLI.
+//
+// TRUST BOUNDARY: Config is validated at load time by Config.Validate().
+// The buildXxxData() functions in this file transform validated config into
+// library types. They do NOT re-validate because:
+//   - Config.Validate() already checked constraints at load time
+//   - Library's validateInput() catches any issues for direct library users
+//   - Redundant validation creates maintenance burden and can drift
+//
+// See docs/_validation_refactor_spec.md for design rationale.
 package main
 
 import (
-	"errors"
-	"fmt"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	md2pdf "github.com/alnah/go-md2pdf"
 	"github.com/alnah/go-md2pdf/internal/config"
-	"github.com/alnah/go-md2pdf/internal/fileutil"
-	"github.com/alnah/go-md2pdf/internal/hints"
-)
-
-// Sentinel errors for CLI param building.
-var (
-	ErrSignatureImagePath = errors.New("signature image not found")
 )
 
 // conversionParams groups parameters shared across batch/file conversion.
@@ -35,16 +36,12 @@ type conversionParams struct {
 // buildSignatureData creates md2pdf.Signature from config.
 // Uses cfg.Author.* for author information.
 // Department is always shown if defined (signature always displays it).
+//
+// Note: Image path validation happens at library boundary (Signature.Validate),
+// not here. This function is a pure transformation from config to library type.
 func buildSignatureData(cfg *config.Config, noSignature bool) (*md2pdf.Signature, error) {
 	if noSignature || !cfg.Signature.Enabled {
 		return nil, nil
-	}
-
-	// Validate image path if set (and not a URL)
-	if cfg.Signature.ImagePath != "" && !fileutil.IsURL(cfg.Signature.ImagePath) {
-		if !fileutil.FileExists(cfg.Signature.ImagePath) {
-			return nil, fmt.Errorf("%w: %s%s", ErrSignatureImagePath, cfg.Signature.ImagePath, hints.ForSignatureImage())
-		}
 	}
 
 	// Convert config links to md2pdf.Link
@@ -112,14 +109,6 @@ func buildWatermarkData(cfg *config.Config) (*md2pdf.Watermark, error) {
 		w.Opacity = md2pdf.DefaultWatermarkOpacity
 	}
 
-	// Validate
-	if w.Text == "" {
-		return nil, fmt.Errorf("watermark text is required when watermark is enabled")
-	}
-	if err := w.Validate(); err != nil {
-		return nil, err
-	}
-
 	return w, nil
 }
 
@@ -147,10 +136,6 @@ func buildPageSettings(cfg *config.Config) (*md2pdf.PageSettings, error) {
 	}
 	if ps.Margin == 0 {
 		ps.Margin = md2pdf.DefaultMargin
-	}
-
-	if err := ps.Validate(); err != nil {
-		return nil, err
 	}
 
 	return ps, nil
@@ -209,10 +194,6 @@ func buildCoverData(cfg *config.Config, markdownContent, filename string) (*md2p
 		c.Department = cfg.Author.Department
 	}
 
-	if err := c.Validate(); err != nil {
-		return nil, err
-	}
-
 	return c, nil
 }
 
@@ -231,10 +212,6 @@ func buildTOCData(cfg *config.Config, tocFlags tocFlags) (*md2pdf.TOC, error) {
 		Title:    cfg.TOC.Title,
 		MinDepth: cfg.TOC.MinDepth, // 0 = library defaults to 2
 		MaxDepth: maxDepth,
-	}
-
-	if err := toc.Validate(); err != nil {
-		return nil, err
 	}
 
 	return toc, nil

@@ -129,51 +129,6 @@ func TestBuildSignatureData(t *testing.T) {
 		}
 	})
 
-	t.Run("nonexistent local image path returns error", func(t *testing.T) {
-		t.Parallel()
-
-		cfg := &Config{
-			Author: AuthorConfig{Name: "Test"},
-			Signature: SignatureConfig{
-				Enabled:   true,
-				ImagePath: "/nonexistent/path/to/image.png",
-			},
-		}
-		_, err := buildSignatureData(cfg, false)
-		if err == nil {
-			t.Fatal("expected error for nonexistent image path")
-		}
-		if !errors.Is(err, ErrSignatureImagePath) {
-			t.Errorf("error = %v, want ErrSignatureImagePath", err)
-		}
-	})
-
-	t.Run("nonexistent local image error includes hint", func(t *testing.T) {
-		t.Parallel()
-
-		cfg := &Config{
-			Author: AuthorConfig{Name: "Test"},
-			Signature: SignatureConfig{
-				Enabled:   true,
-				ImagePath: "/nonexistent/path/to/image.png",
-			},
-		}
-		_, err := buildSignatureData(cfg, false)
-		if err == nil {
-			t.Fatal("expected error for nonexistent image path")
-		}
-		errMsg := err.Error()
-		if !strings.Contains(errMsg, "hint:") {
-			t.Error("error should include hint")
-		}
-		if !strings.Contains(errMsg, "PNG") {
-			t.Error("error hint should mention PNG format")
-		}
-		if !strings.Contains(errMsg, "URL") {
-			t.Error("error hint should mention URL option")
-		}
-	})
-
 	t.Run("existing local image path is accepted", func(t *testing.T) {
 		t.Parallel()
 
@@ -532,30 +487,6 @@ func TestBuildPageSettings(t *testing.T) {
 			wantOrientation: md2pdf.OrientationPortrait,
 			wantMargin:      md2pdf.DefaultMargin,
 		},
-		{
-			name:    "invalid size returns error",
-			flags:   &cliFlags{page: pageFlags{size: "tabloid"}},
-			cfg:     &Config{},
-			wantErr: true,
-		},
-		{
-			name:    "invalid orientation returns error",
-			flags:   &cliFlags{page: pageFlags{orientation: "diagonal"}},
-			cfg:     &Config{},
-			wantErr: true,
-		},
-		{
-			name:    "invalid margin returns error",
-			flags:   &cliFlags{page: pageFlags{margin: 10.0}},
-			cfg:     &Config{},
-			wantErr: true,
-		},
-		{
-			name:    "margin below minimum returns error",
-			flags:   &cliFlags{page: pageFlags{margin: 0.1}},
-			cfg:     &Config{},
-			wantErr: true,
-		},
 	}
 
 	for _, tt := range tests {
@@ -793,80 +724,6 @@ func TestBuildWatermarkData(t *testing.T) {
 			wantColor:   "#888888",
 			wantOpacity: 0.1,
 			wantAngle:   0,
-		},
-		{
-			name:        "empty text when enabled returns error",
-			flags:       &cliFlags{watermark: watermarkFlags{color: "#888888", angle: watermarkAngleSentinel}},
-			cfg:         &Config{Watermark: WatermarkConfig{Enabled: true, Text: ""}},
-			wantErr:     true,
-			errContains: "watermark text is required",
-		},
-		{
-			name: "invalid opacity above 1 returns error",
-			flags: &cliFlags{watermark: watermarkFlags{
-				text:    "DRAFT",
-				opacity: 1.5,
-				angle:   -999,
-			}},
-			cfg:         &Config{},
-			wantErr:     true,
-			errContains: "watermark opacity must be between",
-		},
-		{
-			name: "invalid opacity below 0 returns error",
-			flags: &cliFlags{watermark: watermarkFlags{
-				text:    "DRAFT",
-				opacity: -0.1,
-				angle:   -999,
-			}},
-			cfg:         &Config{},
-			wantErr:     true,
-			errContains: "watermark opacity must be between",
-		},
-		{
-			name: "invalid angle above 90 returns error",
-			flags: &cliFlags{watermark: watermarkFlags{
-				text:  "DRAFT",
-				angle: 100,
-			}},
-			cfg:         &Config{},
-			wantErr:     true,
-			errContains: "angle must be between -90 and 90",
-		},
-		{
-			name: "invalid angle below -90 returns error",
-			flags: &cliFlags{watermark: watermarkFlags{
-				text:  "DRAFT",
-				angle: -100,
-			}},
-			cfg:         &Config{},
-			wantErr:     true,
-			errContains: "angle must be between -90 and 90",
-		},
-		{
-			name: "invalid color format returns error",
-			flags: &cliFlags{watermark: watermarkFlags{
-				text:  "DRAFT",
-				color: "red", // invalid - must be hex
-				angle: watermarkAngleSentinel,
-			}},
-			cfg:         &Config{},
-			wantErr:     true,
-			errContains: "invalid watermark color",
-		},
-		{
-			name: "invalid color from config returns error",
-			flags: &cliFlags{watermark: watermarkFlags{
-				text:  "DRAFT",
-				angle: watermarkAngleSentinel,
-			}},
-			cfg: &Config{Watermark: WatermarkConfig{
-				Enabled: true,
-				Text:    "DRAFT",
-				Color:   "invalid",
-			}},
-			wantErr:     true,
-			errContains: "invalid watermark color",
 		},
 		{
 			name: "boundary angle -90 is valid",
@@ -1607,12 +1464,6 @@ func TestBuildTOCData(t *testing.T) {
 			wantMaxDepth: 3,
 		},
 		{
-			name:    "minDepth greater than maxDepth errors",
-			cfg:     &Config{TOC: TOCConfig{Enabled: true, MinDepth: 4, MaxDepth: 3}},
-			flags:   tocFlags{},
-			wantErr: "MinDepth 4 > MaxDepth 3",
-		},
-		{
 			name:         "minDepth 0 uses default",
 			cfg:          &Config{TOC: TOCConfig{Enabled: true, MinDepth: 0, MaxDepth: 3}},
 			flags:        tocFlags{},
@@ -1625,12 +1476,6 @@ func TestBuildTOCData(t *testing.T) {
 			flags:        tocFlags{},
 			wantMinDepth: 6,
 			wantMaxDepth: 6,
-		},
-		{
-			name:    "minDepth 7 out of range errors",
-			cfg:     &Config{TOC: TOCConfig{Enabled: true, MinDepth: 7, MaxDepth: 6}},
-			flags:   tocFlags{},
-			wantErr: "MinDepth 7",
 		},
 	}
 
