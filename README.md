@@ -1014,6 +1014,7 @@ These are intentional to keep the tool simple:
 
 | Not Supported | Why | Alternative |
 |---------------|-----|-------------|
+| **Raw HTML tags** | Security (prevents code execution during conversion) | Cover config for logos, native markdown `![]()` for images, custom CSS for styling |
 | LaTeX/MathJax | Adds complexity, requires external tools | Pre-render as PNG/SVG |
 | Wikilinks `[[...]]` | Not relevant for PDF output | Use `[text](url)` |
 | Admonitions `:::` | Not implemented | Use blockquotes |
