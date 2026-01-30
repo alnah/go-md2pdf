@@ -307,6 +307,23 @@ type Signature struct {
 	Department string // Department name (optional)
 }
 
+// Validate checks that signature settings are valid.
+// Returns nil if s is nil (nil means no signature).
+//
+// Note: Only ImagePath is validated (file existence). Other fields like Email
+// and Links are pure content that renders as-is - this is a PDF rendering tool,
+// not a data validation tool. Users control their content.
+func (s *Signature) Validate() error {
+	if s == nil {
+		return nil
+	}
+	// Validate image path exists if set (and not a URL)
+	if s.ImagePath != "" && !fileutil.IsURL(s.ImagePath) && !fileutil.FileExists(s.ImagePath) {
+		return fmt.Errorf("%w: %q", ErrSignatureImageNotFound, s.ImagePath)
+	}
+	return nil
+}
+
 // Link represents a clickable link.
 type Link struct {
 	Label string

@@ -7,10 +7,12 @@ package md2pdf
 // - Watermark: tests hex color validation
 // - PageBreaks: tests orphans/widows range validation
 // - TOC: tests depth range validation
+// - Signature: tests image path validation (URL vs file path)
 
 import (
 	"errors"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -892,5 +894,152 @@ func TestTOC_Validate(t *testing.T) {
 				t.Errorf("unexpected error: %v", err)
 			}
 		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestSignature_Validate - Signature ImagePath Validation
+// ---------------------------------------------------------------------------
+
+func TestSignature_Validate(t *testing.T) {
+	t.Parallel()
+
+	// Create a temp file for image path tests
+	tempDir := t.TempDir()
+	existingImage := tempDir + "/signature.png"
+	if err := os.WriteFile(existingImage, []byte("fake png"), 0644); err != nil {
+		t.Fatalf("failed to create test image: %v", err)
+	}
+
+	// Create a file with space in name
+	imageWithSpace := tempDir + "/my signature.png"
+	if err := os.WriteFile(imageWithSpace, []byte("fake png"), 0644); err != nil {
+		t.Fatalf("failed to create test image with space: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		sig     *Signature
+		wantErr error
+	}{
+		{
+			name:    "nil is valid",
+			sig:     nil,
+			wantErr: nil,
+		},
+		{
+			name:    "empty signature is valid",
+			sig:     &Signature{},
+			wantErr: nil,
+		},
+		{
+			name:    "empty ImagePath is valid",
+			sig:     &Signature{ImagePath: ""},
+			wantErr: nil,
+		},
+		{
+			name:    "HTTPS URL bypasses file check",
+			sig:     &Signature{ImagePath: "https://example.com/signature.png"},
+			wantErr: nil,
+		},
+		{
+			name:    "HTTP URL bypasses file check",
+			sig:     &Signature{ImagePath: "http://example.com/signature.png"},
+			wantErr: nil,
+		},
+		{
+			name:    "existing local file path is valid",
+			sig:     &Signature{ImagePath: existingImage},
+			wantErr: nil,
+		},
+		{
+			name:    "nonexistent local file path returns error",
+			sig:     &Signature{ImagePath: "/nonexistent/path/to/signature.png"},
+			wantErr: ErrSignatureImageNotFound,
+		},
+		{
+			name:    "relative nonexistent path returns error",
+			sig:     &Signature{ImagePath: "nonexistent.png"},
+			wantErr: ErrSignatureImageNotFound,
+		},
+		{
+			name: "all fields populated is valid",
+			sig: &Signature{
+				Name:         "John Doe",
+				Title:        "Senior Developer",
+				Email:        "john@example.com",
+				Organization: "Acme Corp",
+				ImagePath:    existingImage,
+				Links:        []Link{{Label: "GitHub", URL: "https://github.com/johndoe"}},
+				Phone:        "+1-555-123-4567",
+				Address:      "123 Main St",
+				Department:   "Engineering",
+			},
+			wantErr: nil,
+		},
+		// Edge cases from SWOT analysis
+		{
+			name:    "whitespace-only path treated as nonexistent file",
+			sig:     &Signature{ImagePath: "   "},
+			wantErr: ErrSignatureImageNotFound,
+		},
+		{
+			name:    "uppercase HTTP not recognized as URL",
+			sig:     &Signature{ImagePath: "HTTP://example.com/img.png"},
+			wantErr: ErrSignatureImageNotFound,
+		},
+		{
+			name:    "ftp protocol not recognized as URL",
+			sig:     &Signature{ImagePath: "ftp://example.com/img.png"},
+			wantErr: ErrSignatureImageNotFound,
+		},
+		{
+			name:    "path with spaces is valid if file exists",
+			sig:     &Signature{ImagePath: imageWithSpace},
+			wantErr: nil,
+		},
+		{
+			name:    "other fields not validated - invalid email accepted",
+			sig:     &Signature{Email: "not-an-email"},
+			wantErr: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := tt.sig.Validate()
+
+			if tt.wantErr != nil {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !errors.Is(err, tt.wantErr) {
+					t.Errorf("error = %v, want %v", err, tt.wantErr)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+func TestSignature_Validate_ErrorMessageIncludesPath(t *testing.T) {
+	t.Parallel()
+
+	badPath := "/nonexistent/path/to/signature.png"
+	sig := &Signature{ImagePath: badPath}
+
+	err := sig.Validate()
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	if !strings.Contains(err.Error(), badPath) {
+		t.Errorf("error message %q should contain path %q", err.Error(), badPath)
 	}
 }

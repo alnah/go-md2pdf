@@ -27,6 +27,9 @@ var (
 	ErrCoverLogoNotFound = errors.New("cover logo file not found")
 	ErrCoverRender       = errors.New("cover template rendering failed")
 
+	// Signature validation errors.
+	ErrSignatureImageNotFound = errors.New("signature image file not found")
+
 	// TOC validation errors.
 	ErrInvalidTOCDepth = errors.New("invalid TOC depth")
 
