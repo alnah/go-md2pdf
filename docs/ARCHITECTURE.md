@@ -141,6 +141,38 @@ The `doctor` command performs system checks without starting a conversion:
 
 ---
 
+## Validation Architecture
+
+The codebase follows a "validate at trust boundaries" pattern:
+
+```
+CLI Path:
+  Flags/Env/YAML ──▶ Config.Validate() ──▶ buildXxxData() ──▶ validateInput()
+                          ▲                  (no validation)        ▲
+                    BOUNDARY 1                               BOUNDARY 2
+
+Library Path:
+  User builds Input ─────────────────────────────────────▶ validateInput()
+                                                               ▲
+                                                          BOUNDARY 2
+```
+
+| Boundary | Location | Purpose |
+| -------- | -------- | ------- |
+| Config.Validate() | `internal/config/` | Validates CLI/YAML input at load time |
+| validateInput() | `converter.go` | Validates library API input before processing |
+
+**Design principles:**
+
+- **CLI param builders trust config** - `buildXxxData()` functions in `cmd/md2pdf/convert_params.go` transform already-validated config into library types without re-validation
+- **Library validates at entry** - `validateInput()` is the trust boundary for direct library users
+- **No redundant validation** - Each constraint is checked once at the appropriate boundary
+- **Validation methods on types** - `PageSettings.Validate()`, `Cover.Validate()`, `Signature.Validate()`, etc.
+
+See `docs/_validation_refactor_spec.md` for detailed design rationale.
+
+---
+
 ## Adding Features
 
 | Feature Type        | Location                          | Example                      |
@@ -156,12 +188,14 @@ The `doctor` command performs system checks without starting a conversion:
 
 **Checklist for new features:**
 1. Add types to `types.go` (if public) or internal package
-2. Add validation in `Validate()` method
-3. Wire into `converter.go` pipeline
-4. Add CLI flags in `cmd/md2pdf/flags.go`
-5. Add config support in `internal/config/`
-6. Add tests: unit + integration
-7. Update README.md documentation
+2. Add `Validate()` method on the type (validates technical constraints only)
+3. Call `Validate()` from `validateInput()` in `converter.go`
+4. Add config validation in `internal/config/` (for CLI path)
+5. Wire into `converter.go` pipeline
+6. Add CLI flags in `cmd/md2pdf/flags.go`
+7. Add param builder in `cmd/md2pdf/convert_params.go` (no validation - trusts config)
+8. Add tests: unit + integration
+9. Update README.md documentation
 
 **Checklist for new CLI commands:**
 1. Create `cmd/md2pdf/{name}.go` with command logic

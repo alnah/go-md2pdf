@@ -6,7 +6,7 @@ go-md2pdf/                      # package md2pdf (library)
 ├── doc.go                      # Package documentation (godoc)
 ├── converter.go                # NewConverter(), Convert(), Close() - facade
 ├── pool.go                     # ConverterPool, ResolvePoolSize()
-├── types.go                    # Input, PageSettings, Footer, Signature, Watermark, Cover, TOC, PageBreaks, Options
+├── types.go                    # Input, PageSettings, Footer, Signature, Watermark, Cover, TOC, PageBreaks, Options, Validate() methods
 ├── assets.go                   # AssetLoader, TemplateSet, NewAssetLoader(), NewTemplateSet()
 ├── errors.go                   # Sentinel errors
 ├── pdf.go                      # HTML -> PDF (Rod/Chrome)
