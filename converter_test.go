@@ -1706,6 +1706,68 @@ func TestValidateInput_InvalidWatermarkColor(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// TestValidateInput_InvalidSignature - Signature Validation
+// ---------------------------------------------------------------------------
+
+func TestValidateInput_InvalidSignature(t *testing.T) {
+	t.Parallel()
+
+	service, err := New()
+	if err != nil {
+		t.Fatalf("failed to create service: %v", err)
+	}
+	defer service.Close()
+
+	t.Run("nil signature is valid", func(t *testing.T) {
+		t.Parallel()
+		input := Input{Markdown: "# Hello", Signature: nil}
+		err := service.validateInput(input)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("valid signature passes", func(t *testing.T) {
+		t.Parallel()
+		input := Input{
+			Markdown:  "# Hello",
+			Signature: &Signature{Name: "John Doe", Email: "john@example.com"},
+		}
+		err := service.validateInput(input)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("nonexistent image path fails", func(t *testing.T) {
+		t.Parallel()
+		input := Input{
+			Markdown:  "# Hello",
+			Signature: &Signature{ImagePath: "/nonexistent/path/to/signature.png"},
+		}
+		err := service.validateInput(input)
+		if err == nil {
+			t.Fatal("expected error for nonexistent image path")
+		}
+		if !errors.Is(err, ErrSignatureImageNotFound) {
+			t.Errorf("error = %v, want ErrSignatureImageNotFound", err)
+		}
+	})
+
+	t.Run("URL image path passes", func(t *testing.T) {
+		t.Parallel()
+		input := Input{
+			Markdown:  "# Hello",
+			Signature: &Signature{ImagePath: "https://example.com/signature.png"},
+		}
+		err := service.validateInput(input)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
 // TestConvert_ReturnsConvertResult - ConvertResult Structure
 // ---------------------------------------------------------------------------
 

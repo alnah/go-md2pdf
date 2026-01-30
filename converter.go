@@ -309,6 +309,10 @@ func (c *Converter) resolveStyle() error {
 }
 
 // validateInput checks that required fields are present and valid.
+//
+// This is a TRUST BOUNDARY for direct library users who build Input manually.
+// CLI users have their input validated earlier by Config.Validate() at config load time.
+// Both paths converge here, ensuring all inputs are validated before processing.
 func (c *Converter) validateInput(input Input) error {
 	if input.Markdown == "" {
 		return ErrEmptyMarkdown
@@ -329,6 +333,9 @@ func (c *Converter) validateInput(input Input) error {
 		return err
 	}
 	if err := input.PageBreaks.Validate(); err != nil {
+		return err
+	}
+	if err := input.Signature.Validate(); err != nil {
 		return err
 	}
 	return nil
