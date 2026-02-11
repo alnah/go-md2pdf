@@ -1,7 +1,7 @@
 // Package pipeline implements the Markdown-to-HTML conversion pipeline.
 //
 // This package handles preprocessing, HTML conversion, and HTML injection stages:
-//   - Markdown preprocessing (line normalization, highlight syntax)
+//   - Markdown preprocessing (line normalization, frontmatter stripping, highlight syntax)
 //   - Markdown to HTML conversion via Goldmark
 //   - CSS injection into HTML documents
 //   - Cover page injection

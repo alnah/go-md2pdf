@@ -25,6 +25,14 @@ var (
 
 	// Highlight syntax ==text==
 	highlightPattern = regexp.MustCompile(`==(.*?)==`)
+
+	// YAML frontmatter at document start.
+	// Matches paired --- delimiters on their own lines.
+	// Pattern requires both delimiters to avoid stripping incomplete blocks.
+	// Only matches at start of document (after optional horizontal whitespace).
+	// Uses [ \t]* instead of \s* to avoid matching across blank lines,
+	// consistent with real-world frontmatter parsers (Jekyll, Hugo).
+	yamlFrontmatter = regexp.MustCompile(`(?s)^[ \t]*---\s*\n.*?\n---\s*\n`)
 )
 
 // MarkdownPreprocessor defines the contract for markdown preprocessing.
@@ -43,6 +51,7 @@ func (p *CommonMarkPreprocessor) PreprocessMarkdown(ctx context.Context, content
 	}
 
 	content = normalizeLineEndings(content)
+	content = stripFrontmatter(content)
 	content = convertHighlights(content)
 	content = compressBlankLines(content)
 	return content
@@ -51,6 +60,15 @@ func (p *CommonMarkPreprocessor) PreprocessMarkdown(ctx context.Context, content
 // normalizeLineEndings converts \r\n and \r to \n.
 func normalizeLineEndings(content string) string {
 	return crlfOrCR.ReplaceAllString(content, "\n")
+}
+
+// stripFrontmatter removes YAML frontmatter from the start of markdown content.
+// YAML frontmatter is identified by paired --- delimiters on their own lines.
+// If frontmatter is malformed (missing opening or closing delimiter), it is
+// left intact to avoid data loss. Only well-formed frontmatter at the document
+// start is removed.
+func stripFrontmatter(content string) string {
+	return yamlFrontmatter.ReplaceAllLiteralString(content, "")
 }
 
 // compressBlankLines limits consecutive blank lines to 2 maximum.
