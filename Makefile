@@ -62,6 +62,15 @@ vet: ## Run go vet for static analysis
 	go vet ./...
 
 lint: ## Run golangci-lint
+	@command -v golangci-lint >/dev/null 2>&1 || (echo "golangci-lint not found in PATH"; echo "Install: https://golangci-lint.run/welcome/install/"; exit 1)
+	@build_go=$$(golangci-lint version | sed -nE 's/.*built with go([0-9]+\.[0-9]+).*/\1/p'); \
+	runtime_go=$$(go env GOVERSION | sed -nE 's/^go([0-9]+\.[0-9]+).*/\1/p'); \
+	if [ -n "$$build_go" ] && [ -n "$$runtime_go" ]; then \
+		awk -v b="$$build_go" -v r="$$runtime_go" 'BEGIN {split(b,bp,"."); split(r,rp,"."); if (bp[1] < rp[1] || (bp[1] == rp[1] && bp[2] < rp[2])) exit 1; exit 0}' || \
+		(echo "golangci-lint was built with go$$build_go but current toolchain is go$$runtime_go."; \
+		 echo "Reinstall golangci-lint from an official binary release or rebuild it with current Go."; \
+		 exit 1); \
+	fi
 	golangci-lint run
 
 sec: ## Run gosec security scanner

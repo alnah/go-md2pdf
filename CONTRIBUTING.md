@@ -25,6 +25,20 @@ git lfs install  # Required for example PDFs
 git lfs pull     # Download example PDFs
 ```
 
+### Lint Tooling
+
+`make lint` expects `golangci-lint` to be available in your `PATH`.
+
+Recommended install method: official binary release from golangci-lint docs.
+
+If lint fails with a message about `built with go...`:
+
+1. Check your Go toolchain: `go env GOVERSION`
+2. Check your linter build toolchain: `golangci-lint version`
+3. Reinstall `golangci-lint` so it is built with a Go version greater than or equal to your current toolchain.
+
+This avoids intermittent crashes when the linter binary is older than the active Go toolchain.
+
 ## How to Contribute
 
 ### Bug Reports
