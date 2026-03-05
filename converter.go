@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/alnah/go-md2pdf/internal/assets"
-	"github.com/alnah/go-md2pdf/internal/fileutil"
 	"github.com/alnah/go-md2pdf/internal/pipeline"
+	"github.com/alnah/go-md2pdf/internal/styleinput"
 )
 
 // Compile-time interface implementation checks.
@@ -278,31 +278,31 @@ func (c *Converter) Close() error {
 // resolveStyle resolves the style input (name, path, or CSS content) to CSS content.
 // Called during New() after options are applied and asset loader is configured.
 func (c *Converter) resolveStyle() error {
-	input := c.cfg.styleInput
-	if input == "" {
+	source, value := styleinput.Classify(c.cfg.styleInput, "", true)
+	if source == styleinput.SourceNone {
 		return nil // no style specified, use default from loader if needed
 	}
 
 	// File path? (contains / or \)
-	if fileutil.IsFilePath(input) {
-		content, err := os.ReadFile(input) // #nosec G304 -- user-provided path
+	if source == styleinput.SourceFile {
+		content, err := os.ReadFile(value) // #nosec G304 -- user-provided path
 		if err != nil {
-			return fmt.Errorf("loading style file %q: %w", input, err)
+			return fmt.Errorf("loading style file %q: %w", value, err)
 		}
 		c.cfg.resolvedStyle = string(content)
 		return nil
 	}
 
 	// CSS content? (contains {)
-	if fileutil.IsCSS(input) {
-		c.cfg.resolvedStyle = input
+	if source == styleinput.SourceRawCSS {
+		c.cfg.resolvedStyle = value
 		return nil
 	}
 
 	// Style name -> use asset loader
-	css, err := c.assetLoader.LoadStyle(input)
+	css, err := c.assetLoader.LoadStyle(value)
 	if err != nil {
-		return fmt.Errorf("loading style %q: %w", input, err)
+		return fmt.Errorf("loading style %q: %w", value, err)
 	}
 	c.cfg.resolvedStyle = css
 	return nil

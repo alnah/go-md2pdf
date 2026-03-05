@@ -122,12 +122,7 @@ func convertFile(ctx context.Context, service CLIConverter, f FileToConvert, par
 	}
 
 	// Build cover data (depends on markdown content for H1 extraction)
-	coverData, err := buildCoverData(params.cfg, string(content), f.InputPath)
-	if err != nil {
-		result.Err = fmt.Errorf("building cover data: %w", err)
-		result.Duration = time.Since(start)
-		return result
-	}
+	coverData := buildCoverData(params.cfg, string(content), f.InputPath)
 
 	outDir := filepath.Dir(f.OutputPath)
 	if err := os.MkdirAll(outDir, dirPermissions); err != nil {

@@ -12,6 +12,7 @@ import (
 	"github.com/alnah/go-md2pdf/internal/config"
 	"github.com/alnah/go-md2pdf/internal/dateutil"
 	"github.com/alnah/go-md2pdf/internal/fileutil"
+	"github.com/alnah/go-md2pdf/internal/styleinput"
 )
 
 // runConvert orchestrates the conversion process.
@@ -55,31 +56,19 @@ func runConvert(ctx context.Context, positionalArgs []string, flags *convertFlag
 	}
 
 	// Build signature data (uses cfg.Author.*)
-	sigData, err := buildSignatureData(cfg, flags.signature.disabled)
-	if err != nil {
-		return err
-	}
+	sigData := buildSignatureData(cfg, flags.signature.disabled)
 
 	// Build footer data (uses cfg.Document.Date, cfg.Document.Version)
 	footerData := buildFooterData(cfg, flags.footer.disabled)
 
 	// Build page settings
-	pageData, err := buildPageSettings(cfg)
-	if err != nil {
-		return err
-	}
+	pageData := buildPageSettings(cfg)
 
 	// Build watermark data
-	watermarkData, err := buildWatermarkData(cfg)
-	if err != nil {
-		return err
-	}
+	watermarkData := buildWatermarkData(cfg)
 
 	// Build TOC data
-	tocData, err := buildTOCData(cfg, flags.toc)
-	if err != nil {
-		return err
-	}
+	tocData := buildTOCData(cfg, flags.toc)
 
 	// Build page breaks data
 	pageBreaksData := buildPageBreaksData(cfg)
@@ -131,7 +120,19 @@ func parseBreakBefore(value string) (h1, h2, h3 bool) {
 
 // mergeFlags merges CLI flags into config. CLI values override config values.
 func mergeFlags(flags *convertFlags, cfg *config.Config) {
-	// Author flags
+	mergeAuthorFlags(flags, cfg)
+	mergeDocumentFlags(flags, cfg)
+	mergeFooterFlags(flags, cfg)
+	mergeCoverFlags(flags, cfg)
+	mergeSignatureFlags(flags, cfg)
+	mergeTOCFlags(flags, cfg)
+	mergeWatermarkFlags(flags, cfg)
+	mergePageFlags(flags, cfg)
+	mergePageBreakFlags(flags, cfg)
+	mergeDisableFlags(flags, cfg)
+}
+
+func mergeAuthorFlags(flags *convertFlags, cfg *config.Config) {
 	if flags.author.name != "" {
 		cfg.Author.Name = flags.author.name
 	}
@@ -153,8 +154,9 @@ func mergeFlags(flags *convertFlags, cfg *config.Config) {
 	if flags.author.department != "" {
 		cfg.Author.Department = flags.author.department
 	}
+}
 
-	// Document flags
+func mergeDocumentFlags(flags *convertFlags, cfg *config.Config) {
 	if flags.document.title != "" {
 		cfg.Document.Title = flags.document.title
 	}
@@ -182,8 +184,9 @@ func mergeFlags(flags *convertFlags, cfg *config.Config) {
 	if flags.document.description != "" {
 		cfg.Document.Description = flags.document.description
 	}
+}
 
-	// Footer flags - auto-enable when flags are provided
+func mergeFooterFlags(flags *convertFlags, cfg *config.Config) {
 	if flags.footer.position != "" {
 		cfg.Footer.Position = flags.footer.position
 		cfg.Footer.Enabled = true
@@ -200,8 +203,9 @@ func mergeFlags(flags *convertFlags, cfg *config.Config) {
 		cfg.Footer.ShowDocumentID = true
 		cfg.Footer.Enabled = true
 	}
+}
 
-	// Cover flags - auto-enable when flags are provided
+func mergeCoverFlags(flags *convertFlags, cfg *config.Config) {
 	if flags.cover.logo != "" {
 		cfg.Cover.Logo = flags.cover.logo
 		cfg.Cover.Enabled = true
@@ -210,14 +214,16 @@ func mergeFlags(flags *convertFlags, cfg *config.Config) {
 		cfg.Cover.ShowDepartment = true
 		cfg.Cover.Enabled = true
 	}
+}
 
-	// Signature flags - auto-enable when flags are provided
+func mergeSignatureFlags(flags *convertFlags, cfg *config.Config) {
 	if flags.signature.image != "" {
 		cfg.Signature.ImagePath = flags.signature.image
 		cfg.Signature.Enabled = true
 	}
+}
 
-	// TOC flags - auto-enable when flags are provided
+func mergeTOCFlags(flags *convertFlags, cfg *config.Config) {
 	if flags.toc.title != "" {
 		cfg.TOC.Title = flags.toc.title
 		cfg.TOC.Enabled = true
@@ -230,8 +236,9 @@ func mergeFlags(flags *convertFlags, cfg *config.Config) {
 		cfg.TOC.MaxDepth = flags.toc.maxDepth
 		cfg.TOC.Enabled = true
 	}
+}
 
-	// Watermark flags
+func mergeWatermarkFlags(flags *convertFlags, cfg *config.Config) {
 	// Track if watermark was configured via config file (vs just CLI flags)
 	configuredViaFile := cfg.Watermark.Enabled
 	if flags.watermark.text != "" {
@@ -251,8 +258,9 @@ func mergeFlags(flags *convertFlags, cfg *config.Config) {
 		// Config file with Angle: 0 is considered intentional
 		cfg.Watermark.Angle = md2pdf.DefaultWatermarkAngle
 	}
+}
 
-	// Page flags
+func mergePageFlags(flags *convertFlags, cfg *config.Config) {
 	if flags.page.size != "" {
 		cfg.Page.Size = flags.page.size
 	}
@@ -262,8 +270,9 @@ func mergeFlags(flags *convertFlags, cfg *config.Config) {
 	if flags.page.margin > 0 {
 		cfg.Page.Margin = flags.page.margin
 	}
+}
 
-	// PageBreaks flags
+func mergePageBreakFlags(flags *convertFlags, cfg *config.Config) {
 	if flags.pageBreaks.breakBefore != "" {
 		h1, h2, h3 := parseBreakBefore(flags.pageBreaks.breakBefore)
 		cfg.PageBreaks.BeforeH1 = h1
@@ -277,8 +286,9 @@ func mergeFlags(flags *convertFlags, cfg *config.Config) {
 	if flags.pageBreaks.widows > 0 {
 		cfg.PageBreaks.Widows = flags.pageBreaks.widows
 	}
+}
 
-	// Disable flags
+func mergeDisableFlags(flags *convertFlags, cfg *config.Config) {
 	if flags.footer.disabled {
 		cfg.Footer.Enabled = false
 	}
@@ -392,15 +402,22 @@ func resolveCSSContent(styleFlag string, cfg *config.Config, noStyle bool, loade
 		style = md2pdf.DefaultStyle
 	}
 
+	source, value := styleinput.Classify(style, md2pdf.DefaultStyle, false)
+
 	// If it looks like a path, read the file directly
-	if fileutil.IsFilePath(style) {
-		content, err := os.ReadFile(style) // #nosec G304 -- user-provided path
+	if source == styleinput.SourceFile {
+		content, err := os.ReadFile(value) // #nosec G304 -- user-provided path
 		if err != nil {
 			return "", fmt.Errorf("%w: %v", ErrReadCSS, err)
 		}
 		return string(content), nil
 	}
 
-	// Otherwise, treat as a style name and use the loader
-	return loader.LoadStyle(style)
+	// Otherwise, treat as a style name and use the loader.
+	// SourceNone should not happen due default fallback above; keeping
+	// this branch makes behavior explicit for defensive safety.
+	if source == styleinput.SourceNone {
+		return "", nil
+	}
+	return loader.LoadStyle(value)
 }

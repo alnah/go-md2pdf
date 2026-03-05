@@ -39,9 +39,9 @@ type conversionParams struct {
 //
 // Note: Image path validation happens at library boundary (Signature.Validate),
 // not here. This function is a pure transformation from config to library type.
-func buildSignatureData(cfg *config.Config, noSignature bool) (*md2pdf.Signature, error) {
+func buildSignatureData(cfg *config.Config, noSignature bool) *md2pdf.Signature {
 	if noSignature || !cfg.Signature.Enabled {
-		return nil, nil
+		return nil
 	}
 
 	// Convert config links to md2pdf.Link
@@ -60,7 +60,7 @@ func buildSignatureData(cfg *config.Config, noSignature bool) (*md2pdf.Signature
 		Phone:        cfg.Author.Phone,
 		Address:      cfg.Author.Address,
 		Department:   cfg.Author.Department,
-	}, nil
+	}
 }
 
 // buildFooterData creates md2pdf.Footer from config.
@@ -88,9 +88,9 @@ func buildFooterData(cfg *config.Config, noFooter bool) *md2pdf.Footer {
 
 // buildWatermarkData creates md2pdf.Watermark from config.
 // Flags are merged into config by mergeFlags before this is called.
-func buildWatermarkData(cfg *config.Config) (*md2pdf.Watermark, error) {
+func buildWatermarkData(cfg *config.Config) *md2pdf.Watermark {
 	if !cfg.Watermark.Enabled {
-		return nil, nil
+		return nil
 	}
 
 	w := &md2pdf.Watermark{
@@ -109,16 +109,16 @@ func buildWatermarkData(cfg *config.Config) (*md2pdf.Watermark, error) {
 		w.Opacity = md2pdf.DefaultWatermarkOpacity
 	}
 
-	return w, nil
+	return w
 }
 
 // buildPageSettings creates md2pdf.PageSettings from config.
 // Flags are merged into config by mergeFlags before this is called.
-func buildPageSettings(cfg *config.Config) (*md2pdf.PageSettings, error) {
+func buildPageSettings(cfg *config.Config) *md2pdf.PageSettings {
 	hasConfig := cfg.Page.Size != "" || cfg.Page.Orientation != "" || cfg.Page.Margin > 0
 
 	if !hasConfig {
-		return nil, nil
+		return nil
 	}
 
 	ps := &md2pdf.PageSettings{
@@ -138,7 +138,7 @@ func buildPageSettings(cfg *config.Config) (*md2pdf.PageSettings, error) {
 		ps.Margin = md2pdf.DefaultMargin
 	}
 
-	return ps, nil
+	return ps
 }
 
 // firstHeadingPattern matches the first # heading in markdown content.
@@ -156,9 +156,9 @@ func extractFirstHeading(markdown string) string {
 // buildCoverData creates md2pdf.Cover from config and markdown content.
 // Uses cfg.Author.* and cfg.Document.* for metadata.
 // Department is only shown if cfg.Cover.ShowDepartment is true.
-func buildCoverData(cfg *config.Config, markdownContent, filename string) (*md2pdf.Cover, error) {
+func buildCoverData(cfg *config.Config, markdownContent, filename string) *md2pdf.Cover {
 	if !cfg.Cover.Enabled {
-		return nil, nil
+		return nil
 	}
 
 	c := &md2pdf.Cover{
@@ -194,13 +194,13 @@ func buildCoverData(cfg *config.Config, markdownContent, filename string) (*md2p
 		c.Department = cfg.Author.Department
 	}
 
-	return c, nil
+	return c
 }
 
 // buildTOCData creates md2pdf.TOC from config.
-func buildTOCData(cfg *config.Config, tocFlags tocFlags) (*md2pdf.TOC, error) {
+func buildTOCData(cfg *config.Config, tocFlags tocFlags) *md2pdf.TOC {
 	if tocFlags.disabled || !cfg.TOC.Enabled {
-		return nil, nil
+		return nil
 	}
 
 	maxDepth := cfg.TOC.MaxDepth
@@ -214,7 +214,7 @@ func buildTOCData(cfg *config.Config, tocFlags tocFlags) (*md2pdf.TOC, error) {
 		MaxDepth: maxDepth,
 	}
 
-	return toc, nil
+	return toc
 }
 
 // buildPageBreaksData creates md2pdf.PageBreaks from config.
