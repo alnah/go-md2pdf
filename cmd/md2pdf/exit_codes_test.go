@@ -65,6 +65,7 @@ func TestExitCodeFor(t *testing.T) {
 		{"returns usage exit code for incomplete template set error", md2pdf.ErrIncompleteTemplateSet, ExitUsage},
 		{"returns usage exit code for invalid asset path error", md2pdf.ErrInvalidAssetPath, ExitUsage},
 		{"returns usage exit code for unsupported shell error", ErrUnsupportedShell, ExitUsage},
+		{"returns usage exit code for config init busy error", ErrConfigInitBusy, ExitUsage},
 		{"returns usage exit code for wrapped config parse error", fmt.Errorf("loading: %w", config.ErrConfigParse), ExitUsage},
 
 		// General errors (exit 1)
