@@ -83,7 +83,7 @@ func (c *GoldmarkConverter) ToHTML(ctx context.Context, content string) (string,
 	go func() {
 		var buf bytes.Buffer
 		if err := c.md.Convert([]byte(content), &buf); err != nil {
-			done <- result{err: fmt.Errorf("%w: %v", ErrHTMLConversion, err)}
+			done <- result{err: fmt.Errorf("%w: %w", ErrHTMLConversion, err)}
 			return
 		}
 		done <- result{html: fmt.Sprintf(htmlTemplate, buf.String())}

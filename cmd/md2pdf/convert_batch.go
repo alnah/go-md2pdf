@@ -116,7 +116,7 @@ func convertFile(ctx context.Context, service CLIConverter, f FileToConvert, par
 
 	content, err := os.ReadFile(f.InputPath) // #nosec G304 -- discovered path
 	if err != nil {
-		result.Err = fmt.Errorf("%w %s: %v", ErrReadMarkdown, f.InputPath, err)
+		result.Err = fmt.Errorf("%w %s: %w", ErrReadMarkdown, f.InputPath, err)
 		result.Duration = time.Since(start)
 		return result
 	}
@@ -170,7 +170,7 @@ func convertFile(ctx context.Context, service CLIConverter, f FileToConvert, par
 	// Write PDF (unless --html-only)
 	// #nosec G306 -- PDFs are meant to be readable
 	if err := os.WriteFile(f.OutputPath, convResult.PDF, filePermissions); err != nil {
-		result.Err = fmt.Errorf("%w: %v", ErrWritePDF, err)
+		result.Err = fmt.Errorf("%w: %w", ErrWritePDF, err)
 		result.Duration = time.Since(start)
 		return result
 	}

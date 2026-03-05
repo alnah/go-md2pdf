@@ -23,7 +23,7 @@ func NewFilesystemLoader(basePath string) (*FilesystemLoader, error) {
 	// Clean and resolve to absolute path
 	absPath, err := filepath.Abs(basePath)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrInvalidBasePath, err)
+		return nil, fmt.Errorf("%w: %w", ErrInvalidBasePath, err)
 	}
 
 	// Resolve symlinks in base path for consistent comparisons
@@ -39,7 +39,7 @@ func NewFilesystemLoader(basePath string) (*FilesystemLoader, error) {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("%w: directory does not exist: %s", ErrInvalidBasePath, absPath)
 		}
-		return nil, fmt.Errorf("%w: %v", ErrInvalidBasePath, err)
+		return nil, fmt.Errorf("%w: %w", ErrInvalidBasePath, err)
 	}
 	if !info.IsDir() {
 		return nil, fmt.Errorf("%w: not a directory: %s", ErrInvalidBasePath, absPath)
@@ -47,7 +47,7 @@ func NewFilesystemLoader(basePath string) (*FilesystemLoader, error) {
 
 	// Verify read access by attempting to read directory
 	if _, err := os.ReadDir(absPath); err != nil {
-		return nil, fmt.Errorf("%w: cannot read directory: %v", ErrInvalidBasePath, err)
+		return nil, fmt.Errorf("%w: cannot read directory: %w", ErrInvalidBasePath, err)
 	}
 
 	return &FilesystemLoader{basePath: absPath}, nil
@@ -72,7 +72,7 @@ func (f *FilesystemLoader) LoadStyle(name string) (string, error) {
 		if os.IsNotExist(err) {
 			return "", fmt.Errorf("%w: %q", ErrStyleNotFound, name)
 		}
-		return "", fmt.Errorf("%w: %v", ErrAssetRead, err)
+		return "", fmt.Errorf("%w: %w", ErrAssetRead, err)
 	}
 
 	return string(content), nil
@@ -105,10 +105,10 @@ func (f *FilesystemLoader) LoadTemplateSet(name string) (*TemplateSet, error) {
 
 	// Handle read errors (not just not-exist)
 	if coverErr != nil && !os.IsNotExist(coverErr) {
-		return nil, fmt.Errorf("%w: reading cover.html: %v", ErrAssetRead, coverErr)
+		return nil, fmt.Errorf("%w: reading cover.html: %w", ErrAssetRead, coverErr)
 	}
 	if sigErr != nil && !os.IsNotExist(sigErr) {
-		return nil, fmt.Errorf("%w: reading signature.html: %v", ErrAssetRead, sigErr)
+		return nil, fmt.Errorf("%w: reading signature.html: %w", ErrAssetRead, sigErr)
 	}
 
 	// If only one file is missing, the template set is incomplete

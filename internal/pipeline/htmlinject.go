@@ -125,7 +125,7 @@ func (s *SignatureInjection) InjectSignature(ctx context.Context, htmlContent st
 
 	var buf bytes.Buffer
 	if err := s.tmpl.Execute(&buf, data); err != nil {
-		return "", fmt.Errorf("%w: %v", ErrSignatureRender, err)
+		return "", fmt.Errorf("%w: %w", ErrSignatureRender, err)
 	}
 
 	signatureHTML := buf.String()
@@ -195,7 +195,7 @@ func (c *CoverInjection) InjectCover(ctx context.Context, htmlContent string, da
 
 	var buf bytes.Buffer
 	if err := c.tmpl.Execute(&buf, data); err != nil {
-		return "", fmt.Errorf("%w: %v", ErrCoverRender, err)
+		return "", fmt.Errorf("%w: %w", ErrCoverRender, err)
 	}
 
 	coverHTML := buf.String()

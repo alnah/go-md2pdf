@@ -419,7 +419,7 @@ func resolveCSSContent(styleFlag string, cfg *config.Config, noStyle bool, loade
 	if source == styleinput.SourceFile {
 		content, err := os.ReadFile(value) // #nosec G304 -- user-provided path
 		if err != nil {
-			return "", fmt.Errorf("%w: %v", ErrReadCSS, err)
+			return "", fmt.Errorf("%w: %w", ErrReadCSS, err)
 		}
 		return string(content), nil
 	}

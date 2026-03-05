@@ -13,11 +13,24 @@ linters:
     - sqlclosecheck
     - noctx
     - misspell
+    - errcheck
+    - errorlint
   settings:
+    errcheck:
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
     staticcheck:
       checks:
         - all
         - "-QF*"
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - errorlint
 
 run:
   timeout: 5m

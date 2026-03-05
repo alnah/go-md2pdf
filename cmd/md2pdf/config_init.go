@@ -948,7 +948,7 @@ func publishConfigForce(tmpPath, outputPath string, ops configInitFileOps) error
 	if err := ops.rename(tmpPath, outputPath); err != nil {
 		restoreErr := ops.rename(backupPath, outputPath)
 		if restoreErr != nil {
-			return fmt.Errorf("overwriting config failed: %w; rollback failed: %v", err, restoreErr)
+			return fmt.Errorf("overwriting config failed: %w; rollback failed: %w", err, restoreErr)
 		}
 		return fmt.Errorf("overwriting config failed, restored previous file: %w", err)
 	}

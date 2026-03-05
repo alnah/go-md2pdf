@@ -95,7 +95,7 @@ func NewConverter(opts ...Option) (*Converter, error) {
 	if c.cfg.assetPath != "" {
 		resolver, err := assets.NewAssetResolver(c.cfg.assetPath)
 		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrInvalidAssetPath, err)
+			return nil, fmt.Errorf("%w: %w", ErrInvalidAssetPath, err)
 		}
 		c.assetLoader = resolver
 	}

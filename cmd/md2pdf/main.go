@@ -115,7 +115,7 @@ func runConvertCmd(args []string, env *Environment) error {
 	}
 
 	converterPool := createConverterPool(flags, env, templateSet, timeout)
-	defer converterPool.Close()
+	defer func() { _ = converterPool.Close() }()
 
 	pool := &poolAdapter{pool: converterPool}
 	ctx, stop := notifyContext(context.Background())

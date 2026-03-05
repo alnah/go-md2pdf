@@ -113,7 +113,7 @@ func (r *rodRenderer) ensureBrowser(ctx context.Context) error {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return ctxErr
 		}
-		return fmt.Errorf("%w: %v%s", ErrBrowserConnect, err, hints.ForBrowserConnect())
+		return fmt.Errorf("%w: %w%s", ErrBrowserConnect, err, hints.ForBrowserConnect())
 	}
 
 	// Store launcher reference for cleanup in Close()
@@ -128,7 +128,7 @@ func (r *rodRenderer) ensureBrowser(ctx context.Context) error {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return ctxErr
 		}
-		return fmt.Errorf("%w: %v%s", ErrBrowserConnect, err, hints.ForBrowserConnect())
+		return fmt.Errorf("%w: %w%s", ErrBrowserConnect, err, hints.ForBrowserConnect())
 	}
 	// Keep a neutral context on the shared browser handle; operations use per-call contexts.
 	r.browser = browser.Context(context.Background())
@@ -199,9 +199,9 @@ func (r *rodRenderer) RenderFromFile(ctx context.Context, filePath string, opts 
 
 	page, err := r.browser.Page(proto.TargetCreateTarget{URL: "file://" + filePath})
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrPageCreate, err)
+		return nil, fmt.Errorf("%w: %w", ErrPageCreate, err)
 	}
-	defer page.Close()
+	defer func() { _ = page.Close() }()
 
 	renderCtx, cancel, err := renderOperationContext(ctx, r.timeout)
 	if err != nil {
@@ -214,7 +214,7 @@ func (r *rodRenderer) RenderFromFile(ctx context.Context, filePath string, opts 
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return nil, ctxErr
 		}
-		return nil, fmt.Errorf("%w: %v%s", ErrPageLoad, err, hints.ForTimeout())
+		return nil, fmt.Errorf("%w: %w%s", ErrPageLoad, err, hints.ForTimeout())
 	}
 
 	// Check context after page load
@@ -231,16 +231,16 @@ func (r *rodRenderer) RenderFromFile(ctx context.Context, filePath string, opts 
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return nil, ctxErr
 		}
-		return nil, fmt.Errorf("%w: %v", ErrPDFGeneration, err)
+		return nil, fmt.Errorf("%w: %w", ErrPDFGeneration, err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	pdfBuf, err := io.ReadAll(reader)
 	if err != nil {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return nil, ctxErr
 		}
-		return nil, fmt.Errorf("%w: reading PDF stream: %v", ErrPDFGeneration, err)
+		return nil, fmt.Errorf("%w: reading PDF stream: %w", ErrPDFGeneration, err)
 	}
 
 	return pdfBuf, nil

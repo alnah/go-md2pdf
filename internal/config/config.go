@@ -520,7 +520,7 @@ func LoadConfig(nameOrPath string) (*Config, error) {
 
 	var cfg Config
 	if err := yamlutil.UnmarshalStrict(data, &cfg); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrConfigParse, err)
+		return nil, fmt.Errorf("%w: %w", ErrConfigParse, err)
 	}
 
 	if err := cfg.Validate(); err != nil {
