@@ -299,6 +299,9 @@ func (p *PageConfig) Validate() error {
 			return fmt.Errorf("page.orientation: invalid value %q (must be portrait or landscape)", p.Orientation)
 		}
 	}
+	if p.Margin != 0 && (p.Margin < md2pdf.MinMargin || p.Margin > md2pdf.MaxMargin) {
+		return fmt.Errorf("page.margin: must be between %.2f and %.2f, got %.2f", md2pdf.MinMargin, md2pdf.MaxMargin, p.Margin)
+	}
 	return nil
 }
 

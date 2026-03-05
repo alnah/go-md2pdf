@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	md2pdf "github.com/alnah/go-md2pdf"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -744,6 +746,39 @@ func TestConfig_Validate_Page(t *testing.T) {
 		err := cfg.Validate()
 		if err != nil {
 			t.Errorf("Config.Validate() unexpected error: %v", err)
+		}
+	})
+
+	t.Run("margin zero passes (uses default)", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Page: PageConfig{Margin: 0}}
+		err := cfg.Validate()
+		if err != nil {
+			t.Errorf("Config.Validate() unexpected error: %v", err)
+		}
+	})
+
+	t.Run("margin below minimum returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Page: PageConfig{Margin: md2pdf.MinMargin - 0.01}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("Config.Validate() error = nil, want error")
+		}
+		if !strings.Contains(err.Error(), "page.margin") {
+			t.Errorf("Config.Validate() error should mention page.margin, got: %v", err)
+		}
+	})
+
+	t.Run("margin above maximum returns error", func(t *testing.T) {
+		t.Parallel()
+		cfg := &Config{Page: PageConfig{Margin: md2pdf.MaxMargin + 0.01}}
+		err := cfg.Validate()
+		if err == nil {
+			t.Fatal("Config.Validate() error = nil, want error")
+		}
+		if !strings.Contains(err.Error(), "page.margin") {
+			t.Errorf("Config.Validate() error should mention page.margin, got: %v", err)
 		}
 	})
 }
