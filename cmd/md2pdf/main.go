@@ -221,19 +221,23 @@ func (a *poolAdapter) Size() int {
 	return a.pool.Size()
 }
 
+func parsePositiveDuration(value string) (time.Duration, error) {
+	d, err := time.ParseDuration(value)
+	if err != nil {
+		return 0, fmt.Errorf("invalid timeout %q (use format like \"30s\", \"2m\")", value)
+	}
+	if d <= 0 {
+		return 0, fmt.Errorf("timeout must be positive, got %q", value)
+	}
+	return d, nil
+}
+
 // resolveTimeoutWithEnv parses timeout with priority: flag > env > config.
 // Returns 0 if none is set (use library default).
 func resolveTimeoutWithEnv(flagValue string, envValue time.Duration, configValue string) (time.Duration, error) {
 	// Flag takes highest priority
 	if flagValue != "" {
-		d, err := time.ParseDuration(flagValue)
-		if err != nil {
-			return 0, fmt.Errorf("invalid timeout %q (use format like \"30s\", \"2m\")", flagValue)
-		}
-		if d <= 0 {
-			return 0, fmt.Errorf("timeout must be positive, got %q", flagValue)
-		}
-		return d, nil
+		return parsePositiveDuration(flagValue)
 	}
 
 	// Env var is second priority (already parsed as duration)
@@ -243,14 +247,7 @@ func resolveTimeoutWithEnv(flagValue string, envValue time.Duration, configValue
 
 	// Config file is third priority
 	if configValue != "" {
-		d, err := time.ParseDuration(configValue)
-		if err != nil {
-			return 0, fmt.Errorf("invalid timeout %q (use format like \"30s\", \"2m\")", configValue)
-		}
-		if d <= 0 {
-			return 0, fmt.Errorf("timeout must be positive, got %q", configValue)
-		}
-		return d, nil
+		return parsePositiveDuration(configValue)
 	}
 
 	return 0, nil
