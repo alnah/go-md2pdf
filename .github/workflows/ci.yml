@@ -116,8 +116,11 @@ jobs:
       - name: Run go vet
         run: go vet ./...
 
-      - name: Run staticcheck
-        run: go tool staticcheck ./...
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.8.0
+          args: --config=.golangci.yml
 
   security:
     runs-on: ubuntu-latest
