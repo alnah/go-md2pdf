@@ -8,6 +8,46 @@ import (
 	"github.com/alnah/go-md2pdf/internal/config"
 )
 
+var (
+	browserExitErrors = []error{
+		md2pdf.ErrBrowserConnect,
+		md2pdf.ErrPageCreate,
+		md2pdf.ErrPageLoad,
+		md2pdf.ErrPDFGeneration,
+	}
+	ioExitErrors = []error{
+		os.ErrNotExist,
+		os.ErrPermission,
+		ErrReadMarkdown,
+		ErrReadCSS,
+		ErrWritePDF,
+		ErrNoInput,
+	}
+	usageExitErrors = []error{
+		config.ErrConfigNotFound,
+		config.ErrConfigParse,
+		config.ErrFieldTooLong,
+		ErrConfigCommandUsage,
+		ErrConfigInitNeedsTTY,
+		ErrConfigInitExists,
+		ErrConfigInitBusy,
+		md2pdf.ErrEmptyMarkdown,
+		md2pdf.ErrInvalidPageSize,
+		md2pdf.ErrInvalidOrientation,
+		md2pdf.ErrInvalidMargin,
+		md2pdf.ErrInvalidFooterPosition,
+		md2pdf.ErrInvalidWatermarkColor,
+		md2pdf.ErrInvalidTOCDepth,
+		md2pdf.ErrInvalidOrphans,
+		md2pdf.ErrInvalidWidows,
+		md2pdf.ErrStyleNotFound,
+		md2pdf.ErrTemplateSetNotFound,
+		md2pdf.ErrIncompleteTemplateSet,
+		md2pdf.ErrInvalidAssetPath,
+		ErrUnsupportedShell,
+	}
+)
+
 // Exit codes for md2pdf CLI.
 // Follows Unix conventions: 0=success, 1=general, 2=usage, and custom codes < 126.
 const (
@@ -25,48 +65,26 @@ func exitCodeFor(err error) int {
 		return ExitSuccess
 	}
 
-	// Browser errors (exit 4)
-	if errors.Is(err, md2pdf.ErrBrowserConnect) ||
-		errors.Is(err, md2pdf.ErrPageCreate) ||
-		errors.Is(err, md2pdf.ErrPageLoad) ||
-		errors.Is(err, md2pdf.ErrPDFGeneration) {
+	if matchesAny(err, browserExitErrors) {
 		return ExitBrowser
 	}
 
-	// I/O errors (exit 3)
-	if errors.Is(err, os.ErrNotExist) ||
-		errors.Is(err, os.ErrPermission) ||
-		errors.Is(err, ErrReadMarkdown) ||
-		errors.Is(err, ErrReadCSS) ||
-		errors.Is(err, ErrWritePDF) ||
-		errors.Is(err, ErrNoInput) {
+	if matchesAny(err, ioExitErrors) {
 		return ExitIO
 	}
 
-	// Usage/config/validation errors (exit 2)
-	if errors.Is(err, config.ErrConfigNotFound) ||
-		errors.Is(err, config.ErrConfigParse) ||
-		errors.Is(err, config.ErrFieldTooLong) ||
-		errors.Is(err, ErrConfigCommandUsage) ||
-		errors.Is(err, ErrConfigInitNeedsTTY) ||
-		errors.Is(err, ErrConfigInitExists) ||
-		errors.Is(err, ErrConfigInitBusy) ||
-		errors.Is(err, md2pdf.ErrEmptyMarkdown) ||
-		errors.Is(err, md2pdf.ErrInvalidPageSize) ||
-		errors.Is(err, md2pdf.ErrInvalidOrientation) ||
-		errors.Is(err, md2pdf.ErrInvalidMargin) ||
-		errors.Is(err, md2pdf.ErrInvalidFooterPosition) ||
-		errors.Is(err, md2pdf.ErrInvalidWatermarkColor) ||
-		errors.Is(err, md2pdf.ErrInvalidTOCDepth) ||
-		errors.Is(err, md2pdf.ErrInvalidOrphans) ||
-		errors.Is(err, md2pdf.ErrInvalidWidows) ||
-		errors.Is(err, md2pdf.ErrStyleNotFound) ||
-		errors.Is(err, md2pdf.ErrTemplateSetNotFound) ||
-		errors.Is(err, md2pdf.ErrIncompleteTemplateSet) ||
-		errors.Is(err, md2pdf.ErrInvalidAssetPath) ||
-		errors.Is(err, ErrUnsupportedShell) {
+	if matchesAny(err, usageExitErrors) {
 		return ExitUsage
 	}
 
 	return ExitGeneral
+}
+
+func matchesAny(err error, candidates []error) bool {
+	for _, target := range candidates {
+		if errors.Is(err, target) {
+			return true
+		}
+	}
+	return false
 }
