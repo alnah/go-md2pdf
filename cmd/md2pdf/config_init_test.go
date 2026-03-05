@@ -6,7 +6,7 @@ package main
 // - Unit slice: flag parsing, prompt behavior, yes/no parser, and output path
 //   normalization.
 // - Safety slice: rollback behavior, race protection, replace semantics, and
-//   interrupted-backup recovery/cleanup.
+//   interrupted-backup recovery/cleanup, including process interruption.
 // These are acceptable gaps: we test observable behavior, not implementation details.
 
 import (
@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -533,5 +534,171 @@ func TestConfigInit_CleanupStaleBackup(t *testing.T) {
 	}
 	if _, err := os.Stat(backupPath); !os.IsNotExist(err) {
 		t.Fatalf("stale backup should be removed, stat error: %v", err)
+	}
+}
+
+func TestConfigInit_LockPreventsConcurrentWrite(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	outputPath := filepath.Join(".", "md2pdf.yaml")
+	lockPath := configInitLockPath(outputPath)
+	if err := os.WriteFile(lockPath, []byte("locked"), 0o600); err != nil {
+		t.Fatalf("os.WriteFile(%q) unexpected error: %v", lockPath, err)
+	}
+
+	err := writeConfigInitFile(outputPath, testConfigInitYAML(t), false)
+	if !errors.Is(err, ErrConfigInitBusy) {
+		t.Fatalf("writeConfigInitFile(... with existing lock) error = %v, want ErrConfigInitBusy", err)
+	}
+}
+
+func TestConfigInit_LockRemovedAfterWriteFailure(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	outputPath := filepath.Join(".", "md2pdf.yaml")
+	if err := os.WriteFile(outputPath, []byte("document:\n  title: keep\n"), 0o644); err != nil {
+		t.Fatalf("os.WriteFile(%q) unexpected error: %v", outputPath, err)
+	}
+
+	err := writeConfigInitFile(outputPath, testConfigInitYAML(t), false)
+	if !errors.Is(err, ErrConfigInitExists) {
+		t.Fatalf("writeConfigInitFile(..., force=false existing) error = %v, want ErrConfigInitExists", err)
+	}
+	if _, err := os.Stat(configInitLockPath(outputPath)); !os.IsNotExist(err) {
+		t.Fatalf("lock file should be cleaned after failure, stat error: %v", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestConfigInit_InterruptSafety - interrupted force-overwrite recovery
+// ---------------------------------------------------------------------------
+
+func TestConfigInit_InterruptSafety(t *testing.T) {
+	const (
+		childModeEnv  = "MD2PDF_TEST_CONFIG_INIT_INTERRUPT_CHILD"
+		outputPathEnv = "MD2PDF_TEST_CONFIG_INIT_INTERRUPT_OUTPUT_PATH"
+		markerPathEnv = "MD2PDF_TEST_CONFIG_INIT_INTERRUPT_MARKER_PATH"
+	)
+
+	if os.Getenv(childModeEnv) == "1" {
+		outputPath := os.Getenv(outputPathEnv)
+		markerPath := os.Getenv(markerPathEnv)
+		if outputPath == "" || markerPath == "" {
+			os.Exit(2)
+		}
+
+		ops := defaultConfigInitFileOps()
+		realRename := ops.rename
+		ops.rename = func(oldPath, newPath string) error {
+			err := realRename(oldPath, newPath)
+			if err == nil && oldPath == outputPath && newPath == configInitBackupPath(outputPath) {
+				_ = os.WriteFile(markerPath, []byte("backup-moved"), 0o644)
+				time.Sleep(30 * time.Second)
+			}
+			return err
+		}
+
+		_ = writeConfigInitFileWithOps(outputPath, testConfigInitYAML(t), true, ops)
+		os.Exit(0)
+	}
+
+	t.Chdir(t.TempDir())
+
+	outputPath := filepath.Join(".", "md2pdf.yaml")
+	original := []byte("document:\n  title: before-interrupt\n")
+	if err := os.WriteFile(outputPath, original, 0o644); err != nil {
+		t.Fatalf("os.WriteFile(%q) unexpected error: %v", outputPath, err)
+	}
+	markerPath := filepath.Join(".", ".interrupt-marker")
+
+	cmd := exec.Command(os.Args[0], "-test.run=TestConfigInit_InterruptSafety")
+	cmd.Env = append(
+		os.Environ(),
+		childModeEnv+"=1",
+		outputPathEnv+"="+outputPath,
+		markerPathEnv+"="+markerPath,
+	)
+	var childStdout, childStderr bytes.Buffer
+	cmd.Stdout = &childStdout
+	cmd.Stderr = &childStderr
+
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("child process start failed: %v", err)
+	}
+
+	waitCh := make(chan error, 1)
+	go func() {
+		waitCh <- cmd.Wait()
+	}()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		if _, err := os.Stat(markerPath); err == nil {
+			break
+		}
+		if time.Now().After(deadline) {
+			_ = cmd.Process.Kill()
+			<-waitCh
+			t.Fatalf("timeout waiting for interruption marker; stdout=%q stderr=%q", childStdout.String(), childStderr.String())
+		}
+		select {
+		case err := <-waitCh:
+			t.Fatalf("child exited before marker: %v; stdout=%q stderr=%q", err, childStdout.String(), childStderr.String())
+		default:
+			time.Sleep(20 * time.Millisecond)
+		}
+	}
+
+	if err := cmd.Process.Signal(os.Interrupt); err != nil {
+		_ = cmd.Process.Kill()
+	}
+	select {
+	case <-waitCh:
+	case <-time.After(5 * time.Second):
+		_ = cmd.Process.Kill()
+		<-waitCh
+		t.Fatalf("child process did not exit after interrupt")
+	}
+
+	backupPath := configInitBackupPath(outputPath)
+	lockPath := configInitLockPath(outputPath)
+	if _, err := os.Stat(backupPath); err != nil {
+		t.Fatalf("expected backup file after interruption, stat error: %v", err)
+	}
+	if _, err := os.Stat(outputPath); !os.IsNotExist(err) {
+		t.Fatalf("expected output to be missing right after interruption, stat error: %v", err)
+	}
+	if _, err := os.Stat(lockPath); err != nil {
+		t.Fatalf("expected lock file after interruption, stat error: %v", err)
+	}
+
+	envBusy, _, busyStderr := newAcceptanceEnv(t)
+	code := runMain([]string{"md2pdf", "config", "init", "--no-input", "--output", outputPath}, envBusy)
+	if code != ExitUsage {
+		t.Fatalf("runMain([config init --no-input --output with stale lock]) = %d, want %d", code, ExitUsage)
+	}
+	if !strings.Contains(busyStderr.String(), "stale lock") {
+		t.Fatalf("stderr = %q, want stale lock guidance", busyStderr.String())
+	}
+
+	if err := os.Remove(lockPath); err != nil {
+		t.Fatalf("os.Remove(%q) unexpected error: %v", lockPath, err)
+	}
+
+	env, _, _ := newAcceptanceEnv(t)
+	code = runMain([]string{"md2pdf", "config", "init", "--no-input", "--output", outputPath}, env)
+	if code != ExitUsage {
+		t.Fatalf("runMain([config init --no-input --output after clearing stale lock]) = %d, want %d", code, ExitUsage)
+	}
+
+	got, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("os.ReadFile(%q) unexpected error after recovery: %v", outputPath, err)
+	}
+	if string(got) != string(original) {
+		t.Fatalf("recovered content mismatch after interrupted force overwrite")
+	}
+	if _, err := os.Stat(backupPath); !os.IsNotExist(err) {
+		t.Fatalf("backup file should be consumed after recovery, stat error: %v", err)
 	}
 }

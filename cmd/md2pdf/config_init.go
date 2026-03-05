@@ -17,12 +17,14 @@ import (
 const (
 	defaultConfigInitOutputPath = "./md2pdf.yaml"
 	configInitBackupSuffix      = ".md2pdf-config-init.bak"
+	configInitLockSuffix        = ".md2pdf-config-init.lock"
 )
 
 var (
 	ErrConfigCommandUsage = errors.New("invalid config command usage")
 	ErrConfigInitNeedsTTY = errors.New("interactive mode requires a TTY")
 	ErrConfigInitExists   = errors.New("config file already exists")
+	ErrConfigInitBusy     = errors.New("config init already in progress for destination")
 )
 
 type configInitFlags struct {
@@ -294,6 +296,24 @@ func writeConfigInitFileWithOps(outputPath string, data []byte, force bool, ops 
 	if err := ops.mkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("creating destination directory: %w", err)
 	}
+	lockPath := configInitLockPath(outputPath)
+	lockFile, err := ops.openFile(lockPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		if os.IsExist(err) {
+			return fmt.Errorf("%w: %s (remove stale lock if needed: %s)", ErrConfigInitBusy, outputPath, lockPath)
+		}
+		return fmt.Errorf("acquiring destination lock: %w", err)
+	}
+	if err := lockFile.Close(); err != nil {
+		_ = ops.remove(lockPath)
+		return fmt.Errorf("closing destination lock: %w", err)
+	}
+	defer func() {
+		if err := ops.remove(lockPath); err != nil && !os.IsNotExist(err) && retErr == nil {
+			retErr = fmt.Errorf("releasing destination lock: %w", err)
+		}
+	}()
+
 	if err := recoverConfigInitBackup(outputPath, ops); err != nil {
 		return err
 	}
@@ -334,6 +354,10 @@ func writeConfigInitFileWithOps(outputPath string, data []byte, force bool, ops 
 
 func configInitBackupPath(outputPath string) string {
 	return outputPath + configInitBackupSuffix
+}
+
+func configInitLockPath(outputPath string) string {
+	return outputPath + configInitLockSuffix
 }
 
 func recoverConfigInitBackup(outputPath string, ops configInitFileOps) error {
