@@ -134,13 +134,14 @@ func extractFlagsFromFlagSet(fs *flag.FlagSet) []flagDef {
 
 		// Override type based on completion metadata
 		if meta, ok := flagCompletionMeta[f.Name]; ok {
-			if len(meta.Values) > 0 {
+			switch {
+			case len(meta.Values) > 0:
 				fd.Type = flagEnum
 				fd.Values = meta.Values
-			} else if meta.FileGlob != "" {
+			case meta.FileGlob != "":
 				fd.Type = flagFile
 				fd.FileGlob = meta.FileGlob
-			} else if meta.IsDir {
+			case meta.IsDir:
 				fd.Type = flagDir
 			}
 		}

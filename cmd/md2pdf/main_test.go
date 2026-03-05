@@ -410,7 +410,7 @@ func TestRunMain(t *testing.T) {
 			loader, _ := md2pdf.NewAssetLoader("")
 			var stdout, stderr bytes.Buffer
 			env := &Environment{
-				Now:         func() time.Time { return time.Now() },
+				Now:         time.Now,
 				Stdout:      &stdout,
 				Stderr:      &stderr,
 				AssetLoader: loader,
@@ -450,7 +450,7 @@ func TestRunMain_DoctorCommand(t *testing.T) {
 	loader, _ := md2pdf.NewAssetLoader("")
 	var stdout, stderr bytes.Buffer
 	env := &Environment{
-		Now:         func() time.Time { return time.Now() },
+		Now:         time.Now,
 		Stdout:      &stdout,
 		Stderr:      &stderr,
 		AssetLoader: loader,
@@ -476,7 +476,7 @@ func TestRunMain_DoctorJSON(t *testing.T) {
 	loader, _ := md2pdf.NewAssetLoader("")
 	var stdout, stderr bytes.Buffer
 	env := &Environment{
-		Now:         func() time.Time { return time.Now() },
+		Now:         time.Now,
 		Stdout:      &stdout,
 		Stderr:      &stderr,
 		AssetLoader: loader,
@@ -507,7 +507,7 @@ func TestRunMain_HelpDoctor(t *testing.T) {
 	loader, _ := md2pdf.NewAssetLoader("")
 	var stdout, stderr bytes.Buffer
 	env := &Environment{
-		Now:         func() time.Time { return time.Now() },
+		Now:         time.Now,
 		Stdout:      &stdout,
 		Stderr:      &stderr,
 		AssetLoader: loader,
@@ -581,7 +581,7 @@ func TestRunMain_ExitCodes(t *testing.T) {
 			loader, _ := md2pdf.NewAssetLoader("")
 			var stdout, stderr bytes.Buffer
 			env := &Environment{
-				Now:         func() time.Time { return time.Now() },
+				Now:         time.Now,
 				Stdout:      &stdout,
 				Stderr:      &stderr,
 				AssetLoader: loader,

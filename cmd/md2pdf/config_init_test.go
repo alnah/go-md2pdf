@@ -41,7 +41,7 @@ func newAcceptanceEnv(t *testing.T) (*Environment, *bytes.Buffer, *bytes.Buffer)
 
 	var stdout, stderr bytes.Buffer
 	env := &Environment{
-		Now:         func() time.Time { return time.Now() },
+		Now:         time.Now,
 		Stdin:       strings.NewReader(""),
 		Stdout:      &stdout,
 		Stderr:      &stderr,

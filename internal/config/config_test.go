@@ -81,10 +81,8 @@ func TestValidateFieldLength(t *testing.T) {
 				if !errors.Is(err, ErrFieldTooLong) {
 					t.Errorf("validateFieldLength(tt.fieldName, tt.value, tt.maxLength) error = %v, want ErrFieldTooLong", err)
 				}
-			} else {
-				if err != nil {
-					t.Errorf("validateFieldLength(tt.fieldName, tt.value, tt.maxLength) unexpected error: %v", err)
-				}
+			} else if err != nil {
+				t.Errorf("validateFieldLength(tt.fieldName, tt.value, tt.maxLength) unexpected error: %v", err)
 			}
 		})
 	}
@@ -1674,10 +1672,8 @@ func TestConfig_Validate_Timeout(t *testing.T) {
 				if tt.errSubstr != "" && !strings.Contains(err.Error(), tt.errSubstr) {
 					t.Errorf("Config.Validate() error should contain %q, got: %v", tt.errSubstr, err)
 				}
-			} else {
-				if err != nil {
-					t.Errorf("Config.Validate() unexpected error: %v", err)
-				}
+			} else if err != nil {
+				t.Errorf("Config.Validate() unexpected error: %v", err)
 			}
 		})
 	}
