@@ -57,6 +57,7 @@ var knownEnvVars = map[string]bool{
 	"MD2PDF_DOC_DATE":       true,
 	"MD2PDF_DOC_ID":         true,
 	"MD2PDF_WORKERS":        true,
+	"MD2PDF_CONTAINER":      true,
 }
 
 // loadEnvConfig reads configuration from environment variables.

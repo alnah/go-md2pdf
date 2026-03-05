@@ -1,7 +1,7 @@
 package main
 
 // Notes:
-// - loadEnvConfig: we test all 15 environment variables across 3 tiers.
+// - loadEnvConfig: we test all 16 environment variables across 3 tiers.
 //   Invalid/negative values for timeout and workers are tested to verify
 //   graceful handling (ignored, not errors).
 // - warnUnknownEnvVars: we test typo detection and that known vars don't warn.
@@ -433,6 +433,7 @@ func TestKnownEnvVars(t *testing.T) {
 		"MD2PDF_DOC_DATE",
 		"MD2PDF_DOC_ID",
 		"MD2PDF_WORKERS",
+		"MD2PDF_CONTAINER",
 	}
 
 	for _, name := range expected {
