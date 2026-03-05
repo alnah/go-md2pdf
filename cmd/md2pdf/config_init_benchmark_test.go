@@ -4,6 +4,10 @@ package main
 // - BenchmarkCopyTempToExclusiveFile_*: we benchmark the non-force fallback
 //   publish path to track copy-time and allocation behavior for small and
 //   larger config payloads.
+// - BenchmarkValidateWizardStyle_*: we benchmark style validation helper cost
+//   for valid and invalid values in prompt loops.
+// - BenchmarkWizardStyleOptions: we benchmark options-string rendering used in
+//   style prompts.
 // These are acceptable gaps: benchmarks isolate copy path, not full command flow.
 
 import (
@@ -49,4 +53,27 @@ func BenchmarkCopyTempToExclusiveFile_4KB(b *testing.B) {
 
 func BenchmarkCopyTempToExclusiveFile_1MB(b *testing.B) {
 	benchmarkCopyTempToExclusiveFile(b, 1024*1024)
+}
+
+func BenchmarkValidateWizardStyle_Valid(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		if err := validateWizardStyle("technical"); err != nil {
+			b.Fatalf("validateWizardStyle(\"technical\") unexpected error: %v", err)
+		}
+	}
+}
+
+func BenchmarkValidateWizardStyle_Invalid(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_ = validateWizardStyle("unknown-style")
+	}
+}
+
+func BenchmarkWizardStyleOptions(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_ = wizardStyleOptions()
+	}
 }

@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	md2pdf "github.com/alnah/go-md2pdf"
@@ -75,6 +74,12 @@ var wizardStyles = []wizardStyle{
 	{name: "invoice", description: "table-oriented business layout"},
 	{name: "manuscript", description: "monospace narrative style"},
 }
+
+var (
+	wizardStyleNames     = buildWizardStyleNames()
+	wizardStyleNamesText = strings.Join(wizardStyleNames, ", ")
+	wizardStyleNameSet   = buildWizardStyleNameSet(wizardStyleNames)
+)
 
 func runConfigCmd(args []string, env *Environment) error {
 	if len(args) == 0 {
@@ -489,23 +494,31 @@ func printWizardStyleChoices(output io.Writer) {
 }
 
 func wizardStyleOptions() string {
-	parts := make([]string, 0, len(wizardStyles))
-	for _, style := range wizardStyles {
-		parts = append(parts, style.name)
-	}
-	return strings.Join(parts, ", ")
+	return wizardStyleNamesText
 }
 
 func validateWizardStyle(value string) error {
 	normalized := strings.ToLower(strings.TrimSpace(value))
+	if _, ok := wizardStyleNameSet[normalized]; !ok {
+		return fmt.Errorf("must be one of: %s", wizardStyleNamesText)
+	}
+	return nil
+}
+
+func buildWizardStyleNames() []string {
 	names := make([]string, 0, len(wizardStyles))
 	for _, style := range wizardStyles {
 		names = append(names, style.name)
 	}
-	if !slices.Contains(names, normalized) {
-		return fmt.Errorf("must be one of: %s", strings.Join(names, ", "))
+	return names
+}
+
+func buildWizardStyleNameSet(names []string) map[string]struct{} {
+	set := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		set[name] = struct{}{}
 	}
-	return nil
+	return set
 }
 
 func parseYesNo(value string) (bool, error) {
