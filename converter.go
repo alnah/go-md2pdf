@@ -162,109 +162,88 @@ func (c *Converter) Convert(ctx context.Context, input Input) (result *ConvertRe
 		return nil, err
 	}
 
-	// Preprocess markdown
-	mdContent := c.preprocessor.PreprocessMarkdown(ctx, input.Markdown)
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-
-	// Convert to HTML
-	htmlContent, err := c.htmlConverter.ToHTML(ctx, mdContent)
+	htmlContent, err := c.renderHTML(ctx, input)
 	if err != nil {
-		return nil, fmt.Errorf("converting to HTML: %w", err)
+		return nil, err
 	}
 
-	// Rewrite relative paths to absolute file:// URLs (if source directory provided)
-	if input.SourceDir != "" {
-		htmlContent, err = pipeline.RewriteRelativePaths(htmlContent, input.SourceDir)
-		if err != nil {
-			return nil, fmt.Errorf("rewriting relative paths: %w", err)
-		}
-	}
-
-	// Convert highlight placeholders to <mark> tags.
-	// This completes the ==text== feature started in preprocessing.
-	// Done after Goldmark to avoid needing html.WithUnsafe().
-	htmlContent = pipeline.ConvertMarkPlaceholders(htmlContent)
-
-	// Build combined CSS (converter style + page breaks + watermark + user CSS)
-	// Order matters: converter style first (base), user CSS last (can override)
-	cssContent := c.cfg.resolvedStyle
-	if input.CSS != "" {
-		cssContent += "\n" + input.CSS
-	}
-	if input.Watermark != nil {
-		watermarkCSS := buildWatermarkCSS(input.Watermark)
-		cssContent = watermarkCSS + cssContent
-	}
-	// Page breaks CSS always generated (includes hardcoded rules + configurable)
-	pageBreaksCSS := buildPageBreaksCSS(input.PageBreaks)
-	cssContent = pageBreaksCSS + cssContent
-
-	// Inject CSS
-	htmlContent = c.cssInjector.InjectCSS(ctx, htmlContent, cssContent)
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-
-	// Inject cover (if provided)
-	var cvData *pipeline.CoverData
-	if input.Cover != nil {
-		cvData = toCoverData(input.Cover)
-	}
-	htmlContent, err = c.coverInjector.InjectCover(ctx, htmlContent, cvData)
-	if err != nil {
-		return nil, fmt.Errorf("injecting cover: %w", err)
-	}
-
-	// Inject TOC (if provided) - must be after cover
-	var tData *pipeline.TOCData
-	if input.TOC != nil {
-		tData = toTOCData(input.TOC)
-	}
-	htmlContent, err = c.tocInjector.InjectTOC(ctx, htmlContent, tData)
-	if err != nil {
-		return nil, fmt.Errorf("injecting TOC: %w", err)
-	}
-
-	// Inject signature (if provided)
-	var sigData *pipeline.SignatureData
-	if input.Signature != nil {
-		sigData = toSignatureData(input.Signature)
-	}
-	htmlContent, err = c.signatureInjector.InjectSignature(ctx, htmlContent, sigData)
-	if err != nil {
-		return nil, fmt.Errorf("injecting signature: %w", err)
-	}
-
-	// Prepare result with HTML
 	res := &ConvertResult{
 		HTML: []byte(htmlContent),
 	}
 
-	// Skip PDF generation if HTMLOnly mode
 	if input.HTMLOnly {
 		return res, nil
 	}
 
-	// Build PDF options with footer and page settings
-	var footData *pipeline.FooterData
-	if input.Footer != nil {
-		footData = toFooterData(input.Footer)
-	}
-	pdfOpts := &pdfOptions{
-		Footer: footData,
-		Page:   input.Page,
-	}
-
-	// Convert to PDF
-	pdfBytes, err := c.pdfConverter.ToPDF(ctx, htmlContent, pdfOpts)
+	pdfBytes, err := c.pdfConverter.ToPDF(ctx, htmlContent, buildPDFOptions(input))
 	if err != nil {
 		return nil, fmt.Errorf("converting to PDF: %w", err)
 	}
 
 	res.PDF = pdfBytes
 	return res, nil
+}
+
+func (c *Converter) renderHTML(ctx context.Context, input Input) (string, error) {
+	mdContent := c.preprocessor.PreprocessMarkdown(ctx, input.Markdown)
+	if ctx.Err() != nil {
+		return "", ctx.Err()
+	}
+
+	htmlContent, err := c.htmlConverter.ToHTML(ctx, mdContent)
+	if err != nil {
+		return "", fmt.Errorf("converting to HTML: %w", err)
+	}
+	if input.SourceDir != "" {
+		htmlContent, err = pipeline.RewriteRelativePaths(htmlContent, input.SourceDir)
+		if err != nil {
+			return "", fmt.Errorf("rewriting relative paths: %w", err)
+		}
+	}
+
+	// Complete ==highlight== rendering after markdown conversion.
+	htmlContent = pipeline.ConvertMarkPlaceholders(htmlContent)
+	return c.injectHTMLDecorations(ctx, htmlContent, input)
+}
+
+func (c *Converter) injectHTMLDecorations(ctx context.Context, htmlContent string, input Input) (string, error) {
+	htmlContent = c.cssInjector.InjectCSS(ctx, htmlContent, buildCombinedCSS(c.cfg.resolvedStyle, input))
+	if ctx.Err() != nil {
+		return "", ctx.Err()
+	}
+
+	htmlWithCover, err := c.coverInjector.InjectCover(ctx, htmlContent, toCoverData(input.Cover))
+	if err != nil {
+		return "", fmt.Errorf("injecting cover: %w", err)
+	}
+	htmlWithTOC, err := c.tocInjector.InjectTOC(ctx, htmlWithCover, toTOCData(input.TOC))
+	if err != nil {
+		return "", fmt.Errorf("injecting TOC: %w", err)
+	}
+	htmlWithSignature, err := c.signatureInjector.InjectSignature(ctx, htmlWithTOC, toSignatureData(input.Signature))
+	if err != nil {
+		return "", fmt.Errorf("injecting signature: %w", err)
+	}
+	return htmlWithSignature, nil
+}
+
+func buildCombinedCSS(baseCSS string, input Input) string {
+	// Order matters: page-break/watermark prefixes first, user CSS last.
+	cssContent := baseCSS
+	if input.CSS != "" {
+		cssContent += "\n" + input.CSS
+	}
+	if input.Watermark != nil {
+		cssContent = buildWatermarkCSS(input.Watermark) + cssContent
+	}
+	return buildPageBreaksCSS(input.PageBreaks) + cssContent
+}
+
+func buildPDFOptions(input Input) *pdfOptions {
+	return &pdfOptions{
+		Footer: toFooterData(input.Footer),
+		Page:   input.Page,
+	}
 }
 
 // Close releases resources (headless Chrome browser).
