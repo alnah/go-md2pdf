@@ -217,6 +217,8 @@ func buildConfigInitConfig(noInput bool, env *Environment) (*config.Config, bool
 	return cfg, true, nil
 }
 
+// defaultConfigInitAnswers defines a single baseline profile so interactive and
+// non-interactive generation start from the same conservative defaults.
 func defaultConfigInitAnswers() configInitAnswers {
 	return configInitAnswers{
 		style:              "technical",
@@ -235,6 +237,8 @@ func defaultConfigInitAnswers() configInitAnswers {
 	}
 }
 
+// collectConfigInitInteractiveAnswers orchestrates prompt groups so the wizard
+// flow stays readable while preserving one deterministic question order.
 func collectConfigInitInteractiveAnswers(reader *bufio.Reader, output io.Writer, answers configInitAnswers) (configInitAnswers, error) {
 	printWizardStyleChoices(output)
 
@@ -258,6 +262,8 @@ func collectConfigInitInteractiveAnswers(reader *bufio.Reader, output io.Writer,
 	return answers, nil
 }
 
+// promptConfigInitBaseAnswers captures core identity/page fields first so users
+// can establish document context before optional feature prompts.
 func promptConfigInitBaseAnswers(reader *bufio.Reader, output io.Writer, answers configInitAnswers) (configInitAnswers, error) {
 	style, err := promptString(reader, output, wizardPrompt{
 		title:        "Style",
@@ -331,6 +337,8 @@ func promptConfigInitBaseAnswers(reader *bufio.Reader, output io.Writer, answers
 	return answers, nil
 }
 
+// promptConfigInitSignatureAnswers isolates signature decisions so optional
+// follow-up questions are only asked when the feature is enabled.
 func promptConfigInitSignatureAnswers(reader *bufio.Reader, output io.Writer, answers configInitAnswers) (configInitAnswers, error) {
 	signatureEnabled, err := promptBool(reader, output, wizardPrompt{
 		title:        "Enable signature block",
@@ -360,6 +368,8 @@ func promptConfigInitSignatureAnswers(reader *bufio.Reader, output io.Writer, an
 	return answers, nil
 }
 
+// promptConfigInitWatermarkAnswers keeps watermark branching localized to avoid
+// spreading conditional prompt logic across the main wizard flow.
 func promptConfigInitWatermarkAnswers(reader *bufio.Reader, output io.Writer, answers configInitAnswers) (configInitAnswers, error) {
 	watermarkEnabled, err := promptBool(reader, output, wizardPrompt{
 		title:        "Enable watermark",
@@ -402,6 +412,8 @@ func promptConfigInitWatermarkAnswers(reader *bufio.Reader, output io.Writer, an
 	return answers, nil
 }
 
+// promptConfigInitCoverAnswers keeps cover-specific branching local so optional
+// logo handling remains easy to evolve without touching unrelated prompts.
 func promptConfigInitCoverAnswers(reader *bufio.Reader, output io.Writer, answers configInitAnswers) (configInitAnswers, error) {
 	coverEnabled, err := promptBool(reader, output, wizardPrompt{
 		title:        "Enable cover page",
@@ -431,6 +443,8 @@ func promptConfigInitCoverAnswers(reader *bufio.Reader, output io.Writer, answer
 	return answers, nil
 }
 
+// buildConfigInitConfigFromAnswers materializes validated answers into config in
+// one place so field mapping stays consistent as wizard prompts evolve.
 func buildConfigInitConfigFromAnswers(answers configInitAnswers) *config.Config {
 	cfg := config.DefaultConfig()
 	cfg.Style = answers.style

@@ -27,6 +27,8 @@ func printConvertUsage(w io.Writer) {
 	}
 }
 
+// convertUsageLines keeps help content data-driven so wording updates do not
+// require editing a long sequence of print calls.
 var convertUsageLines = []string{
 	"Usage: md2pdf convert <input> [flags]",
 	"",

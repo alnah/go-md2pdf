@@ -184,6 +184,8 @@ func (c *Converter) Convert(ctx context.Context, input Input) (result *ConvertRe
 	return res, nil
 }
 
+// renderHTML isolates markdown-to-HTML stages so PDF concerns remain outside
+// this path and HTML-only mode can reuse the same transformation pipeline.
 func (c *Converter) renderHTML(ctx context.Context, input Input) (string, error) {
 	mdContent := c.preprocessor.PreprocessMarkdown(ctx, input.Markdown)
 	if ctx.Err() != nil {
@@ -206,6 +208,8 @@ func (c *Converter) renderHTML(ctx context.Context, input Input) (string, error)
 	return c.injectHTMLDecorations(ctx, htmlContent, input)
 }
 
+// injectHTMLDecorations keeps injection ordering explicit because cover/TOC/
+// signature placement depends on deterministic sequencing.
 func (c *Converter) injectHTMLDecorations(ctx context.Context, htmlContent string, input Input) (string, error) {
 	htmlContent = c.cssInjector.InjectCSS(ctx, htmlContent, buildCombinedCSS(c.cfg.resolvedStyle, input))
 	if ctx.Err() != nil {
@@ -227,6 +231,8 @@ func (c *Converter) injectHTMLDecorations(ctx context.Context, htmlContent strin
 	return htmlWithSignature, nil
 }
 
+// buildCombinedCSS centralizes stylesheet layering rules so precedence remains
+// stable (base, user overrides, then generated structural overlays).
 func buildCombinedCSS(baseCSS string, input Input) string {
 	// Order matters: page-break/watermark prefixes first, user CSS last.
 	cssContent := baseCSS
@@ -239,6 +245,8 @@ func buildCombinedCSS(baseCSS string, input Input) string {
 	return buildPageBreaksCSS(input.PageBreaks) + cssContent
 }
 
+// buildPDFOptions isolates input-to-renderer option mapping to avoid repeating
+// footer/page conversion logic at call sites.
 func buildPDFOptions(input Input) *pdfOptions {
 	return &pdfOptions{
 		Footer: toFooterData(input.Footer),

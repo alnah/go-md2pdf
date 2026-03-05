@@ -99,6 +99,8 @@ func runConvert(ctx context.Context, positionalArgs []string, flags *convertFlag
 	return nil
 }
 
+// configWithResolvedDate clones config to avoid mutating shared environment
+// state when resolving runtime-only date values.
 func configWithResolvedDate(cfg *config.Config, resolvedDate string) *config.Config {
 	if cfg == nil {
 		return nil

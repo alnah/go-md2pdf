@@ -128,6 +128,8 @@ func runConvertCmd(args []string, env *Environment) error {
 	return runConvert(ctx, positionalArgs, flags, pool, env)
 }
 
+// resolveWorkers centralizes worker resolution to keep precedence and validation
+// consistent across the convert command entry path.
 func resolveWorkers(flags *convertFlags, envCfg *envConfig) error {
 	workers := flags.workers
 	if workers == 0 && envCfg.Workers > 0 {
@@ -140,6 +142,8 @@ func resolveWorkers(flags *convertFlags, envCfg *envConfig) error {
 	return nil
 }
 
+// configureMaxProcs keeps CPU tuning setup in one place so startup behavior
+// remains deterministic while still exposing diagnostics in verbose mode.
 func configureMaxProcs(verbose bool, env *Environment) {
 	if verbose {
 		_, _ = maxprocs.Set(maxprocs.Logger(func(format string, args ...interface{}) {
@@ -150,6 +154,8 @@ func configureMaxProcs(verbose bool, env *Environment) {
 	_, _ = maxprocs.Set(maxprocs.Logger(func(string, ...interface{}) {}))
 }
 
+// loadRuntimeConfig preserves a single config-loading policy (path selection,
+// defaults, then env fills) so all downstream conversion logic sees one model.
 func loadRuntimeConfig(flags *convertFlags, envCfg *envConfig, env *Environment) error {
 	configPath := resolveConfigPath(flags.common.config, envCfg.ConfigPath)
 
@@ -170,6 +176,7 @@ func loadRuntimeConfig(flags *convertFlags, envCfg *envConfig, env *Environment)
 	return nil
 }
 
+// resolveConfigPath isolates precedence rules to avoid drift across callers.
 func resolveConfigPath(flagPath, envPath string) string {
 	if flagPath != "" {
 		return flagPath
@@ -177,6 +184,8 @@ func resolveConfigPath(flagPath, envPath string) string {
 	return envPath
 }
 
+// configureAssetLoader keeps custom-asset wiring explicit so style/template
+// lookups later in the pipeline do not need path resolution logic.
 func configureAssetLoader(flags *convertFlags, env *Environment) error {
 	assetBasePath := resolveAssetBasePath(flags, env.Config)
 	if assetBasePath == "" {
@@ -195,6 +204,8 @@ func configureAssetLoader(flags *convertFlags, env *Environment) error {
 	return nil
 }
 
+// resolveAssetBasePath isolates precedence so asset-path behavior stays stable
+// when new call sites are added.
 func resolveAssetBasePath(flags *convertFlags, cfg *config.Config) string {
 	if flags.assets.assetPath != "" {
 		return flags.assets.assetPath
@@ -202,6 +213,8 @@ func resolveAssetBasePath(flags *convertFlags, cfg *config.Config) string {
 	return cfg.Assets.BasePath
 }
 
+// resolveTemplateSetForRun encapsulates template-set selection so convert setup
+// can fail early with a single error boundary.
 func resolveTemplateSetForRun(flags *convertFlags, env *Environment) (*md2pdf.TemplateSet, error) {
 	templateSet, err := resolveTemplateSet(flags.assets.template, env.AssetLoader)
 	if err != nil {
@@ -213,6 +226,8 @@ func resolveTemplateSetForRun(flags *convertFlags, env *Environment) (*md2pdf.Te
 	return templateSet, nil
 }
 
+// createConverterPool keeps pool construction together so sizing/options/logging
+// evolve in one place without widening runConvertCmd.
 func createConverterPool(flags *convertFlags, env *Environment, templateSet *md2pdf.TemplateSet, timeout time.Duration) *md2pdf.ConverterPool {
 	poolSize := md2pdf.ResolvePoolSize(flags.workers)
 	if flags.common.verbose {
@@ -224,6 +239,8 @@ func createConverterPool(flags *convertFlags, env *Environment, templateSet *md2
 	return md2pdf.NewConverterPool(poolSize, buildPoolOptions(env.AssetLoader, templateSet, timeout)...)
 }
 
+// buildPoolOptions prevents option assembly duplication and preserves option
+// ordering assumptions in a single helper.
 func buildPoolOptions(loader md2pdf.AssetLoader, templateSet *md2pdf.TemplateSet, timeout time.Duration) []md2pdf.Option {
 	opts := []md2pdf.Option{
 		md2pdf.WithAssetLoader(loader),

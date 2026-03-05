@@ -8,6 +8,8 @@ import (
 	"github.com/alnah/go-md2pdf/internal/config"
 )
 
+// Error groups keep exit-code policy centralized so new sentinels can be added
+// without duplicating branching logic in exitCodeFor.
 var (
 	browserExitErrors = []error{
 		md2pdf.ErrBrowserConnect,
@@ -80,6 +82,7 @@ func exitCodeFor(err error) int {
 	return ExitGeneral
 }
 
+// matchesAny keeps wrapped-error matching uniform across exit-code categories.
 func matchesAny(err error, candidates []error) bool {
 	for _, target := range candidates {
 		if errors.Is(err, target) {
