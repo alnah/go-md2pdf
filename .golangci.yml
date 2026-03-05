@@ -4,6 +4,13 @@ linters:
   default: none
   enable:
     - staticcheck
+    - ineffassign
+    - unused
+    - nilerr
+    - nilnil
+    - unconvert
+    - rowserrcheck
+    - sqlclosecheck
   settings:
     staticcheck:
       checks:
