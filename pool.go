@@ -159,12 +159,28 @@ func (p *ConverterPool) Close() error {
 	converters := p.converters
 	p.mu.Unlock()
 
-	var errs []error
+	errCh := make(chan error, len(converters))
+	var wg sync.WaitGroup
 	for _, conv := range converters {
-		if err := conv.Close(); err != nil {
-			errs = append(errs, err)
+		if conv == nil {
+			continue
 		}
+		wg.Add(1)
+		go func(c *Converter) {
+			defer wg.Done()
+			if err := c.Close(); err != nil {
+				errCh <- err
+			}
+		}(conv)
 	}
+	wg.Wait()
+	close(errCh)
+
+	var errs []error
+	for err := range errCh {
+		errs = append(errs, err)
+	}
+
 	return errors.Join(errs...)
 }
 

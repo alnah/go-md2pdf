@@ -7,6 +7,8 @@ package md2pdf
 // - Pool is safe for concurrent use: multiple goroutines can Acquire/Release
 
 import (
+	"context"
+	"errors"
 	"runtime"
 	"sync"
 	"testing"
@@ -23,6 +25,20 @@ var _ interface {
 	Size() int
 	Close() error
 } = (*ServicePool)(nil)
+
+type slowClosePDFConverter struct {
+	delay time.Duration
+	err   error
+}
+
+func (m *slowClosePDFConverter) ToPDF(_ context.Context, _ string, _ *pdfOptions) ([]byte, error) {
+	return []byte("%PDF-1.4 mock"), nil
+}
+
+func (m *slowClosePDFConverter) Close() error {
+	time.Sleep(m.delay)
+	return m.err
+}
 
 // ---------------------------------------------------------------------------
 // TestResolvePoolSize - Pool Size Calculation
@@ -229,6 +245,52 @@ func TestServicePool_ClosePreventsFurtherRelease(t *testing.T) {
 
 	// Release after close should not panic
 	pool.Release(svc) // Should be safe (no-op)
+}
+
+func TestServicePool_CloseClosesConvertersConcurrently(t *testing.T) {
+	t.Parallel()
+
+	pool := NewServicePool(3)
+	pool.converters = []*Converter{
+		{pdfConverter: &slowClosePDFConverter{delay: 200 * time.Millisecond}},
+		{pdfConverter: &slowClosePDFConverter{delay: 200 * time.Millisecond}},
+		{pdfConverter: &slowClosePDFConverter{delay: 200 * time.Millisecond}},
+	}
+
+	start := time.Now()
+	if err := pool.Close(); err != nil {
+		t.Fatalf("Close() unexpected error: %v", err)
+	}
+	elapsed := time.Since(start)
+
+	// Concurrent close should take about one converter delay, not sum of delays.
+	if elapsed > 420*time.Millisecond {
+		t.Fatalf("Close() elapsed = %v, want <= 420ms to confirm parallel close", elapsed)
+	}
+}
+
+func TestServicePool_CloseAggregatesErrorsFromConcurrentClose(t *testing.T) {
+	t.Parallel()
+
+	pool := NewServicePool(3)
+	errA := errors.New("close A failed")
+	errB := errors.New("close B failed")
+	pool.converters = []*Converter{
+		{pdfConverter: &slowClosePDFConverter{delay: 10 * time.Millisecond, err: errA}},
+		{pdfConverter: &slowClosePDFConverter{delay: 10 * time.Millisecond}},
+		{pdfConverter: &slowClosePDFConverter{delay: 10 * time.Millisecond, err: errB}},
+	}
+
+	err := pool.Close()
+	if err == nil {
+		t.Fatal("Close() error = nil, want joined error")
+	}
+	if !errors.Is(err, errA) {
+		t.Errorf("Close() error = %v, want to include errA", err)
+	}
+	if !errors.Is(err, errB) {
+		t.Errorf("Close() error = %v, want to include errB", err)
+	}
 }
 
 func TestServicePool_ConcurrentCloseAndRelease_NoPanic(t *testing.T) {
