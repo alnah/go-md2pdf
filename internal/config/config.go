@@ -1,3 +1,5 @@
+// Package config centralizes parsing and validation so every entry point
+// enforces the same safety and defaulting rules.
 package config
 
 import (

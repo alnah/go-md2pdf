@@ -1,3 +1,5 @@
+// Package styleinput classifies user-provided style values so callers can
+// resolve style names, files, and inline CSS through one decision path.
 package styleinput
 
 import "github.com/alnah/go-md2pdf/internal/fileutil"
