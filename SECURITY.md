@@ -37,6 +37,14 @@ The tool may make network requests in these cases:
 
 These requests are initiated by the headless Chrome browser, not the Go code directly.
 
+### Config Init (`md2pdf config init`)
+
+- Generates a local YAML config file only (default: `./md2pdf.yaml`).
+- Does not perform network requests.
+- Uses destination lock files to avoid concurrent write corruption.
+- Uses explicit `--force` for overwrite and applies backup/rollback safeguards to recover interrupted writes.
+- Respects normal OS file permissions and does not elevate privileges.
+
 ### Data Handling
 
 - The tool does not handle authentication
