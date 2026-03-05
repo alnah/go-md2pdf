@@ -37,6 +37,10 @@ linters:
         - fmt.Fprint
         - fmt.Fprintf
         - fmt.Fprintln
+    revive:
+      rules:
+        - name: exported
+        - name: package-comments
     staticcheck:
       checks:
         - all
@@ -47,6 +51,7 @@ linters:
         linters:
           - errcheck
           - errorlint
+          - revive
 
 run:
   timeout: 5m
