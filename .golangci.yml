@@ -4,6 +4,11 @@ linters:
   default: none
   enable:
     - staticcheck
+  settings:
+    staticcheck:
+      checks:
+        - all
+        - "-QF*"
 
 run:
   timeout: 5m
