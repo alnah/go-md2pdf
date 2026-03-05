@@ -100,7 +100,7 @@ func loadEnvConfig() *envConfig {
 }
 
 // warnUnknownEnvVars logs warnings for unrecognized MD2PDF_* variables.
-// Helps catch typos like MD2PDF_AUTOR instead of MD2PDF_AUTHOR_NAME.
+// Helps catch typos like MD2PDF_AHTOR_NAME instead of MD2PDF_AUTHOR_NAME.
 func warnUnknownEnvVars(w io.Writer) {
 	for _, env := range os.Environ() {
 		if strings.HasPrefix(env, "MD2PDF_") {

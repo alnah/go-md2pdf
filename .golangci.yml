@@ -11,6 +11,8 @@ linters:
     - unconvert
     - rowserrcheck
     - sqlclosecheck
+    - noctx
+    - misspell
   settings:
     staticcheck:
       checks:

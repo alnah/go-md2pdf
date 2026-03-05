@@ -165,7 +165,7 @@ func TestLoadEnvConfig(t *testing.T) {
 func TestWarnUnknownEnvVars(t *testing.T) {
 	t.Run("warns on unknown MD2PDF variables", func(t *testing.T) {
 		t.Setenv("MD2PDF_TYPO", "value")
-		t.Setenv("MD2PDF_AUTOR_NAME", "typo")
+		t.Setenv("MD2PDF_AHTOR_NAME", "typo")
 
 		var buf bytes.Buffer
 		warnUnknownEnvVars(&buf)
@@ -174,8 +174,8 @@ func TestWarnUnknownEnvVars(t *testing.T) {
 		if !bytes.Contains(buf.Bytes(), []byte("MD2PDF_TYPO")) {
 			t.Errorf("warnUnknownEnvVars() should warn about MD2PDF_TYPO, got: %s", output)
 		}
-		if !bytes.Contains(buf.Bytes(), []byte("MD2PDF_AUTOR_NAME")) {
-			t.Errorf("warnUnknownEnvVars() should warn about MD2PDF_AUTOR_NAME, got: %s", output)
+		if !bytes.Contains(buf.Bytes(), []byte("MD2PDF_AHTOR_NAME")) {
+			t.Errorf("warnUnknownEnvVars() should warn about MD2PDF_AHTOR_NAME, got: %s", output)
 		}
 		if !bytes.Contains(buf.Bytes(), []byte("typo?")) {
 			t.Errorf("warnUnknownEnvVars() should suggest typo, got: %s", output)

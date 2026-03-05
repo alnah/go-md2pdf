@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/go-rod/rod/lib/launcher"
 )
@@ -126,7 +128,9 @@ func checkChrome(result *doctorResult) {
 
 	// Get version by running chrome --version
 	// #nosec G204 -- chromePath comes from launcher.LookPath() or ROD_BROWSER_BIN env var
-	cmd := exec.Command(chromePath, "--version")
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, chromePath, "--version")
 	out, err := cmd.Output()
 	if err == nil {
 		result.Chrome.Version = strings.TrimSpace(string(out))

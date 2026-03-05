@@ -12,6 +12,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"os/exec"
@@ -788,7 +789,7 @@ func TestConfigInit_InterruptSafety(t *testing.T) {
 	}
 	markerPath := filepath.Join(".", ".interrupt-marker")
 
-	cmd := exec.Command(os.Args[0], "-test.run=TestConfigInit_InterruptSafety")
+	cmd := exec.CommandContext(context.Background(), os.Args[0], "-test.run=TestConfigInit_InterruptSafety")
 	cmd.Env = append(
 		os.Environ(),
 		childModeEnv+"=1",
