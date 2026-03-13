@@ -39,6 +39,19 @@ The current Go module path is `github.com/alnah/picoloom/v2`.
 <details>
 <summary>Other installation methods</summary>
 
+### Homebrew
+
+```bash
+brew tap alnah/tap
+brew install alnah/tap/picoloom
+```
+
+Update later with:
+
+```bash
+brew upgrade alnah/tap/picoloom
+```
+
 ### Docker
 
 ```bash
@@ -55,6 +68,7 @@ Download pre-built binaries from [GitHub Releases](https://github.com/alnah/pico
 
 - Go 1.25+
 - Chrome/Chromium (downloaded automatically on first run)
+- Homebrew users can install the CLI from `alnah/tap/picoloom`
 
 > **Docker/CI users:** See [Troubleshooting](#troubleshooting) for setup instructions.
 
