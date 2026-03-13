@@ -163,11 +163,6 @@ var convertUsageLines = []string{
 	"  4  Browser      Chrome not found, connection failed",
 }
 
-// printDoctorUsage prints usage for the doctor command.
-func printDoctorUsage(w io.Writer) {
-	printDoctorUsageFor(w, canonicalCLIName)
-}
-
 func printDoctorUsageFor(w io.Writer, cliName string) {
 	fmt.Fprintf(w, "Usage: %s doctor [flags]\n", cliName)
 	fmt.Fprintln(w)

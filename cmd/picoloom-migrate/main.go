@@ -1,7 +1,9 @@
+// Command picoloom-migrate rewrites common go-md2pdf references to picoloom/v2.
 package main
 
 import (
 	"bytes"
+	"context"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -49,6 +51,7 @@ type fileChange struct {
 	path         string
 	original     []byte
 	updated      []byte
+	mode         fs.FileMode
 	replacements int
 }
 
@@ -96,7 +99,8 @@ func main() {
 	}
 
 	for _, change := range changes {
-		if err := os.WriteFile(change.path, change.updated, 0o644); err != nil {
+		// #nosec G306 -- migration tool intentionally preserves the existing file mode for rewritten repo files.
+		if err := os.WriteFile(change.path, change.updated, change.mode); err != nil {
 			fmt.Fprintf(os.Stderr, "error writing %s: %v\n", change.path, err)
 			os.Exit(1)
 		}
@@ -172,6 +176,7 @@ func analyzePath(path string) (fileChange, bool, error) {
 		return fileChange{}, false, nil
 	}
 
+	// #nosec G304 -- migration tool intentionally reads user-selected repo files after extension/path filtering.
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return fileChange{}, false, fmt.Errorf("read %s: %w", path, err)
@@ -189,8 +194,17 @@ func analyzePath(path string) (fileChange, bool, error) {
 		path:         path,
 		original:     content,
 		updated:      updated,
+		mode:         infoMode(path),
 		replacements: replacements,
 	}, true, nil
+}
+
+func infoMode(path string) fs.FileMode {
+	info, err := os.Stat(path)
+	if err != nil {
+		return 0o644
+	}
+	return info.Mode().Perm()
 }
 
 func shouldProcessPath(path string) bool {
@@ -254,7 +268,8 @@ func gofmtTouchedFiles(changes []fileChange) error {
 		return nil
 	}
 
-	cmd := exec.Command("gofmt", append([]string{"-w"}, goFiles...)...)
+	// #nosec G204 -- gofmt is a fixed trusted binary; arguments are the just-rewritten local Go files.
+	cmd := exec.CommandContext(context.Background(), "gofmt", append([]string{"-w"}, goFiles...)...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
