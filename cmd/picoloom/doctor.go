@@ -256,7 +256,8 @@ func printDoctorResult(w io.Writer, r *doctorResult, cliName string) {
 
 	// Chrome section
 	fmt.Fprintln(w, "Chrome/Chromium")
-	if r.Chrome.Found {
+	switch {
+	case r.Chrome.Found:
 		fmt.Fprintf(w, "  [OK] Found at %s\n", r.Chrome.Path)
 		if r.Chrome.Version != "" {
 			fmt.Fprintf(w, "  [OK] Version: %s\n", r.Chrome.Version)
@@ -266,9 +267,9 @@ func printDoctorResult(w io.Writer, r *doctorResult, cliName string) {
 		} else {
 			fmt.Fprintln(w, "  [OK] Sandbox: disabled (ROD_NO_SANDBOX=1)")
 		}
-	} else if r.Chrome.ManagedFallback {
+	case r.Chrome.ManagedFallback:
 		fmt.Fprintln(w, "  [WARN] Not found locally (managed Chromium allowed)")
-	} else {
+	default:
 		fmt.Fprintln(w, "  [ERROR] Not found")
 	}
 	fmt.Fprintln(w)
