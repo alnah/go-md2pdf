@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	md2pdf "github.com/alnah/go-md2pdf"
-	"github.com/alnah/go-md2pdf/internal/config"
-	"github.com/alnah/go-md2pdf/internal/dateutil"
-	"github.com/alnah/go-md2pdf/internal/fileutil"
-	"github.com/alnah/go-md2pdf/internal/styleinput"
+	picoloom "github.com/alnah/picoloom/v2"
+	"github.com/alnah/picoloom/v2/internal/config"
+	"github.com/alnah/picoloom/v2/internal/dateutil"
+	"github.com/alnah/picoloom/v2/internal/fileutil"
+	"github.com/alnah/picoloom/v2/internal/styleinput"
 )
 
 // runConvert orchestrates the conversion process.
@@ -267,7 +267,7 @@ func mergeWatermarkFlags(flags *convertFlags, cfg *config.Config) {
 	} else if !configuredViaFile && cfg.Watermark.Enabled {
 		// Only apply default angle if enabled purely by CLI flags (not config file)
 		// Config file with Angle: 0 is considered intentional
-		cfg.Watermark.Angle = md2pdf.DefaultWatermarkAngle
+		cfg.Watermark.Angle = picoloom.DefaultWatermarkAngle
 	}
 }
 
@@ -348,10 +348,10 @@ func resolveOutputDir(flagOutput string, cfg *config.Config) string {
 // If templateFlag is empty, loads the default template set.
 // If templateFlag looks like a path, loads from the filesystem directory.
 // Otherwise, treats it as a template set name and uses the loader.
-func resolveTemplateSet(templateFlag string, loader md2pdf.AssetLoader) (*md2pdf.TemplateSet, error) {
+func resolveTemplateSet(templateFlag string, loader picoloom.AssetLoader) (*picoloom.TemplateSet, error) {
 	// Use default if not specified
 	if templateFlag == "" {
-		return loader.LoadTemplateSet(md2pdf.DefaultTemplateSet)
+		return loader.LoadTemplateSet(picoloom.DefaultTemplateSet)
 	}
 
 	// If it looks like a path, load from filesystem directory
@@ -364,7 +364,7 @@ func resolveTemplateSet(templateFlag string, loader md2pdf.AssetLoader) (*md2pdf
 }
 
 // loadTemplateSetFromDir loads cover.html and signature.html from a directory.
-func loadTemplateSetFromDir(dirPath string) (*md2pdf.TemplateSet, error) {
+func loadTemplateSetFromDir(dirPath string) (*picoloom.TemplateSet, error) {
 	coverPath := filepath.Join(dirPath, "cover.html")
 	sigPath := filepath.Join(dirPath, "signature.html")
 
@@ -373,7 +373,7 @@ func loadTemplateSetFromDir(dirPath string) (*md2pdf.TemplateSet, error) {
 
 	// If both files are missing, the directory is not a valid template set
 	if os.IsNotExist(coverErr) && os.IsNotExist(sigErr) {
-		return nil, fmt.Errorf("%w: %q (directory has no templates)", md2pdf.ErrTemplateSetNotFound, dirPath)
+		return nil, fmt.Errorf("%w: %q (directory has no templates)", picoloom.ErrTemplateSetNotFound, dirPath)
 	}
 
 	// Handle read errors (not just not-exist)
@@ -386,20 +386,20 @@ func loadTemplateSetFromDir(dirPath string) (*md2pdf.TemplateSet, error) {
 
 	// If only one file is missing, the template set is incomplete
 	if os.IsNotExist(coverErr) {
-		return nil, fmt.Errorf("%w: %q missing cover.html", md2pdf.ErrIncompleteTemplateSet, dirPath)
+		return nil, fmt.Errorf("%w: %q missing cover.html", picoloom.ErrIncompleteTemplateSet, dirPath)
 	}
 	if os.IsNotExist(sigErr) {
-		return nil, fmt.Errorf("%w: %q missing signature.html", md2pdf.ErrIncompleteTemplateSet, dirPath)
+		return nil, fmt.Errorf("%w: %q missing signature.html", picoloom.ErrIncompleteTemplateSet, dirPath)
 	}
 
-	return md2pdf.NewTemplateSet(dirPath, string(cover), string(signature)), nil
+	return picoloom.NewTemplateSet(dirPath, string(cover), string(signature)), nil
 }
 
 // resolveCSSContent resolves CSS content from CLI flag, config, or asset loader.
 // Priority: CLI flag > config style > default style.
 // If the style value looks like a path (contains / or \), read it directly.
 // Otherwise, treat it as a style name and use the asset loader.
-func resolveCSSContent(styleFlag string, cfg *config.Config, noStyle bool, loader md2pdf.AssetLoader) (string, error) {
+func resolveCSSContent(styleFlag string, cfg *config.Config, noStyle bool, loader picoloom.AssetLoader) (string, error) {
 	if noStyle {
 		return "", nil
 	}
@@ -410,10 +410,10 @@ func resolveCSSContent(styleFlag string, cfg *config.Config, noStyle bool, loade
 		style = cfg.Style
 	}
 	if style == "" {
-		style = md2pdf.DefaultStyle
+		style = picoloom.DefaultStyle
 	}
 
-	source, value := styleinput.Classify(style, md2pdf.DefaultStyle, false)
+	source, value := styleinput.Classify(style, picoloom.DefaultStyle, false)
 
 	// If it looks like a path, read the file directly
 	if source == styleinput.SourceFile {

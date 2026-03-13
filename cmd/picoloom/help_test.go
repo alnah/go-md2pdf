@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	md2pdf "github.com/alnah/go-md2pdf"
+	picoloom "github.com/alnah/picoloom/v2"
 )
 
 // ---------------------------------------------------------------------------
@@ -183,16 +183,16 @@ func TestHelpDefaultsMatchConstants(t *testing.T) {
 		name     string
 		expected string
 	}{
-		{"page-size", fmt.Sprintf("default: %s", md2pdf.PageSizeLetter)},
-		{"orientation", fmt.Sprintf("default: %s", md2pdf.OrientationPortrait)},
-		{"margin", fmt.Sprintf("default: %.1f", md2pdf.DefaultMargin)},
-		{"toc-min-depth", fmt.Sprintf("default: %d", md2pdf.DefaultTOCMinDepth)},
-		{"toc-max-depth", fmt.Sprintf("default: %d", md2pdf.DefaultTOCMaxDepth)},
-		{"wm-color", fmt.Sprintf("default: %s", md2pdf.DefaultWatermarkColor)},
-		{"wm-opacity", fmt.Sprintf("default: %.1f", md2pdf.DefaultWatermarkOpacity)},
-		{"wm-angle", fmt.Sprintf("default: %.0f", md2pdf.DefaultWatermarkAngle)},
-		{"orphans", fmt.Sprintf("default: %d", md2pdf.DefaultOrphans)},
-		{"widows", fmt.Sprintf("default: %d", md2pdf.DefaultWidows)},
+		{"page-size", fmt.Sprintf("default: %s", picoloom.PageSizeLetter)},
+		{"orientation", fmt.Sprintf("default: %s", picoloom.OrientationPortrait)},
+		{"margin", fmt.Sprintf("default: %.1f", picoloom.DefaultMargin)},
+		{"toc-min-depth", fmt.Sprintf("default: %d", picoloom.DefaultTOCMinDepth)},
+		{"toc-max-depth", fmt.Sprintf("default: %d", picoloom.DefaultTOCMaxDepth)},
+		{"wm-color", fmt.Sprintf("default: %s", picoloom.DefaultWatermarkColor)},
+		{"wm-opacity", fmt.Sprintf("default: %.1f", picoloom.DefaultWatermarkOpacity)},
+		{"wm-angle", fmt.Sprintf("default: %.0f", picoloom.DefaultWatermarkAngle)},
+		{"orphans", fmt.Sprintf("default: %d", picoloom.DefaultOrphans)},
+		{"widows", fmt.Sprintf("default: %d", picoloom.DefaultWidows)},
 	}
 
 	for _, d := range defaults {
@@ -251,7 +251,7 @@ func TestRunHelp(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			loader, _ := md2pdf.NewAssetLoader("")
+			loader, _ := picoloom.NewAssetLoader("")
 			var stdout, stderr bytes.Buffer
 			env := &Environment{
 				Stdout:      &stdout,

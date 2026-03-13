@@ -127,12 +127,12 @@ Root package interface:
 
 | Command      | Purpose                                | Location              |
 | ------------ | -------------------------------------- | --------------------- |
-| `convert`    | Markdown to PDF conversion             | `cmd/md2pdf/convert.go` |
-| `config`     | Config management (`init` wizard)      | `cmd/md2pdf/config_init.go` |
-| `doctor`     | System diagnostics (Chrome, container) | `cmd/md2pdf/doctor.go`  |
-| `completion` | Shell completion scripts               | `cmd/md2pdf/completion.go` |
-| `version`    | Show version information               | `cmd/md2pdf/main.go`  |
-| `help`       | Command help                           | `cmd/md2pdf/help.go`  |
+| `convert`    | Markdown to PDF conversion             | `cmd/picoloom/convert.go` |
+| `config`     | Config management (`init` wizard)      | `cmd/picoloom/config_init.go` |
+| `doctor`     | System diagnostics (Chrome, container) | `cmd/picoloom/doctor.go`  |
+| `completion` | Shell completion scripts               | `cmd/picoloom/completion.go` |
+| `version`    | Show version information               | `cmd/picoloom/main.go`  |
+| `help`       | Command help                           | `cmd/picoloom/help.go`  |
 
 The `doctor` command performs system checks without starting a conversion:
 - Chrome/Chromium detection (binary, version, sandbox status)
@@ -172,7 +172,7 @@ Library Path:
 
 **Design principles:**
 
-- **CLI param builders trust config** - `buildXxxData()` functions in `cmd/md2pdf/convert_params.go` transform already-validated config into library types without re-validation
+- **CLI param builders trust config** - `buildXxxData()` functions in `cmd/picoloom/convert_params.go` transform already-validated config into library types without re-validation
 - **Library validates at entry** - `validateInput()` is the trust boundary for direct library users
 - **No redundant validation** - Each constraint is checked once at the appropriate boundary
 - **Validation methods on types** - `PageSettings.Validate()`, `Cover.Validate()`, `Signature.Validate()`, etc.
@@ -188,8 +188,8 @@ See `docs/_validation_refactor_spec.md` for detailed design rationale.
 | New MD syntax       | `internal/pipeline/mdtransform.go`| `==highlight==` support      |
 | New HTML injection  | `internal/pipeline/htmlinject.go` | New metadata block           |
 | New Input field     | `types.go` + `converter.go`       | Add to `Input` struct        |
-| New CLI flag        | `cmd/md2pdf/flags.go`             | Add flag definition          |
-| New CLI command     | `cmd/md2pdf/{name}.go`            | Add `doctor.go`              |
+| New CLI flag        | `cmd/picoloom/flags.go`             | Add flag definition          |
+| New CLI command     | `cmd/picoloom/{name}.go`            | Add `doctor.go`              |
 | New config option   | `internal/config/config.go`       | Add to `Config` struct       |
 | New CSS style       | `internal/assets/styles/`         | Add `{name}.css`             |
 | New template        | `internal/assets/templates/`      | Add `{name}/cover.html`      |
@@ -200,15 +200,15 @@ See `docs/_validation_refactor_spec.md` for detailed design rationale.
 3. Call `Validate()` from `validateInput()` in `converter.go`
 4. Add config validation in `internal/config/` (for CLI path)
 5. Wire into `converter.go` pipeline
-6. Add CLI flags in `cmd/md2pdf/flags.go`
-7. Add param builder in `cmd/md2pdf/convert_params.go` (no validation - trusts config)
+6. Add CLI flags in `cmd/picoloom/flags.go`
+7. Add param builder in `cmd/picoloom/convert_params.go` (no validation - trusts config)
 8. Add tests: unit + integration
 9. Update README.md documentation
 
 **Checklist for new CLI commands:**
-1. Create `cmd/md2pdf/{name}.go` with command logic
-2. Register in `cmd/md2pdf/main.go` switch statement
+1. Create `cmd/picoloom/{name}.go` with command logic
+2. Register in `cmd/picoloom/main.go` switch statement
 3. Add to `isCommand()` function
-4. Add help text in `cmd/md2pdf/help.go`
-5. Add tests in `cmd/md2pdf/{name}_test.go`
+4. Add help text in `cmd/picoloom/help.go`
+5. Add tests in `cmd/picoloom/{name}_test.go`
 6. Update README.md documentation

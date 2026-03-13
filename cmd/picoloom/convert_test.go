@@ -18,8 +18,8 @@ import (
 	"strings"
 	"testing"
 
-	md2pdf "github.com/alnah/go-md2pdf"
-	"github.com/alnah/go-md2pdf/internal/config"
+	picoloom "github.com/alnah/picoloom/v2"
+	"github.com/alnah/picoloom/v2/internal/config"
 )
 
 // ---------------------------------------------------------------------------
@@ -29,7 +29,7 @@ import (
 func TestResolveCSSContent(t *testing.T) {
 	t.Parallel()
 
-	loader, _ := md2pdf.NewAssetLoader("")
+	loader, _ := picoloom.NewAssetLoader("")
 
 	t.Run("empty style and no config returns default style", func(t *testing.T) {
 		t.Parallel()
@@ -554,7 +554,7 @@ func TestLoadTemplateSetFromDir(t *testing.T) {
 		}
 
 		_, err := loadTemplateSetFromDir(tmpDir)
-		if !errors.Is(err, md2pdf.ErrIncompleteTemplateSet) {
+		if !errors.Is(err, picoloom.ErrIncompleteTemplateSet) {
 			t.Errorf("loadTemplateSetFromDir(%q) error = %v, want ErrIncompleteTemplateSet", tmpDir, err)
 		}
 	})
@@ -568,7 +568,7 @@ func TestLoadTemplateSetFromDir(t *testing.T) {
 		}
 
 		_, err := loadTemplateSetFromDir(tmpDir)
-		if !errors.Is(err, md2pdf.ErrIncompleteTemplateSet) {
+		if !errors.Is(err, picoloom.ErrIncompleteTemplateSet) {
 			t.Errorf("loadTemplateSetFromDir(%q) error = %v, want ErrIncompleteTemplateSet", tmpDir, err)
 		}
 	})
@@ -579,7 +579,7 @@ func TestLoadTemplateSetFromDir(t *testing.T) {
 		tmpDir := t.TempDir()
 
 		_, err := loadTemplateSetFromDir(tmpDir)
-		if !errors.Is(err, md2pdf.ErrTemplateSetNotFound) {
+		if !errors.Is(err, picoloom.ErrTemplateSetNotFound) {
 			t.Errorf("loadTemplateSetFromDir(%q) error = %v, want ErrTemplateSetNotFound", tmpDir, err)
 		}
 	})
@@ -588,7 +588,7 @@ func TestLoadTemplateSetFromDir(t *testing.T) {
 		t.Parallel()
 
 		_, err := loadTemplateSetFromDir("/nonexistent/path/to/templates")
-		if !errors.Is(err, md2pdf.ErrTemplateSetNotFound) {
+		if !errors.Is(err, picoloom.ErrTemplateSetNotFound) {
 			t.Errorf("loadTemplateSetFromDir(\"/nonexistent/path/to/templates\") error = %v, want ErrTemplateSetNotFound", err)
 		}
 	})
@@ -605,7 +605,7 @@ func TestResolveTemplateSet(t *testing.T) {
 		t.Parallel()
 
 		loader := &mockTemplateLoader{
-			templateSets: map[string]*md2pdf.TemplateSet{
+			templateSets: map[string]*picoloom.TemplateSet{
 				"default": {Name: "default", Cover: "<cover/>", Signature: "<sig/>"},
 			},
 		}
@@ -623,7 +623,7 @@ func TestResolveTemplateSet(t *testing.T) {
 		t.Parallel()
 
 		loader := &mockTemplateLoader{
-			templateSets: map[string]*md2pdf.TemplateSet{
+			templateSets: map[string]*picoloom.TemplateSet{
 				"corporate": {Name: "corporate", Cover: "<corp-cover/>", Signature: "<corp-sig/>"},
 			},
 		}
@@ -666,11 +666,11 @@ func TestResolveTemplateSet(t *testing.T) {
 		t.Parallel()
 
 		loader := &mockTemplateLoader{
-			templateSets: map[string]*md2pdf.TemplateSet{},
+			templateSets: map[string]*picoloom.TemplateSet{},
 		}
 
 		_, err := resolveTemplateSet("nonexistent", loader)
-		if !errors.Is(err, md2pdf.ErrTemplateSetNotFound) {
+		if !errors.Is(err, picoloom.ErrTemplateSetNotFound) {
 			t.Errorf("resolveTemplateSet(\"nonexistent\", loader) error = %v, want ErrTemplateSetNotFound", err)
 		}
 	})

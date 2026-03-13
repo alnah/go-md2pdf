@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	md2pdf "github.com/alnah/go-md2pdf"
+	picoloom "github.com/alnah/picoloom/v2"
 )
 
 // ---------------------------------------------------------------------------
@@ -61,7 +61,7 @@ func TestDefaultEnv(t *testing.T) {
 func TestEnvironmentInjection(t *testing.T) {
 	t.Parallel()
 
-	loader, _ := md2pdf.NewAssetLoader("")
+	loader, _ := picoloom.NewAssetLoader("")
 
 	t.Run("uses mock time function", func(t *testing.T) {
 		t.Parallel()

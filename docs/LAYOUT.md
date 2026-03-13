@@ -1,7 +1,7 @@
 # Project Layout
 
 ```
-go-md2pdf/                      # package md2pdf (library), public name: Picoloom
+picoloom/                       # package picoloom (library)
 │
 ├── doc.go                      # Package documentation (godoc)
 ├── converter.go                # NewConverter(), Convert(), Close() - facade
@@ -13,7 +13,7 @@ go-md2pdf/                      # package md2pdf (library), public name: Picoloo
 ├── cssbuilders.go              # Watermark/PageBreaks CSS (depend on public types)
 ├── example_test.go             # Runnable examples for godoc (Example*, ExampleConverterPool, etc.)
 │
-├── cmd/md2pdf/                 # CLI (picoloom convert|config|doctor|version|help|completion)
+├── cmd/picoloom/               # CLI (picoloom convert|config|doctor|version|help|completion)
 │   ├── main.go                 # Entry point, command dispatch
 │   ├── exit_codes.go           # Semantic exit codes (0-4) and exitCodeFor()
 │   ├── convert.go              # Convert command orchestration
@@ -74,7 +74,7 @@ go-md2pdf/                      # package md2pdf (library), public name: Picoloo
 ## Root Configuration Files
 
 ```
-go-md2pdf/
+picoloom/
 ├── go.mod                      # Module definition, dependencies
 ├── go.sum                      # Dependency checksums
 ├── Makefile                    # Build, test, lint commands
@@ -88,7 +88,7 @@ go-md2pdf/
 
 ## Conventions
 
-- **Library at root** - `import "github.com/alnah/go-md2pdf"`
+- **Library at root** - `import "github.com/alnah/picoloom/v2"`
 - **Public API only at root** - Converter, Input, types, errors
 - **Pipeline in internal/** - mdtransform, md2html, htmlinject
 - **Platform suffix** - `_unix.go`, `_windows.go` for OS-specific code

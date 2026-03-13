@@ -4,18 +4,18 @@ import (
 	"errors"
 	"os"
 
-	md2pdf "github.com/alnah/go-md2pdf"
-	"github.com/alnah/go-md2pdf/internal/config"
+	picoloom "github.com/alnah/picoloom/v2"
+	"github.com/alnah/picoloom/v2/internal/config"
 )
 
 // Error groups keep exit-code policy centralized so new sentinels can be added
 // without duplicating branching logic in exitCodeFor.
 var (
 	browserExitErrors = []error{
-		md2pdf.ErrBrowserConnect,
-		md2pdf.ErrPageCreate,
-		md2pdf.ErrPageLoad,
-		md2pdf.ErrPDFGeneration,
+		picoloom.ErrBrowserConnect,
+		picoloom.ErrPageCreate,
+		picoloom.ErrPageLoad,
+		picoloom.ErrPDFGeneration,
 	}
 	ioExitErrors = []error{
 		os.ErrNotExist,
@@ -33,19 +33,19 @@ var (
 		ErrConfigInitNeedsTTY,
 		ErrConfigInitExists,
 		ErrConfigInitBusy,
-		md2pdf.ErrEmptyMarkdown,
-		md2pdf.ErrInvalidPageSize,
-		md2pdf.ErrInvalidOrientation,
-		md2pdf.ErrInvalidMargin,
-		md2pdf.ErrInvalidFooterPosition,
-		md2pdf.ErrInvalidWatermarkColor,
-		md2pdf.ErrInvalidTOCDepth,
-		md2pdf.ErrInvalidOrphans,
-		md2pdf.ErrInvalidWidows,
-		md2pdf.ErrStyleNotFound,
-		md2pdf.ErrTemplateSetNotFound,
-		md2pdf.ErrIncompleteTemplateSet,
-		md2pdf.ErrInvalidAssetPath,
+		picoloom.ErrEmptyMarkdown,
+		picoloom.ErrInvalidPageSize,
+		picoloom.ErrInvalidOrientation,
+		picoloom.ErrInvalidMargin,
+		picoloom.ErrInvalidFooterPosition,
+		picoloom.ErrInvalidWatermarkColor,
+		picoloom.ErrInvalidTOCDepth,
+		picoloom.ErrInvalidOrphans,
+		picoloom.ErrInvalidWidows,
+		picoloom.ErrStyleNotFound,
+		picoloom.ErrTemplateSetNotFound,
+		picoloom.ErrIncompleteTemplateSet,
+		picoloom.ErrInvalidAssetPath,
 		ErrUnsupportedShell,
 	}
 )

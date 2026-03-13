@@ -16,10 +16,10 @@ deps: ## Download dependencies from go.mod
 	go mod download
 
 build: ## Build the binary
-	go build -o $(BINARY) ./cmd/md2pdf
+	go build -o $(BINARY) ./cmd/picoloom
 
 build-legacy: ## Build the legacy md2pdf alias binary
-	go build -o $(LEGACY_BINARY) ./cmd/md2pdf
+	go build -o $(LEGACY_BINARY) ./cmd/picoloom
 
 test: ## Run unit tests
 	go test -v ./...

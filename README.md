@@ -1,14 +1,14 @@
 # Picoloom
 
-[![Go Reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/alnah/go-md2pdf)
-[![Go Report Card](https://img.shields.io/badge/go%20report-A+-brightgreen)](https://goreportcard.com/report/github.com/alnah/go-md2pdf)
+[![Go Reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/alnah/picoloom/v2)
+[![Go Report Card](https://img.shields.io/badge/go%20report-A+-brightgreen)](https://goreportcard.com/report/github.com/alnah/picoloom/v2)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/alnah/picoloom/ci.yml?branch=main)](https://github.com/alnah/picoloom/actions)
 [![Coverage](https://img.shields.io/codecov/c/github/alnah/picoloom)](https://codecov.io/gh/alnah/picoloom)
 [![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](LICENSE)
 
 > Go library and CLI for Markdown to PDF conversion using headless Chrome. Auto-downloads Chromium on first run. Features cover pages, automatic table of contents, footers with page numbers, signatures, watermarks, and 8 built-in CSS themes with custom template support. Supports parallel batch processing.
 
-> Rebrand note: this project is being migrated to **Picoloom**. The name comes from **Piccolo**, my dog, plus **loom** for the layering/twisting idea behind turning markdown, styling, cover pages, TOC, signatures, and rendering into one small PDF tool with real traction. Legacy `md2pdf` names stay supported during the transition.
+> Rebrand note: this project is now **Picoloom**. The name comes from **Piccolo**, my dog, plus **loom** for the layering/twisting idea behind turning markdown, styling, cover pages, TOC, signatures, and rendering into one small PDF tool with real traction. Legacy `md2pdf` names stay supported during the transition.
 
 [See example outputs](examples/)
 
@@ -31,10 +31,10 @@
 ## Installation
 
 ```bash
-go install github.com/alnah/go-md2pdf/cmd/md2pdf@latest
+go install github.com/alnah/picoloom/v2/cmd/picoloom@latest
 ```
 
-The Go module path stays `github.com/alnah/go-md2pdf` for now. The public CLI name is moving to `picoloom`.
+The current Go module path is `github.com/alnah/picoloom/v2`.
 
 <details>
 <summary>Other installation methods</summary>
@@ -79,18 +79,18 @@ import (
     "log"
     "os"
 
-    "github.com/alnah/go-md2pdf"
+    "github.com/alnah/picoloom/v2"
 )
 
 func main() {
-    conv, err := md2pdf.NewConverter()
+    conv, err := picoloom.NewConverter()
     if err != nil {
         log.Fatal(err)
     }
     defer conv.Close()
 
-    result, err := conv.Convert(context.Background(), md2pdf.Input{
-        Markdown: "# Hello World\n\nGenerated with go-md2pdf.",
+    result, err := conv.Convert(context.Background(), picoloom.Input{
+        Markdown: "# Hello World\n\nGenerated with Picoloom.",
     })
     if err != nil {
         log.Fatal(err)
@@ -690,7 +690,7 @@ When your markdown contains relative image paths like `![logo](./images/logo.png
 ```go
 content, _ := os.ReadFile("docs/report.md")
 
-result, err := conv.Convert(ctx, md2pdf.Input{
+result, err := conv.Convert(ctx, picoloom.Input{
     Markdown:  string(content),
     SourceDir: "docs/", // Images resolve relative to this directory
 })
@@ -704,9 +704,9 @@ The CLI automatically sets `SourceDir` to the input file's directory, so relativ
 <summary>With Cover Page</summary>
 
 ```go
-result, err := conv.Convert(ctx, md2pdf.Input{
+result, err := conv.Convert(ctx, picoloom.Input{
     Markdown: content,
-    Cover: &md2pdf.Cover{
+    Cover: &picoloom.Cover{
         Title:        "Project Report",
         Subtitle:     "Q4 2025 Analysis",
         Author:       "John Doe",
@@ -729,9 +729,9 @@ result, err := conv.Convert(ctx, md2pdf.Input{
 <summary>With Table of Contents</summary>
 
 ```go
-result, err := conv.Convert(ctx, md2pdf.Input{
+result, err := conv.Convert(ctx, picoloom.Input{
     Markdown: content,
-    TOC: &md2pdf.TOC{
+    TOC: &picoloom.TOC{
         Title:    "Contents",
         MinDepth: 2, // Start at h2 (skip document title)
         MaxDepth: 3, // Include up to h3
@@ -745,9 +745,9 @@ result, err := conv.Convert(ctx, md2pdf.Input{
 <summary>With Footer</summary>
 
 ```go
-result, err := conv.Convert(ctx, md2pdf.Input{
+result, err := conv.Convert(ctx, picoloom.Input{
     Markdown: content,
-    Footer: &md2pdf.Footer{
+    Footer: &picoloom.Footer{
         ShowPageNumber: true,
         Position:       "center",
         Date:           "2025-12-15",
@@ -762,9 +762,9 @@ result, err := conv.Convert(ctx, md2pdf.Input{
 <summary>With Signature</summary>
 
 ```go
-result, err := conv.Convert(ctx, md2pdf.Input{
+result, err := conv.Convert(ctx, picoloom.Input{
     Markdown: content,
-    Signature: &md2pdf.Signature{
+    Signature: &picoloom.Signature{
         Name:         "John Doe",
         Title:        "Senior Developer",
         Email:        "john@example.com",
@@ -781,9 +781,9 @@ result, err := conv.Convert(ctx, md2pdf.Input{
 <summary>With Watermark</summary>
 
 ```go
-result, err := conv.Convert(ctx, md2pdf.Input{
+result, err := conv.Convert(ctx, picoloom.Input{
     Markdown: content,
-    Watermark: &md2pdf.Watermark{
+    Watermark: &picoloom.Watermark{
         Text:    "CONFIDENTIAL",
         Color:   "#888888",
         Opacity: 0.1,
@@ -798,11 +798,11 @@ result, err := conv.Convert(ctx, md2pdf.Input{
 <summary>With Page Settings</summary>
 
 ```go
-result, err := conv.Convert(ctx, md2pdf.Input{
+result, err := conv.Convert(ctx, picoloom.Input{
     Markdown: content,
-    Page: &md2pdf.PageSettings{
-        Size:        md2pdf.PageSizeA4,
-        Orientation: md2pdf.OrientationLandscape,
+    Page: &picoloom.PageSettings{
+        Size:        picoloom.PageSizeA4,
+        Orientation: picoloom.OrientationLandscape,
         Margin:      1.0, // inches
     },
 })
@@ -814,9 +814,9 @@ result, err := conv.Convert(ctx, md2pdf.Input{
 <summary>With Page Breaks</summary>
 
 ```go
-result, err := conv.Convert(ctx, md2pdf.Input{
+result, err := conv.Convert(ctx, picoloom.Input{
     Markdown: content,
-    PageBreaks: &md2pdf.PageBreaks{
+    PageBreaks: &picoloom.PageBreaks{
         BeforeH1: true, // Page break before H1 headings
         BeforeH2: true, // Page break before H2 headings
         Orphans:  3,    // Min 3 lines at page bottom
@@ -834,7 +834,7 @@ The `CSS` field in `Input` accepts a CSS string that is injected into the HTML f
 
 ```go
 // CSS string injected into this document only
-result, err := conv.Convert(ctx, md2pdf.Input{
+result, err := conv.Convert(ctx, picoloom.Input{
     Markdown: content,
     CSS: `
         body { font-family: Georgia, serif; }
@@ -860,27 +860,27 @@ Override embedded CSS styles and HTML templates:
 
 ```go
 // Option 1: Use embedded style by name
-conv, err := md2pdf.NewConverter(md2pdf.WithStyle("technical"))
+conv, err := picoloom.NewConverter(picoloom.WithStyle("technical"))
 
 // Option 2: Load CSS from file path
-conv, err := md2pdf.NewConverter(md2pdf.WithStyle("./custom.css"))
+conv, err := picoloom.NewConverter(picoloom.WithStyle("./custom.css"))
 
 // Option 3: Provide CSS content directly
-conv, err := md2pdf.NewConverter(md2pdf.WithStyle("body { font-family: Georgia; }"))
+conv, err := picoloom.NewConverter(picoloom.WithStyle("body { font-family: Georgia; }"))
 
 // Option 4: Load from custom directory (with fallback to embedded)
-conv, err := md2pdf.NewConverter(md2pdf.WithAssetPath("/path/to/assets"))
+conv, err := picoloom.NewConverter(picoloom.WithAssetPath("/path/to/assets"))
 
 // Option 5: Provide template set directly
-ts := md2pdf.NewTemplateSet("custom", coverHTML, signatureHTML)
-conv, err := md2pdf.NewConverter(md2pdf.WithTemplateSet(ts))
+ts := picoloom.NewTemplateSet("custom", coverHTML, signatureHTML)
+conv, err := picoloom.NewConverter(picoloom.WithTemplateSet(ts))
 
 // Option 6: Full control with custom loader
-loader, err := md2pdf.NewAssetLoader("/path/to/assets")
+loader, err := picoloom.NewAssetLoader("/path/to/assets")
 if err != nil {
     log.Fatal(err)
 }
-conv, err := md2pdf.NewConverter(md2pdf.WithAssetLoader(loader))
+conv, err := picoloom.NewConverter(picoloom.WithAssetLoader(loader))
 ```
 
 `WithStyle` accepts a style name, file path, or CSS content:
@@ -923,12 +923,12 @@ import (
     "os"
     "sync"
 
-    "github.com/alnah/go-md2pdf"
+    "github.com/alnah/picoloom/v2"
 )
 
 func main() {
     // Create pool with 4 workers (each has its own browser instance)
-    pool := md2pdf.NewConverterPool(4)
+    pool := picoloom.NewConverterPool(4)
     defer pool.Close()
 
     files := []string{"doc1.md", "doc2.md", "doc3.md", "doc4.md"}
@@ -947,7 +947,7 @@ func main() {
             defer pool.Release(conv)
 
             content, _ := os.ReadFile(f)
-            result, err := conv.Convert(context.Background(), md2pdf.Input{
+            result, err := conv.Convert(context.Background(), picoloom.Input{
                 Markdown: string(content),
             })
             if err != nil {
@@ -961,13 +961,13 @@ func main() {
 }
 ```
 
-Use `md2pdf.ResolvePoolSize(0)` to auto-calculate optimal pool size based on CPU cores.
+Use `picoloom.ResolvePoolSize(0)` to auto-calculate optimal pool size based on CPU cores.
 
 </details>
 
 ## Documentation
 
-Full API documentation with runnable examples: [pkg.go.dev/github.com/alnah/go-md2pdf](https://pkg.go.dev/github.com/alnah/go-md2pdf)
+Full API documentation with runnable examples: [pkg.go.dev/github.com/alnah/picoloom/v2](https://pkg.go.dev/github.com/alnah/picoloom/v2)
 
 ## Troubleshooting
 

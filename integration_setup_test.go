@@ -1,6 +1,6 @@
 //go:build integration
 
-package md2pdf
+package picoloom
 
 // Notes:
 // - Integration test setup: shared ServicePool for all integration tests

@@ -1,4 +1,4 @@
-package md2pdf
+package picoloom
 
 // Notes:
 // - Tests rodConverter and rodRenderer with mock implementations
@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alnah/go-md2pdf/internal/fileutil"
-	"github.com/alnah/go-md2pdf/internal/pipeline"
+	"github.com/alnah/picoloom/v2/internal/fileutil"
+	"github.com/alnah/picoloom/v2/internal/pipeline"
 )
 
 // ---------------------------------------------------------------------------

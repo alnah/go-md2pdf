@@ -1,4 +1,4 @@
-package md2pdf
+package picoloom
 
 // Notes:
 // - escapeCSSString: tests CSS string escaping for quotes, backslashes, newlines

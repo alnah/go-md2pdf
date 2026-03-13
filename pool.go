@@ -1,4 +1,4 @@
-package md2pdf
+package picoloom
 
 import (
 	"errors"

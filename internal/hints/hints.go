@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/alnah/go-md2pdf/internal/fileutil"
+	"github.com/alnah/picoloom/v2/internal/fileutil"
 )
 
 // IsInContainer detects if running inside a Docker container or similar.
@@ -45,11 +45,17 @@ func ForTimeout() string {
 }
 
 // ForConfigNotFound returns hints for config file not found errors.
-// Suggests --config flag and creating a config in ~/.config/go-md2pdf/.
+// Suggests --config flag and creating a config in the user config directory.
 func ForConfigNotFound(searchedPaths []string) string {
 	hint := "use --config /path/to/file.yaml"
 
-	// Find a user config path (contains .config/go-md2pdf) to suggest
+	// Prefer canonical config paths, then fall back to legacy ones.
+	for _, p := range searchedPaths {
+		if strings.Contains(p, ".config/picoloom") {
+			hint += " or create " + p
+			return format(hint)
+		}
+	}
 	for _, p := range searchedPaths {
 		if strings.Contains(p, ".config/go-md2pdf") {
 			hint += " or create " + p

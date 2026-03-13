@@ -1,6 +1,6 @@
 //go:build bench
 
-package md2pdf
+package picoloom
 
 // Notes:
 // - Benchmarks for ServicePool performance

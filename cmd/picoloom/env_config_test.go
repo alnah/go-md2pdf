@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alnah/go-md2pdf/internal/config"
+	"github.com/alnah/picoloom/v2/internal/config"
 )
 
 // ---------------------------------------------------------------------------

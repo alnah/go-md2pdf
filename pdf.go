@@ -1,4 +1,4 @@
-package md2pdf
+package picoloom
 
 import (
 	"context"
@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alnah/go-md2pdf/internal/fileutil"
-	"github.com/alnah/go-md2pdf/internal/hints"
-	"github.com/alnah/go-md2pdf/internal/pipeline"
-	"github.com/alnah/go-md2pdf/internal/process"
+	"github.com/alnah/picoloom/v2/internal/fileutil"
+	"github.com/alnah/picoloom/v2/internal/hints"
+	"github.com/alnah/picoloom/v2/internal/pipeline"
+	"github.com/alnah/picoloom/v2/internal/process"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"

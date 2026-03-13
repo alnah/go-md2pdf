@@ -144,9 +144,9 @@ func TestForConfigNotFound(t *testing.T) {
 		},
 		{
 			name:     "with paths",
-			paths:    []string{"./foo.yaml", "~/.config/go-md2pdf/foo.yaml"},
+			paths:    []string{"./foo.yaml", "~/.config/picoloom/foo.yaml", "~/.config/go-md2pdf/foo.yaml"},
 			wantHint: true,
-			contains: "go-md2pdf/foo.yaml",
+			contains: "picoloom/foo.yaml",
 		},
 	}
 

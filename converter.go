@@ -1,13 +1,13 @@
-package md2pdf
+package picoloom
 
 import (
 	"context"
 	"fmt"
 	"os"
 
-	"github.com/alnah/go-md2pdf/internal/assets"
-	"github.com/alnah/go-md2pdf/internal/pipeline"
-	"github.com/alnah/go-md2pdf/internal/styleinput"
+	"github.com/alnah/picoloom/v2/internal/assets"
+	"github.com/alnah/picoloom/v2/internal/pipeline"
+	"github.com/alnah/picoloom/v2/internal/styleinput"
 )
 
 // Compile-time interface implementation checks.

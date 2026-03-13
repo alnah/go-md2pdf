@@ -15,42 +15,42 @@ import (
 	"regexp"
 	"strings"
 
-	md2pdf "github.com/alnah/go-md2pdf"
-	"github.com/alnah/go-md2pdf/internal/config"
+	picoloom "github.com/alnah/picoloom/v2"
+	"github.com/alnah/picoloom/v2/internal/config"
 )
 
 // conversionParams groups parameters shared across batch/file conversion.
 type conversionParams struct {
 	css        string
-	footer     *md2pdf.Footer
-	signature  *md2pdf.Signature
-	page       *md2pdf.PageSettings
-	watermark  *md2pdf.Watermark
-	toc        *md2pdf.TOC
-	pageBreaks *md2pdf.PageBreaks
+	footer     *picoloom.Footer
+	signature  *picoloom.Signature
+	page       *picoloom.PageSettings
+	watermark  *picoloom.Watermark
+	toc        *picoloom.TOC
+	pageBreaks *picoloom.PageBreaks
 	cfg        *config.Config
 	htmlOnly   bool // Output HTML only, skip PDF
 	htmlOutput bool // Output HTML alongside PDF
 }
 
-// buildSignatureData creates md2pdf.Signature from config.
+// buildSignatureData creates picoloom.Signature from config.
 // Uses cfg.Author.* for author information.
 // Department is always shown if defined (signature always displays it).
 //
 // Note: Image path validation happens at library boundary (Signature.Validate),
 // not here. This function is a pure transformation from config to library type.
-func buildSignatureData(cfg *config.Config, noSignature bool) *md2pdf.Signature {
+func buildSignatureData(cfg *config.Config, noSignature bool) *picoloom.Signature {
 	if noSignature || !cfg.Signature.Enabled {
 		return nil
 	}
 
-	// Convert config links to md2pdf.Link
-	links := make([]md2pdf.Link, len(cfg.Signature.Links))
+	// Convert config links to picoloom.Link
+	links := make([]picoloom.Link, len(cfg.Signature.Links))
 	for i, l := range cfg.Signature.Links {
-		links[i] = md2pdf.Link{Label: l.Label, URL: l.URL}
+		links[i] = picoloom.Link{Label: l.Label, URL: l.URL}
 	}
 
-	return &md2pdf.Signature{
+	return &picoloom.Signature{
 		Name:         cfg.Author.Name,
 		Title:        cfg.Author.Title,
 		Email:        cfg.Author.Email,
@@ -63,10 +63,10 @@ func buildSignatureData(cfg *config.Config, noSignature bool) *md2pdf.Signature 
 	}
 }
 
-// buildFooterData creates md2pdf.Footer from config.
+// buildFooterData creates picoloom.Footer from config.
 // Uses cfg.Document.Date and cfg.Document.Version for date/status.
 // DocumentID is only shown if cfg.Footer.ShowDocumentID is true.
-func buildFooterData(cfg *config.Config, noFooter bool) *md2pdf.Footer {
+func buildFooterData(cfg *config.Config, noFooter bool) *picoloom.Footer {
 	if noFooter || !cfg.Footer.Enabled {
 		return nil
 	}
@@ -76,7 +76,7 @@ func buildFooterData(cfg *config.Config, noFooter bool) *md2pdf.Footer {
 		docID = cfg.Document.DocumentID
 	}
 
-	return &md2pdf.Footer{
+	return &picoloom.Footer{
 		Position:       cfg.Footer.Position,
 		ShowPageNumber: cfg.Footer.ShowPageNumber,
 		Date:           cfg.Document.Date,
@@ -86,14 +86,14 @@ func buildFooterData(cfg *config.Config, noFooter bool) *md2pdf.Footer {
 	}
 }
 
-// buildWatermarkData creates md2pdf.Watermark from config.
+// buildWatermarkData creates picoloom.Watermark from config.
 // Flags are merged into config by mergeFlags before this is called.
-func buildWatermarkData(cfg *config.Config) *md2pdf.Watermark {
+func buildWatermarkData(cfg *config.Config) *picoloom.Watermark {
 	if !cfg.Watermark.Enabled {
 		return nil
 	}
 
-	w := &md2pdf.Watermark{
+	w := &picoloom.Watermark{
 		Text:    cfg.Watermark.Text,
 		Color:   cfg.Watermark.Color,
 		Opacity: cfg.Watermark.Opacity,
@@ -103,25 +103,25 @@ func buildWatermarkData(cfg *config.Config) *md2pdf.Watermark {
 	// Apply defaults for color and opacity.
 	// Angle default is handled in mergeFlags to distinguish "not set" from "0".
 	if w.Color == "" {
-		w.Color = md2pdf.DefaultWatermarkColor
+		w.Color = picoloom.DefaultWatermarkColor
 	}
 	if w.Opacity == 0 {
-		w.Opacity = md2pdf.DefaultWatermarkOpacity
+		w.Opacity = picoloom.DefaultWatermarkOpacity
 	}
 
 	return w
 }
 
-// buildPageSettings creates md2pdf.PageSettings from config.
+// buildPageSettings creates picoloom.PageSettings from config.
 // Flags are merged into config by mergeFlags before this is called.
-func buildPageSettings(cfg *config.Config) *md2pdf.PageSettings {
+func buildPageSettings(cfg *config.Config) *picoloom.PageSettings {
 	hasConfig := cfg.Page.Size != "" || cfg.Page.Orientation != "" || cfg.Page.Margin > 0
 
 	if !hasConfig {
 		return nil
 	}
 
-	ps := &md2pdf.PageSettings{
+	ps := &picoloom.PageSettings{
 		Size:        cfg.Page.Size,
 		Orientation: cfg.Page.Orientation,
 		Margin:      cfg.Page.Margin,
@@ -129,13 +129,13 @@ func buildPageSettings(cfg *config.Config) *md2pdf.PageSettings {
 
 	// Apply defaults
 	if ps.Size == "" {
-		ps.Size = md2pdf.PageSizeLetter
+		ps.Size = picoloom.PageSizeLetter
 	}
 	if ps.Orientation == "" {
-		ps.Orientation = md2pdf.OrientationPortrait
+		ps.Orientation = picoloom.OrientationPortrait
 	}
 	if ps.Margin == 0 {
-		ps.Margin = md2pdf.DefaultMargin
+		ps.Margin = picoloom.DefaultMargin
 	}
 
 	return ps
@@ -153,15 +153,15 @@ func extractFirstHeading(markdown string) string {
 	return ""
 }
 
-// buildCoverData creates md2pdf.Cover from config and markdown content.
+// buildCoverData creates picoloom.Cover from config and markdown content.
 // Uses cfg.Author.* and cfg.Document.* for metadata.
 // Department is only shown if cfg.Cover.ShowDepartment is true.
-func buildCoverData(cfg *config.Config, markdownContent, filename string) *md2pdf.Cover {
+func buildCoverData(cfg *config.Config, markdownContent, filename string) *picoloom.Cover {
 	if !cfg.Cover.Enabled {
 		return nil
 	}
 
-	c := &md2pdf.Cover{
+	c := &picoloom.Cover{
 		Logo: cfg.Cover.Logo,
 	}
 
@@ -197,18 +197,18 @@ func buildCoverData(cfg *config.Config, markdownContent, filename string) *md2pd
 	return c
 }
 
-// buildTOCData creates md2pdf.TOC from config.
-func buildTOCData(cfg *config.Config, tocFlags tocFlags) *md2pdf.TOC {
+// buildTOCData creates picoloom.TOC from config.
+func buildTOCData(cfg *config.Config, tocFlags tocFlags) *picoloom.TOC {
 	if tocFlags.disabled || !cfg.TOC.Enabled {
 		return nil
 	}
 
 	maxDepth := cfg.TOC.MaxDepth
 	if maxDepth == 0 {
-		maxDepth = md2pdf.DefaultTOCMaxDepth
+		maxDepth = picoloom.DefaultTOCMaxDepth
 	}
 
-	toc := &md2pdf.TOC{
+	toc := &picoloom.TOC{
 		Title:    cfg.TOC.Title,
 		MinDepth: cfg.TOC.MinDepth, // 0 = library defaults to 2
 		MaxDepth: maxDepth,
@@ -217,19 +217,19 @@ func buildTOCData(cfg *config.Config, tocFlags tocFlags) *md2pdf.TOC {
 	return toc
 }
 
-// buildPageBreaksData creates md2pdf.PageBreaks from config.
+// buildPageBreaksData creates picoloom.PageBreaks from config.
 // Flags are merged into config by mergeFlags before this is called.
-func buildPageBreaksData(cfg *config.Config) *md2pdf.PageBreaks {
+func buildPageBreaksData(cfg *config.Config) *picoloom.PageBreaks {
 	if !cfg.PageBreaks.Enabled {
 		return nil
 	}
 
-	pb := &md2pdf.PageBreaks{
+	pb := &picoloom.PageBreaks{
 		BeforeH1: cfg.PageBreaks.BeforeH1,
 		BeforeH2: cfg.PageBreaks.BeforeH2,
 		BeforeH3: cfg.PageBreaks.BeforeH3,
-		Orphans:  md2pdf.DefaultOrphans,
-		Widows:   md2pdf.DefaultWidows,
+		Orphans:  picoloom.DefaultOrphans,
+		Widows:   picoloom.DefaultWidows,
 	}
 
 	if cfg.PageBreaks.Orphans > 0 {

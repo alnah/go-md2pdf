@@ -1,9 +1,9 @@
-package md2pdf
+package picoloom
 
 import (
 	"errors"
 
-	"github.com/alnah/go-md2pdf/internal/assets"
+	"github.com/alnah/picoloom/v2/internal/assets"
 )
 
 // Asset name constants for built-in styles and templates.

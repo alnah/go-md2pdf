@@ -148,4 +148,3 @@ func generateBashCommandCase(b *strings.Builder, cmd commandDef, funcName string
 	}
 	b.WriteString("            fi\n")
 }
-

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	md2pdf "github.com/alnah/go-md2pdf"
-	"github.com/alnah/go-md2pdf/internal/config"
+	picoloom "github.com/alnah/picoloom/v2"
+	"github.com/alnah/picoloom/v2/internal/config"
 	"go.uber.org/automaxprocs/maxprocs"
 )
 
@@ -196,7 +196,7 @@ func configureAssetLoader(flags *convertFlags, env *Environment) error {
 		return nil
 	}
 
-	loader, err := md2pdf.NewAssetLoader(assetBasePath)
+	loader, err := picoloom.NewAssetLoader(assetBasePath)
 	if err != nil {
 		return fmt.Errorf("initializing assets: %w", err)
 	}
@@ -219,7 +219,7 @@ func resolveAssetBasePath(flags *convertFlags, cfg *config.Config) string {
 
 // resolveTemplateSetForRun encapsulates template-set selection so convert setup
 // can fail early with a single error boundary.
-func resolveTemplateSetForRun(flags *convertFlags, env *Environment) (*md2pdf.TemplateSet, error) {
+func resolveTemplateSetForRun(flags *convertFlags, env *Environment) (*picoloom.TemplateSet, error) {
 	templateSet, err := resolveTemplateSet(flags.assets.template, env.AssetLoader)
 	if err != nil {
 		return nil, fmt.Errorf("loading template set: %w", err)
@@ -232,33 +232,33 @@ func resolveTemplateSetForRun(flags *convertFlags, env *Environment) (*md2pdf.Te
 
 // createConverterPool keeps pool construction together so sizing/options/logging
 // evolve in one place without widening runConvertCmd.
-func createConverterPool(flags *convertFlags, env *Environment, templateSet *md2pdf.TemplateSet, timeout time.Duration) *md2pdf.ConverterPool {
-	poolSize := md2pdf.ResolvePoolSize(flags.workers)
+func createConverterPool(flags *convertFlags, env *Environment, templateSet *picoloom.TemplateSet, timeout time.Duration) *picoloom.ConverterPool {
+	poolSize := picoloom.ResolvePoolSize(flags.workers)
 	if flags.common.verbose {
 		fmt.Fprintf(env.Stderr, "Pool size: %d\n", poolSize)
 		if timeout > 0 {
 			fmt.Fprintf(env.Stderr, "Timeout: %v\n", timeout)
 		}
 	}
-	return md2pdf.NewConverterPool(poolSize, buildPoolOptions(env.AssetLoader, templateSet, timeout)...)
+	return picoloom.NewConverterPool(poolSize, buildPoolOptions(env.AssetLoader, templateSet, timeout)...)
 }
 
 // buildPoolOptions prevents option assembly duplication and preserves option
 // ordering assumptions in a single helper.
-func buildPoolOptions(loader md2pdf.AssetLoader, templateSet *md2pdf.TemplateSet, timeout time.Duration) []md2pdf.Option {
-	opts := []md2pdf.Option{
-		md2pdf.WithAssetLoader(loader),
-		md2pdf.WithTemplateSet(templateSet),
+func buildPoolOptions(loader picoloom.AssetLoader, templateSet *picoloom.TemplateSet, timeout time.Duration) []picoloom.Option {
+	opts := []picoloom.Option{
+		picoloom.WithAssetLoader(loader),
+		picoloom.WithTemplateSet(templateSet),
 	}
 	if timeout > 0 {
-		opts = append(opts, md2pdf.WithTimeout(timeout))
+		opts = append(opts, picoloom.WithTimeout(timeout))
 	}
 	return opts
 }
 
-// poolAdapter adapts md2pdf.ConverterPool to the local Pool interface.
+// poolAdapter adapts picoloom.ConverterPool to the local Pool interface.
 type poolAdapter struct {
-	pool *md2pdf.ConverterPool
+	pool *picoloom.ConverterPool
 }
 
 func (a *poolAdapter) Acquire() CLIConverter {
@@ -266,9 +266,9 @@ func (a *poolAdapter) Acquire() CLIConverter {
 }
 
 func (a *poolAdapter) Release(c CLIConverter) {
-	conv, ok := c.(*md2pdf.Converter)
+	conv, ok := c.(*picoloom.Converter)
 	if !ok {
-		// Defensive no-op: pool only manages *md2pdf.Converter instances.
+		// Defensive no-op: pool only manages *picoloom.Converter instances.
 		// Avoid crashing the CLI if a wrong test double/type is passed.
 		return
 	}

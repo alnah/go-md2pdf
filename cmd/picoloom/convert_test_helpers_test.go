@@ -9,8 +9,8 @@ import (
 	"context"
 	"fmt"
 
-	md2pdf "github.com/alnah/go-md2pdf"
-	"github.com/alnah/go-md2pdf/internal/config"
+	picoloom "github.com/alnah/picoloom/v2"
+	"github.com/alnah/picoloom/v2/internal/config"
 )
 
 // ---------------------------------------------------------------------------
@@ -70,22 +70,22 @@ type staticMockConverter struct {
 	err    error
 }
 
-func (m *staticMockConverter) Convert(_ context.Context, _ md2pdf.Input) (*md2pdf.ConvertResult, error) {
+func (m *staticMockConverter) Convert(_ context.Context, _ picoloom.Input) (*picoloom.ConvertResult, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
-	return &md2pdf.ConvertResult{PDF: m.result}, nil
+	return &picoloom.ConvertResult{PDF: m.result}, nil
 }
 
 // capturingMockConverter captures the Input for inspection in tests.
 type capturingMockConverter struct {
 	result      []byte
 	err         error
-	capturedIn  md2pdf.Input
-	convertFunc func(md2pdf.Input) (*md2pdf.ConvertResult, error)
+	capturedIn  picoloom.Input
+	convertFunc func(picoloom.Input) (*picoloom.ConvertResult, error)
 }
 
-func (m *capturingMockConverter) Convert(_ context.Context, input md2pdf.Input) (*md2pdf.ConvertResult, error) {
+func (m *capturingMockConverter) Convert(_ context.Context, input picoloom.Input) (*picoloom.ConvertResult, error) {
 	m.capturedIn = input
 	if m.convertFunc != nil {
 		return m.convertFunc(input)
@@ -93,12 +93,12 @@ func (m *capturingMockConverter) Convert(_ context.Context, input md2pdf.Input) 
 	if m.err != nil {
 		return nil, m.err
 	}
-	return &md2pdf.ConvertResult{PDF: m.result}, nil
+	return &picoloom.ConvertResult{PDF: m.result}, nil
 }
 
-// mockTemplateLoader implements md2pdf.AssetLoader for testing resolveTemplateSet.
+// mockTemplateLoader implements picoloom.AssetLoader for testing resolveTemplateSet.
 type mockTemplateLoader struct {
-	templateSets map[string]*md2pdf.TemplateSet
+	templateSets map[string]*picoloom.TemplateSet
 	err          error
 }
 
@@ -106,12 +106,12 @@ func (m *mockTemplateLoader) LoadStyle(_ string) (string, error) {
 	return "", nil
 }
 
-func (m *mockTemplateLoader) LoadTemplateSet(name string) (*md2pdf.TemplateSet, error) {
+func (m *mockTemplateLoader) LoadTemplateSet(name string) (*picoloom.TemplateSet, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 	if ts, ok := m.templateSets[name]; ok {
 		return ts, nil
 	}
-	return nil, fmt.Errorf("%w: %q", md2pdf.ErrTemplateSetNotFound, name)
+	return nil, fmt.Errorf("%w: %q", picoloom.ErrTemplateSetNotFound, name)
 }

@@ -1,6 +1,6 @@
 //go:build bench
 
-package md2pdf
+package picoloom
 
 // Notes:
 // - Benchmarks CSS building functions with various input configurations

@@ -1,12 +1,12 @@
-package md2pdf
+package picoloom
 
 import (
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/alnah/go-md2pdf/internal/assets"
-	"github.com/alnah/go-md2pdf/internal/fileutil"
+	"github.com/alnah/picoloom/v2/internal/assets"
+	"github.com/alnah/picoloom/v2/internal/fileutil"
 )
 
 // Page size constants.
@@ -362,11 +362,11 @@ func WithTimeout(d time.Duration) Option {
 //
 // Example:
 //
-//	loader, err := md2pdf.NewAssetLoader("/path/to/assets")
+//	loader, err := picoloom.NewAssetLoader("/path/to/assets")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
-//	conv, err := md2pdf.NewConverter(md2pdf.WithAssetLoader(loader))
+//	conv, err := picoloom.NewConverter(picoloom.WithAssetLoader(loader))
 func WithAssetLoader(loader AssetLoader) Option {
 	return func(c *Converter) {
 		c.publicAssetLoader = loader
@@ -407,8 +407,8 @@ func WithStyle(style string) Option {
 //
 // Example:
 //
-//	ts := md2pdf.NewTemplateSet("custom", coverHTML, signatureHTML)
-//	conv, err := md2pdf.NewConverter(md2pdf.WithTemplateSet(ts))
+//	ts := picoloom.NewTemplateSet("custom", coverHTML, signatureHTML)
+//	conv, err := picoloom.NewConverter(picoloom.WithTemplateSet(ts))
 func WithTemplateSet(ts *TemplateSet) Option {
 	return func(c *Converter) {
 		if ts != nil {

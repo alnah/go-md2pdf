@@ -1,9 +1,6 @@
-module github.com/alnah/go-md2pdf
+module github.com/alnah/picoloom/v2
 
 go 1.25.4
-
-// Pre-release versions published during development
-retract [v0.1.0, v1.2.1]
 
 tool github.com/securego/gosec/v2/cmd/gosec
 

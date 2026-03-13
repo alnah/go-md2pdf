@@ -1,4 +1,4 @@
-package md2pdf
+package picoloom
 
 // Notes:
 // - Tests NewAssetLoader with various path configurations (empty, valid, invalid)

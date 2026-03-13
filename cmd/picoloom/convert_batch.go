@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	md2pdf "github.com/alnah/go-md2pdf"
-	"github.com/alnah/go-md2pdf/internal/hints"
+	picoloom "github.com/alnah/picoloom/v2"
+	"github.com/alnah/picoloom/v2/internal/hints"
 )
 
 // File permission constants.
@@ -30,11 +30,11 @@ var (
 
 // CLIConverter is the interface for the conversion service.
 type CLIConverter interface {
-	Convert(ctx context.Context, input md2pdf.Input) (*md2pdf.ConvertResult, error)
+	Convert(ctx context.Context, input picoloom.Input) (*picoloom.ConvertResult, error)
 }
 
 // Compile-time interface implementation check.
-var _ CLIConverter = (*md2pdf.Converter)(nil)
+var _ CLIConverter = (*picoloom.Converter)(nil)
 
 // Pool abstracts service pool operations for testability.
 type Pool interface {
@@ -131,7 +131,7 @@ func convertFile(ctx context.Context, service CLIConverter, f FileToConvert, par
 		return result
 	}
 
-	convResult, err := service.Convert(ctx, md2pdf.Input{
+	convResult, err := service.Convert(ctx, picoloom.Input{
 		Markdown:   string(content),
 		SourceDir:  filepath.Dir(f.InputPath), // Auto-set for relative image resolution
 		CSS:        params.css,

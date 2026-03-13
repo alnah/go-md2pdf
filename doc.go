@@ -1,16 +1,16 @@
-// Package md2pdf converts Markdown documents to PDF using headless Chrome.
+// Package picoloom converts Markdown documents to PDF using headless Chrome.
 //
 // # Quick Start
 //
 // Create a converter, convert markdown, and close when done:
 //
-//	conv, err := md2pdf.NewConverter()
+//	conv, err := picoloom.NewConverter()
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //	defer conv.Close()
 //
-//	result, err := conv.Convert(ctx, md2pdf.Input{
+//	result, err := conv.Convert(ctx, picoloom.Input{
 //	    Markdown: "# Hello\n\nWorld",
 //	})
 //	if err != nil {
@@ -34,31 +34,31 @@
 //
 // Use functional options to customize the converter:
 //
-//	conv, err := md2pdf.NewConverter(
-//	    md2pdf.WithTimeout(2 * time.Minute),
-//	    md2pdf.WithStyle("technical"),
-//	    md2pdf.WithAssetPath("/path/to/custom/assets"),
+//	conv, err := picoloom.NewConverter(
+//	    picoloom.WithTimeout(2 * time.Minute),
+//	    picoloom.WithStyle("technical"),
+//	    picoloom.WithAssetPath("/path/to/custom/assets"),
 //	)
 //
 // Per-conversion options are passed via Input:
 //
-//	result, err := conv.Convert(ctx, md2pdf.Input{
+//	result, err := conv.Convert(ctx, picoloom.Input{
 //	    Markdown:  content,
 //	    SourceDir: "/path/to/markdown",  // for relative image paths
 //	    CSS:       "body { font-size: 14px; }",
-//	    Page:      &md2pdf.PageSettings{Size: "a4"},
-//	    Footer:    &md2pdf.Footer{ShowPageNumber: true},
-//	    Cover:     &md2pdf.Cover{Title: "Report"},
-//	    TOC:       &md2pdf.TOC{Title: "Contents"},
-//	    Watermark: &md2pdf.Watermark{Text: "DRAFT"},
-//	    Signature: &md2pdf.Signature{Name: "John Doe"},
+//	    Page:      &picoloom.PageSettings{Size: "a4"},
+//	    Footer:    &picoloom.Footer{ShowPageNumber: true},
+//	    Cover:     &picoloom.Cover{Title: "Report"},
+//	    TOC:       &picoloom.TOC{Title: "Contents"},
+//	    Watermark: &picoloom.Watermark{Text: "DRAFT"},
+//	    Signature: &picoloom.Signature{Name: "John Doe"},
 //	})
 //
 // # Parallel Processing
 //
 // For batch conversion, use ConverterPool to manage multiple browser instances:
 //
-//	pool := md2pdf.NewConverterPool(4)
+//	pool := picoloom.NewConverterPool(4)
 //	defer pool.Close()
 //
 //	conv := pool.Acquire()
@@ -69,8 +69,8 @@
 //
 // Override built-in styles and templates using AssetLoader:
 //
-//	loader, err := md2pdf.NewAssetLoader("/path/to/assets")
-//	conv, err := md2pdf.NewConverter(md2pdf.WithAssetLoader(loader))
+//	loader, err := picoloom.NewAssetLoader("/path/to/assets")
+//	conv, err := picoloom.NewConverter(picoloom.WithAssetLoader(loader))
 //
 // Asset directory structure:
 //
@@ -89,4 +89,4 @@
 //
 // For containers and CI environments, set ROD_NO_SANDBOX=1 to disable the
 // Chrome sandbox. Use ROD_BROWSER_BIN to specify a custom Chrome binary.
-package md2pdf
+package picoloom

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	md2pdf "github.com/alnah/go-md2pdf"
+	picoloom "github.com/alnah/picoloom/v2"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -797,7 +797,7 @@ func TestConfig_Validate_Page(t *testing.T) {
 
 	t.Run("margin below minimum returns error", func(t *testing.T) {
 		t.Parallel()
-		cfg := &Config{Page: PageConfig{Margin: md2pdf.MinMargin - 0.01}}
+		cfg := &Config{Page: PageConfig{Margin: picoloom.MinMargin - 0.01}}
 		err := cfg.Validate()
 		if err == nil {
 			t.Fatal("Config.Validate() error = nil, want error")
@@ -809,7 +809,7 @@ func TestConfig_Validate_Page(t *testing.T) {
 
 	t.Run("margin above maximum returns error", func(t *testing.T) {
 		t.Parallel()
-		cfg := &Config{Page: PageConfig{Margin: md2pdf.MaxMargin + 0.01}}
+		cfg := &Config{Page: PageConfig{Margin: picoloom.MaxMargin + 0.01}}
 		err := cfg.Validate()
 		if err == nil {
 			t.Fatal("Config.Validate() error = nil, want error")

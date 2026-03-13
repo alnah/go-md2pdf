@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	md2pdf "github.com/alnah/go-md2pdf"
-	"github.com/alnah/go-md2pdf/internal/dateutil"
-	"github.com/alnah/go-md2pdf/internal/fileutil"
-	"github.com/alnah/go-md2pdf/internal/hints"
-	"github.com/alnah/go-md2pdf/internal/yamlutil"
+	picoloom "github.com/alnah/picoloom/v2"
+	"github.com/alnah/picoloom/v2/internal/dateutil"
+	"github.com/alnah/picoloom/v2/internal/fileutil"
+	"github.com/alnah/picoloom/v2/internal/hints"
+	"github.com/alnah/picoloom/v2/internal/yamlutil"
 )
 
 // Sentinel errors for config operations.
@@ -287,7 +287,7 @@ func (p *PageConfig) Validate() error {
 	// Validate allowed values (empty means use default)
 	if p.Size != "" {
 		switch strings.ToLower(p.Size) {
-		case md2pdf.PageSizeLetter, md2pdf.PageSizeA4, md2pdf.PageSizeLegal:
+		case picoloom.PageSizeLetter, picoloom.PageSizeA4, picoloom.PageSizeLegal:
 			// valid
 		default:
 			return fmt.Errorf("page.size: invalid value %q (must be letter, a4, or legal)", p.Size)
@@ -295,14 +295,14 @@ func (p *PageConfig) Validate() error {
 	}
 	if p.Orientation != "" {
 		switch strings.ToLower(p.Orientation) {
-		case md2pdf.OrientationPortrait, md2pdf.OrientationLandscape:
+		case picoloom.OrientationPortrait, picoloom.OrientationLandscape:
 			// valid
 		default:
 			return fmt.Errorf("page.orientation: invalid value %q (must be portrait or landscape)", p.Orientation)
 		}
 	}
-	if p.Margin != 0 && (p.Margin < md2pdf.MinMargin || p.Margin > md2pdf.MaxMargin) {
-		return fmt.Errorf("page.margin: must be between %.2f and %.2f, got %.2f", md2pdf.MinMargin, md2pdf.MaxMargin, p.Margin)
+	if p.Margin != 0 && (p.Margin < picoloom.MinMargin || p.Margin > picoloom.MaxMargin) {
+		return fmt.Errorf("page.margin: must be between %.2f and %.2f, got %.2f", picoloom.MinMargin, picoloom.MaxMargin, p.Margin)
 	}
 	return nil
 }
@@ -330,11 +330,11 @@ func (w *WatermarkConfig) Validate() error {
 	if err := validateFieldLength("watermark.color", w.Color, MaxWatermarkColorLength); err != nil {
 		return err
 	}
-	if w.Opacity < md2pdf.MinWatermarkOpacity || w.Opacity > md2pdf.MaxWatermarkOpacity {
-		return fmt.Errorf("watermark.opacity: must be between %.1f and %.1f, got %.2f", md2pdf.MinWatermarkOpacity, md2pdf.MaxWatermarkOpacity, w.Opacity)
+	if w.Opacity < picoloom.MinWatermarkOpacity || w.Opacity > picoloom.MaxWatermarkOpacity {
+		return fmt.Errorf("watermark.opacity: must be between %.1f and %.1f, got %.2f", picoloom.MinWatermarkOpacity, picoloom.MaxWatermarkOpacity, w.Opacity)
 	}
-	if w.Angle < md2pdf.MinWatermarkAngle || w.Angle > md2pdf.MaxWatermarkAngle {
-		return fmt.Errorf("watermark.angle: must be between %.0f and %.0f, got %.2f", md2pdf.MinWatermarkAngle, md2pdf.MaxWatermarkAngle, w.Angle)
+	if w.Angle < picoloom.MinWatermarkAngle || w.Angle > picoloom.MaxWatermarkAngle {
+		return fmt.Errorf("watermark.angle: must be between %.0f and %.0f, got %.2f", picoloom.MinWatermarkAngle, picoloom.MaxWatermarkAngle, w.Angle)
 	}
 	return nil
 }

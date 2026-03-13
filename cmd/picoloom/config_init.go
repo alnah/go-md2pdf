@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	md2pdf "github.com/alnah/go-md2pdf"
-	"github.com/alnah/go-md2pdf/internal/config"
-	"github.com/alnah/go-md2pdf/internal/yamlutil"
+	picoloom "github.com/alnah/picoloom/v2"
+	"github.com/alnah/picoloom/v2/internal/config"
+	"github.com/alnah/picoloom/v2/internal/yamlutil"
 	flag "github.com/spf13/pflag"
 )
 
@@ -231,7 +231,7 @@ func defaultConfigInitAnswers() configInitAnswers {
 		signatureImagePath: "",
 		watermarkEnabled:   false,
 		watermarkText:      "DRAFT",
-		watermarkColor:     md2pdf.DefaultWatermarkColor,
+		watermarkColor:     picoloom.DefaultWatermarkColor,
 		coverEnabled:       false,
 		coverLogo:          "",
 	}
@@ -459,8 +459,8 @@ func buildConfigInitConfigFromAnswers(answers configInitAnswers) *config.Config 
 	cfg.Watermark.Enabled = answers.watermarkEnabled
 	cfg.Watermark.Text = answers.watermarkText
 	cfg.Watermark.Color = answers.watermarkColor
-	cfg.Watermark.Opacity = md2pdf.DefaultWatermarkOpacity
-	cfg.Watermark.Angle = md2pdf.DefaultWatermarkAngle
+	cfg.Watermark.Opacity = picoloom.DefaultWatermarkOpacity
+	cfg.Watermark.Angle = picoloom.DefaultWatermarkAngle
 	cfg.Cover.Enabled = answers.coverEnabled
 	cfg.Cover.Logo = answers.coverLogo
 	return cfg
@@ -706,10 +706,10 @@ func validatePageSize(value string) error {
 // validateWatermarkColor delegates to core watermark validation so CLI and
 // library paths share the same acceptance rules.
 func validateWatermarkColor(value string) error {
-	test := &md2pdf.Watermark{
+	test := &picoloom.Watermark{
 		Color:   value,
-		Opacity: md2pdf.DefaultWatermarkOpacity,
-		Angle:   md2pdf.DefaultWatermarkAngle,
+		Opacity: picoloom.DefaultWatermarkOpacity,
+		Angle:   picoloom.DefaultWatermarkAngle,
 	}
 	if err := test.Validate(); err != nil {
 		return err

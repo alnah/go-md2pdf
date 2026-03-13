@@ -6,7 +6,7 @@ package main
 // - These are integration tests that use the real PDF converter.
 // - They test end-to-end conversion scenarios including batch conversion,
 //   config loading, CSS styling, page breaks, and concurrent execution.
-// - Build tag 'integration' required: go test -tags=integration ./cmd/md2pdf/...
+// - Build tag 'integration' required: go test -tags=integration ./cmd/picoloom/...
 // These are acceptable gaps: we test observable behavior, not implementation details.
 
 import (
@@ -17,8 +17,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	md2pdf "github.com/alnah/go-md2pdf"
-	"github.com/alnah/go-md2pdf/internal/config"
+	picoloom "github.com/alnah/picoloom/v2"
+	"github.com/alnah/picoloom/v2/internal/config"
 )
 
 // ---------------------------------------------------------------------------
@@ -28,13 +28,13 @@ import (
 // concurrentTestFiles is the number of files to create for concurrent conversion tests.
 const concurrentTestFiles = 10
 
-// integrationPool wraps md2pdf.ConverterPool for integration testing.
+// integrationPool wraps picoloom.ConverterPool for integration testing.
 type integrationPool struct {
-	pool *md2pdf.ConverterPool
+	pool *picoloom.ConverterPool
 }
 
 func newIntegrationPool(size int) *integrationPool {
-	return &integrationPool{pool: md2pdf.NewConverterPool(size)}
+	return &integrationPool{pool: picoloom.NewConverterPool(size)}
 }
 
 func (p *integrationPool) Acquire() CLIConverter {
@@ -42,7 +42,7 @@ func (p *integrationPool) Acquire() CLIConverter {
 }
 
 func (p *integrationPool) Release(c CLIConverter) {
-	if conv, ok := c.(*md2pdf.Converter); ok {
+	if conv, ok := c.(*picoloom.Converter); ok {
 		p.pool.Release(conv)
 	}
 }

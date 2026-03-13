@@ -1,6 +1,6 @@
 //go:build integration
 
-package md2pdf
+package picoloom
 
 // Notes:
 // - Tests NewConversionService with proper pipeline component initialization
@@ -15,7 +15,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/alnah/go-md2pdf/internal/pipeline"
+	"github.com/alnah/picoloom/v2/internal/pipeline"
 )
 
 // ---------------------------------------------------------------------------

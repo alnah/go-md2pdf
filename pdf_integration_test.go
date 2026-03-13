@@ -1,6 +1,6 @@
 //go:build integration
 
-package md2pdf
+package picoloom
 
 // Notes:
 // - Tests PDF generation using go-rod browser automation
@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alnah/go-md2pdf/internal/pipeline"
+	"github.com/alnah/picoloom/v2/internal/pipeline"
 )
 
 // ---------------------------------------------------------------------------

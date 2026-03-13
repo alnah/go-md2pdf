@@ -10,7 +10,7 @@ before:
 
 builds:
   - id: picoloom
-    main: ./cmd/md2pdf
+    main: ./cmd/picoloom
     binary: picoloom
     env:
       - CGO_ENABLED=0

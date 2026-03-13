@@ -21,9 +21,9 @@ import (
 	"testing"
 	"time"
 
-	md2pdf "github.com/alnah/go-md2pdf"
-	"github.com/alnah/go-md2pdf/internal/dateutil"
-	"github.com/alnah/go-md2pdf/internal/fileutil"
+	picoloom "github.com/alnah/picoloom/v2"
+	"github.com/alnah/picoloom/v2/internal/dateutil"
+	"github.com/alnah/picoloom/v2/internal/fileutil"
 )
 
 // ---------------------------------------------------------------------------
@@ -454,16 +454,16 @@ func TestBuildPageSettings(t *testing.T) {
 			flags:           &cliFlags{},
 			cfg:             &Config{Page: PageConfig{Size: "a4"}},
 			wantSize:        "a4",
-			wantOrientation: md2pdf.OrientationPortrait,
-			wantMargin:      md2pdf.DefaultMargin,
+			wantOrientation: picoloom.OrientationPortrait,
+			wantMargin:      picoloom.DefaultMargin,
 		},
 		{
 			name:            "flags trigger validation with defaults",
 			flags:           &cliFlags{page: pageFlags{size: "letter"}},
 			cfg:             &Config{},
 			wantSize:        "letter",
-			wantOrientation: md2pdf.OrientationPortrait,
-			wantMargin:      md2pdf.DefaultMargin,
+			wantOrientation: picoloom.OrientationPortrait,
+			wantMargin:      picoloom.DefaultMargin,
 		},
 	}
 
@@ -529,20 +529,20 @@ func TestValidateWorkers(t *testing.T) {
 		},
 		{
 			name:    "max workers is valid",
-			n:       md2pdf.MaxPoolSize,
+			n:       picoloom.MaxPoolSize,
 			wantErr: false,
 		},
 		{
 			name:    "above max returns error",
-			n:       md2pdf.MaxPoolSize + 1,
+			n:       picoloom.MaxPoolSize + 1,
 			wantErr: true,
-			errMsg:  fmt.Sprintf("maximum is %d", md2pdf.MaxPoolSize),
+			errMsg:  fmt.Sprintf("maximum is %d", picoloom.MaxPoolSize),
 		},
 		{
 			name:    "large number returns error",
 			n:       100,
 			wantErr: true,
-			errMsg:  fmt.Sprintf("maximum is %d", md2pdf.MaxPoolSize),
+			errMsg:  fmt.Sprintf("maximum is %d", picoloom.MaxPoolSize),
 		},
 	}
 
@@ -1329,7 +1329,7 @@ func TestBuildTOCData(t *testing.T) {
 			cfg:          &Config{TOC: TOCConfig{Enabled: true, Title: "TOC", MaxDepth: 0}},
 			flags:        tocFlags{},
 			wantTitle:    "TOC",
-			wantMaxDepth: md2pdf.DefaultTOCMaxDepth,
+			wantMaxDepth: picoloom.DefaultTOCMaxDepth,
 		},
 		{
 			name:         "config depth 1 boundary",
@@ -1576,21 +1576,21 @@ func TestBuildPageBreaksData(t *testing.T) {
 			wantBeforeH1: false,
 			wantBeforeH2: true,
 			wantBeforeH3: true,
-			wantOrphans:  md2pdf.DefaultOrphans,
-			wantWidows:   md2pdf.DefaultWidows,
+			wantOrphans:  picoloom.DefaultOrphans,
+			wantWidows:   picoloom.DefaultWidows,
 		},
 		{
 			name:        "orphans flag overrides config",
 			flags:       &cliFlags{pageBreaks: pageBreakFlags{orphans: 5}},
 			cfg:         &Config{PageBreaks: PageBreaksConfig{Enabled: true, Orphans: 3}},
 			wantOrphans: 5,
-			wantWidows:  md2pdf.DefaultWidows,
+			wantWidows:  picoloom.DefaultWidows,
 		},
 		{
 			name:        "widows flag overrides config",
 			flags:       &cliFlags{pageBreaks: pageBreakFlags{widows: 5}},
 			cfg:         &Config{PageBreaks: PageBreaksConfig{Enabled: true, Widows: 3}},
-			wantOrphans: md2pdf.DefaultOrphans,
+			wantOrphans: picoloom.DefaultOrphans,
 			wantWidows:  5,
 		},
 		{
@@ -1613,7 +1613,7 @@ func TestBuildPageBreaksData(t *testing.T) {
 			name:        "config orphans 0 uses default",
 			flags:       &cliFlags{},
 			cfg:         &Config{PageBreaks: PageBreaksConfig{Enabled: true, Orphans: 0, Widows: 3}},
-			wantOrphans: md2pdf.DefaultOrphans,
+			wantOrphans: picoloom.DefaultOrphans,
 			wantWidows:  3,
 		},
 		{
@@ -1621,7 +1621,7 @@ func TestBuildPageBreaksData(t *testing.T) {
 			flags:       &cliFlags{},
 			cfg:         &Config{PageBreaks: PageBreaksConfig{Enabled: true, Orphans: 3, Widows: 0}},
 			wantOrphans: 3,
-			wantWidows:  md2pdf.DefaultWidows,
+			wantWidows:  picoloom.DefaultWidows,
 		},
 		{
 			name:         "breakBefore flag with empty config",
@@ -1630,8 +1630,8 @@ func TestBuildPageBreaksData(t *testing.T) {
 			wantBeforeH1: true,
 			wantBeforeH2: true,
 			wantBeforeH3: true,
-			wantOrphans:  md2pdf.DefaultOrphans,
-			wantWidows:   md2pdf.DefaultWidows,
+			wantOrphans:  picoloom.DefaultOrphans,
+			wantWidows:   picoloom.DefaultWidows,
 		},
 	}
 

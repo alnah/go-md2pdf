@@ -20,7 +20,7 @@ ARG VERSION=dev
 RUN CGO_ENABLED=0 go build \
     -trimpath \
     -ldflags="-s -w -X main.Version=${VERSION}" \
-    -o /picoloom ./cmd/md2pdf
+    -o /picoloom ./cmd/picoloom
 
 # =============================================================================
 # Runtime stage: minimal image with headless Chromium

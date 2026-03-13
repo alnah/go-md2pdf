@@ -1,4 +1,4 @@
-package md2pdf
+package picoloom
 
 // Notes:
 // - PageSettings: tests validation for size, orientation, and margin boundaries

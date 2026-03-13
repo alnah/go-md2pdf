@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alnah/go-md2pdf/internal/fileutil"
+	"github.com/alnah/picoloom/v2/internal/fileutil"
 )
 
 type stringBoolCase struct {

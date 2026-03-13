@@ -21,9 +21,9 @@ import (
 	"testing"
 	"time"
 
-	md2pdf "github.com/alnah/go-md2pdf"
-	"github.com/alnah/go-md2pdf/internal/config"
-	"github.com/alnah/go-md2pdf/internal/yamlutil"
+	picoloom "github.com/alnah/picoloom/v2"
+	"github.com/alnah/picoloom/v2/internal/config"
+	"github.com/alnah/picoloom/v2/internal/yamlutil"
 	flag "github.com/spf13/pflag"
 )
 
@@ -34,9 +34,9 @@ import (
 func newAcceptanceEnv(t *testing.T) (*Environment, *bytes.Buffer, *bytes.Buffer) {
 	t.Helper()
 
-	loader, err := md2pdf.NewAssetLoader("")
+	loader, err := picoloom.NewAssetLoader("")
 	if err != nil {
-		t.Fatalf("md2pdf.NewAssetLoader(\"\") unexpected error: %v", err)
+		t.Fatalf("picoloom.NewAssetLoader(\"\") unexpected error: %v", err)
 	}
 
 	var stdout, stderr bytes.Buffer
@@ -409,7 +409,7 @@ func TestBuildConfigInitConfig_InteractiveFlow(t *testing.T) {
 	if cfg.Watermark.Text != "CONFIDENTIAL" || cfg.Watermark.Color != "#888888" {
 		t.Fatalf("watermark text/color mismatch: %+v", cfg.Watermark)
 	}
-	if cfg.Watermark.Opacity != md2pdf.DefaultWatermarkOpacity || cfg.Watermark.Angle != md2pdf.DefaultWatermarkAngle {
+	if cfg.Watermark.Opacity != picoloom.DefaultWatermarkOpacity || cfg.Watermark.Angle != picoloom.DefaultWatermarkAngle {
 		t.Fatalf("watermark default opacity/angle mismatch: %+v", cfg.Watermark)
 	}
 	if !cfg.Cover.Enabled || cfg.Cover.Logo != "./assets/logo.png" {
@@ -508,7 +508,7 @@ func TestOutputPathForExample(t *testing.T) {
 	}{
 		{input: defaultConfigInitOutputPath, want: defaultConfigInitOutputPath},
 		{input: "picoloom.yaml", want: defaultConfigInitOutputPath},
-		{input: "md2pdf.yaml", want: defaultConfigInitOutputPath},
+		{input: "picoloom.yaml", want: defaultConfigInitOutputPath},
 		{input: "./configs/work.yaml", want: "./configs/work.yaml"},
 	}
 

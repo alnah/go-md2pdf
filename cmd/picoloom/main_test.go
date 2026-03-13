@@ -18,18 +18,18 @@ import (
 	"testing"
 	"time"
 
-	md2pdf "github.com/alnah/go-md2pdf"
+	picoloom "github.com/alnah/picoloom/v2"
 )
 
 // ---------------------------------------------------------------------------
 // Test Infrastructure - Mock converter
 // ---------------------------------------------------------------------------
 
-// wrongTypeConverter is a Converter that is NOT *md2pdf.Service.
+// wrongTypeConverter is a Converter that is NOT *picoloom.Service.
 type wrongTypeConverter struct{}
 
-func (w *wrongTypeConverter) Convert(_ context.Context, _ md2pdf.Input) (*md2pdf.ConvertResult, error) {
-	return &md2pdf.ConvertResult{PDF: []byte("%PDF-1.4 mock")}, nil
+func (w *wrongTypeConverter) Convert(_ context.Context, _ picoloom.Input) (*picoloom.ConvertResult, error) {
+	return &picoloom.ConvertResult{PDF: []byte("%PDF-1.4 mock")}, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -40,7 +40,7 @@ func TestPoolAdapter_Release_WrongType(t *testing.T) {
 	t.Parallel()
 
 	// Create a real pool with size 1
-	pool := md2pdf.NewConverterPool(1)
+	pool := picoloom.NewConverterPool(1)
 	defer pool.Close()
 
 	adapter := &poolAdapter{pool: pool}
@@ -58,7 +58,7 @@ func TestPoolAdapter_Release_WrongType(t *testing.T) {
 func TestPoolAdapter_Size(t *testing.T) {
 	t.Parallel()
 
-	pool := md2pdf.NewConverterPool(3)
+	pool := picoloom.NewConverterPool(3)
 	defer pool.Close()
 
 	adapter := &poolAdapter{pool: pool}
@@ -75,7 +75,7 @@ func TestPoolAdapter_Size(t *testing.T) {
 func TestPoolAdapter_AcquireRelease(t *testing.T) {
 	t.Parallel()
 
-	pool := md2pdf.NewConverterPool(1)
+	pool := picoloom.NewConverterPool(1)
 	defer pool.Close()
 
 	adapter := &poolAdapter{pool: pool}
@@ -407,7 +407,7 @@ func TestRunMain(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			loader, _ := md2pdf.NewAssetLoader("")
+			loader, _ := picoloom.NewAssetLoader("")
 			var stdout, stderr bytes.Buffer
 			env := &Environment{
 				Now:         time.Now,
@@ -447,7 +447,7 @@ func TestRunMain(t *testing.T) {
 func TestRunMain_DoctorCommand(t *testing.T) {
 	t.Parallel()
 
-	loader, _ := md2pdf.NewAssetLoader("")
+	loader, _ := picoloom.NewAssetLoader("")
 	var stdout, stderr bytes.Buffer
 	env := &Environment{
 		Now:         time.Now,
@@ -473,7 +473,7 @@ func TestRunMain_DoctorCommand(t *testing.T) {
 func TestRunMain_DoctorJSON(t *testing.T) {
 	t.Parallel()
 
-	loader, _ := md2pdf.NewAssetLoader("")
+	loader, _ := picoloom.NewAssetLoader("")
 	var stdout, stderr bytes.Buffer
 	env := &Environment{
 		Now:         time.Now,
@@ -504,7 +504,7 @@ func TestRunMain_DoctorJSON(t *testing.T) {
 func TestRunMain_HelpDoctor(t *testing.T) {
 	t.Parallel()
 
-	loader, _ := md2pdf.NewAssetLoader("")
+	loader, _ := picoloom.NewAssetLoader("")
 	var stdout, stderr bytes.Buffer
 	env := &Environment{
 		Now:         time.Now,
@@ -578,7 +578,7 @@ func TestRunMain_ExitCodes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			loader, _ := md2pdf.NewAssetLoader("")
+			loader, _ := picoloom.NewAssetLoader("")
 			var stdout, stderr bytes.Buffer
 			env := &Environment{
 				Now:         time.Now,

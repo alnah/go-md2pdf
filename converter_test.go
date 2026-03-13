@@ -1,4 +1,4 @@
-package md2pdf
+package picoloom
 
 // Notes:
 // - Tests Service.Convert with mocked pipeline components to isolate unit logic
@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alnah/go-md2pdf/internal/pipeline"
+	"github.com/alnah/picoloom/v2/internal/pipeline"
 )
 
 // ---------------------------------------------------------------------------

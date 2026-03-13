@@ -13,8 +13,8 @@ import (
 	"os"
 	"testing"
 
-	md2pdf "github.com/alnah/go-md2pdf"
-	"github.com/alnah/go-md2pdf/internal/config"
+	picoloom "github.com/alnah/picoloom/v2"
+	"github.com/alnah/picoloom/v2/internal/config"
 )
 
 // ---------------------------------------------------------------------------
@@ -32,11 +32,11 @@ func TestExitCodeFor(t *testing.T) {
 		{"returns success for nil error", nil, ExitSuccess},
 
 		// Browser errors (exit 4)
-		{"returns browser exit code for browser connect error", md2pdf.ErrBrowserConnect, ExitBrowser},
-		{"returns browser exit code for page create error", md2pdf.ErrPageCreate, ExitBrowser},
-		{"returns browser exit code for page load error", md2pdf.ErrPageLoad, ExitBrowser},
-		{"returns browser exit code for pdf generation error", md2pdf.ErrPDFGeneration, ExitBrowser},
-		{"returns browser exit code for wrapped browser connect error", fmt.Errorf("failed: %w", md2pdf.ErrBrowserConnect), ExitBrowser},
+		{"returns browser exit code for browser connect error", picoloom.ErrBrowserConnect, ExitBrowser},
+		{"returns browser exit code for page create error", picoloom.ErrPageCreate, ExitBrowser},
+		{"returns browser exit code for page load error", picoloom.ErrPageLoad, ExitBrowser},
+		{"returns browser exit code for pdf generation error", picoloom.ErrPDFGeneration, ExitBrowser},
+		{"returns browser exit code for wrapped browser connect error", fmt.Errorf("failed: %w", picoloom.ErrBrowserConnect), ExitBrowser},
 
 		// I/O errors (exit 3)
 		{"returns io exit code for file not exist error", os.ErrNotExist, ExitIO},
@@ -51,19 +51,19 @@ func TestExitCodeFor(t *testing.T) {
 		{"returns usage exit code for config not found error", config.ErrConfigNotFound, ExitUsage},
 		{"returns usage exit code for config parse error", config.ErrConfigParse, ExitUsage},
 		{"returns usage exit code for field too long error", config.ErrFieldTooLong, ExitUsage},
-		{"returns usage exit code for empty markdown error", md2pdf.ErrEmptyMarkdown, ExitUsage},
-		{"returns usage exit code for invalid page size error", md2pdf.ErrInvalidPageSize, ExitUsage},
-		{"returns usage exit code for invalid orientation error", md2pdf.ErrInvalidOrientation, ExitUsage},
-		{"returns usage exit code for invalid margin error", md2pdf.ErrInvalidMargin, ExitUsage},
-		{"returns usage exit code for invalid footer position error", md2pdf.ErrInvalidFooterPosition, ExitUsage},
-		{"returns usage exit code for invalid watermark color error", md2pdf.ErrInvalidWatermarkColor, ExitUsage},
-		{"returns usage exit code for invalid toc depth error", md2pdf.ErrInvalidTOCDepth, ExitUsage},
-		{"returns usage exit code for invalid orphans error", md2pdf.ErrInvalidOrphans, ExitUsage},
-		{"returns usage exit code for invalid widows error", md2pdf.ErrInvalidWidows, ExitUsage},
-		{"returns usage exit code for style not found error", md2pdf.ErrStyleNotFound, ExitUsage},
-		{"returns usage exit code for template set not found error", md2pdf.ErrTemplateSetNotFound, ExitUsage},
-		{"returns usage exit code for incomplete template set error", md2pdf.ErrIncompleteTemplateSet, ExitUsage},
-		{"returns usage exit code for invalid asset path error", md2pdf.ErrInvalidAssetPath, ExitUsage},
+		{"returns usage exit code for empty markdown error", picoloom.ErrEmptyMarkdown, ExitUsage},
+		{"returns usage exit code for invalid page size error", picoloom.ErrInvalidPageSize, ExitUsage},
+		{"returns usage exit code for invalid orientation error", picoloom.ErrInvalidOrientation, ExitUsage},
+		{"returns usage exit code for invalid margin error", picoloom.ErrInvalidMargin, ExitUsage},
+		{"returns usage exit code for invalid footer position error", picoloom.ErrInvalidFooterPosition, ExitUsage},
+		{"returns usage exit code for invalid watermark color error", picoloom.ErrInvalidWatermarkColor, ExitUsage},
+		{"returns usage exit code for invalid toc depth error", picoloom.ErrInvalidTOCDepth, ExitUsage},
+		{"returns usage exit code for invalid orphans error", picoloom.ErrInvalidOrphans, ExitUsage},
+		{"returns usage exit code for invalid widows error", picoloom.ErrInvalidWidows, ExitUsage},
+		{"returns usage exit code for style not found error", picoloom.ErrStyleNotFound, ExitUsage},
+		{"returns usage exit code for template set not found error", picoloom.ErrTemplateSetNotFound, ExitUsage},
+		{"returns usage exit code for incomplete template set error", picoloom.ErrIncompleteTemplateSet, ExitUsage},
+		{"returns usage exit code for invalid asset path error", picoloom.ErrInvalidAssetPath, ExitUsage},
 		{"returns usage exit code for unsupported shell error", ErrUnsupportedShell, ExitUsage},
 		{"returns usage exit code for config init busy error", ErrConfigInitBusy, ExitUsage},
 		{"returns usage exit code for wrapped config parse error", fmt.Errorf("loading: %w", config.ErrConfigParse), ExitUsage},

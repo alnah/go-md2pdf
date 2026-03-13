@@ -1,4 +1,4 @@
-package md2pdf_test
+package picoloom_test
 
 import (
 	"context"
@@ -6,20 +6,20 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/alnah/go-md2pdf"
+	"github.com/alnah/picoloom/v2"
 )
 
 // Example demonstrates basic markdown to HTML conversion.
 // For PDF output, set HTMLOnly to false (requires Chrome).
 func Example() {
-	conv, err := md2pdf.NewConverter()
+	conv, err := picoloom.NewConverter()
 	if err != nil {
 		fmt.Println("error:", err)
 		return
 	}
 	defer conv.Close()
 
-	result, err := conv.Convert(context.Background(), md2pdf.Input{
+	result, err := conv.Convert(context.Background(), picoloom.Input{
 		Markdown: "# Hello World\n\nThis is a test.",
 		HTMLOnly: true, // Skip PDF generation for this example
 	})
@@ -37,16 +37,16 @@ func Example() {
 
 // Example_withCover demonstrates adding a cover page.
 func Example_withCover() {
-	conv, err := md2pdf.NewConverter()
+	conv, err := picoloom.NewConverter()
 	if err != nil {
 		fmt.Println("error:", err)
 		return
 	}
 	defer conv.Close()
 
-	result, err := conv.Convert(context.Background(), md2pdf.Input{
+	result, err := conv.Convert(context.Background(), picoloom.Input{
 		Markdown: "# Introduction\n\nDocument content here.",
-		Cover: &md2pdf.Cover{
+		Cover: &picoloom.Cover{
 			Title:        "Project Report",
 			Subtitle:     "Q4 2025 Analysis",
 			Author:       "John Doe",
@@ -69,7 +69,7 @@ func Example_withCover() {
 
 // Example_withTOC demonstrates adding a table of contents.
 func Example_withTOC() {
-	conv, err := md2pdf.NewConverter()
+	conv, err := picoloom.NewConverter()
 	if err != nil {
 		fmt.Println("error:", err)
 		return
@@ -91,9 +91,9 @@ Content for chapter 2.
 Subsection content.
 `
 
-	result, err := conv.Convert(context.Background(), md2pdf.Input{
+	result, err := conv.Convert(context.Background(), picoloom.Input{
 		Markdown: markdown,
-		TOC: &md2pdf.TOC{
+		TOC: &picoloom.TOC{
 			Title:    "Contents",
 			MinDepth: 2, // Start at h2 (skip document title)
 			MaxDepth: 3, // Include up to h3
@@ -113,14 +113,14 @@ Subsection content.
 
 // Example_withCustomCSS demonstrates injecting custom CSS.
 func Example_withCustomCSS() {
-	conv, err := md2pdf.NewConverter()
+	conv, err := picoloom.NewConverter()
 	if err != nil {
 		fmt.Println("error:", err)
 		return
 	}
 	defer conv.Close()
 
-	result, err := conv.Convert(context.Background(), md2pdf.Input{
+	result, err := conv.Convert(context.Background(), picoloom.Input{
 		Markdown: "# Styled Document\n\nCustom styling applied.",
 		CSS: `
 			body { font-family: Georgia, serif; }
@@ -141,16 +141,16 @@ func Example_withCustomCSS() {
 
 // Example_withSignature demonstrates adding a signature block.
 func Example_withSignature() {
-	conv, err := md2pdf.NewConverter()
+	conv, err := picoloom.NewConverter()
 	if err != nil {
 		fmt.Println("error:", err)
 		return
 	}
 	defer conv.Close()
 
-	result, err := conv.Convert(context.Background(), md2pdf.Input{
+	result, err := conv.Convert(context.Background(), picoloom.Input{
 		Markdown: "# Report\n\nDocument content.",
-		Signature: &md2pdf.Signature{
+		Signature: &picoloom.Signature{
 			Name:         "Jane Smith",
 			Title:        "Senior Engineer",
 			Email:        "jane@example.com",
@@ -171,16 +171,16 @@ func Example_withSignature() {
 
 // Example_withWatermark demonstrates adding a watermark.
 func Example_withWatermark() {
-	conv, err := md2pdf.NewConverter()
+	conv, err := picoloom.NewConverter()
 	if err != nil {
 		fmt.Println("error:", err)
 		return
 	}
 	defer conv.Close()
 
-	result, err := conv.Convert(context.Background(), md2pdf.Input{
+	result, err := conv.Convert(context.Background(), picoloom.Input{
 		Markdown: "# Draft Document\n\nThis is a draft.",
-		Watermark: &md2pdf.Watermark{
+		Watermark: &picoloom.Watermark{
 			Text:    "DRAFT",
 			Color:   "#888888",
 			Opacity: 0.1,
@@ -201,18 +201,18 @@ func Example_withWatermark() {
 
 // Example_withPageSettings demonstrates configuring page settings.
 func Example_withPageSettings() {
-	conv, err := md2pdf.NewConverter()
+	conv, err := picoloom.NewConverter()
 	if err != nil {
 		fmt.Println("error:", err)
 		return
 	}
 	defer conv.Close()
 
-	result, err := conv.Convert(context.Background(), md2pdf.Input{
+	result, err := conv.Convert(context.Background(), picoloom.Input{
 		Markdown: "# A4 Document\n\nConfigured for A4 paper.",
-		Page: &md2pdf.PageSettings{
-			Size:        md2pdf.PageSizeA4,
-			Orientation: md2pdf.OrientationPortrait,
+		Page: &picoloom.PageSettings{
+			Size:        picoloom.PageSizeA4,
+			Orientation: picoloom.OrientationPortrait,
 			Margin:      1.0, // inches
 		},
 		HTMLOnly: true,
@@ -230,16 +230,16 @@ func Example_withPageSettings() {
 
 // Example_withFooter demonstrates adding a page footer.
 func Example_withFooter() {
-	conv, err := md2pdf.NewConverter()
+	conv, err := picoloom.NewConverter()
 	if err != nil {
 		fmt.Println("error:", err)
 		return
 	}
 	defer conv.Close()
 
-	result, err := conv.Convert(context.Background(), md2pdf.Input{
+	result, err := conv.Convert(context.Background(), picoloom.Input{
 		Markdown: "# Document with Footer\n\nContent here.",
-		Footer: &md2pdf.Footer{
+		Footer: &picoloom.Footer{
 			Position:       "center",
 			ShowPageNumber: true,
 			Date:           "2025-01-15",
@@ -260,14 +260,14 @@ func Example_withFooter() {
 
 // ExampleNewConverter_withStyle demonstrates using a built-in style.
 func ExampleNewConverter_withStyle() {
-	conv, err := md2pdf.NewConverter(md2pdf.WithStyle("technical"))
+	conv, err := picoloom.NewConverter(picoloom.WithStyle("technical"))
 	if err != nil {
 		fmt.Println("error:", err)
 		return
 	}
 	defer conv.Close()
 
-	result, err := conv.Convert(context.Background(), md2pdf.Input{
+	result, err := conv.Convert(context.Background(), picoloom.Input{
 		Markdown: "# Technical Document\n\nUsing the technical style.",
 		HTMLOnly: true,
 	})
@@ -285,7 +285,7 @@ func ExampleNewConverter_withStyle() {
 
 // ExampleConverterPool demonstrates parallel batch processing.
 func ExampleConverterPool() {
-	pool := md2pdf.NewConverterPool(2)
+	pool := picoloom.NewConverterPool(2)
 
 	// Process two documents in parallel
 	docs := []string{
@@ -309,7 +309,7 @@ func ExampleConverterPool() {
 			}
 			defer pool.Release(conv)
 
-			result, err := conv.Convert(context.Background(), md2pdf.Input{
+			result, err := conv.Convert(context.Background(), picoloom.Input{
 				Markdown: markdown,
 				HTMLOnly: true,
 			})
@@ -335,20 +335,20 @@ func ExampleConverterPool() {
 // ExampleNewAssetLoader demonstrates loading custom assets.
 func ExampleNewAssetLoader() {
 	// NewAssetLoader with empty path uses embedded assets only
-	loader, err := md2pdf.NewAssetLoader("")
+	loader, err := picoloom.NewAssetLoader("")
 	if err != nil {
 		fmt.Println("error:", err)
 		return
 	}
 
-	conv, err := md2pdf.NewConverter(md2pdf.WithAssetLoader(loader))
+	conv, err := picoloom.NewConverter(picoloom.WithAssetLoader(loader))
 	if err != nil {
 		fmt.Println("error:", err)
 		return
 	}
 	defer conv.Close()
 
-	result, err := conv.Convert(context.Background(), md2pdf.Input{
+	result, err := conv.Convert(context.Background(), picoloom.Input{
 		Markdown: "# Custom Assets\n\nUsing asset loader.",
 		HTMLOnly: true,
 	})

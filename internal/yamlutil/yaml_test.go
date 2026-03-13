@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alnah/go-md2pdf/internal/yamlutil"
+	"github.com/alnah/picoloom/v2/internal/yamlutil"
 )
 
 type testConfig struct {

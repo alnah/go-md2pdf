@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	md2pdf "github.com/alnah/go-md2pdf"
+	picoloom "github.com/alnah/picoloom/v2"
 )
 
 // Sentinel errors for file discovery.
@@ -96,8 +96,8 @@ func validateWorkers(n int) error {
 	if n < 0 {
 		return fmt.Errorf("%w: %d (must be >= 0, 0 means auto)", ErrInvalidWorkerCount, n)
 	}
-	if n > md2pdf.MaxPoolSize {
-		return fmt.Errorf("%w: %d (maximum is %d)", ErrInvalidWorkerCount, n, md2pdf.MaxPoolSize)
+	if n > picoloom.MaxPoolSize {
+		return fmt.Errorf("%w: %d (maximum is %d)", ErrInvalidWorkerCount, n, picoloom.MaxPoolSize)
 	}
 	return nil
 }

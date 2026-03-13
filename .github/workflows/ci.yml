@@ -93,10 +93,10 @@ jobs:
           cache: true
 
       - name: Run config init safety tests
-        run: go test ./cmd/md2pdf -run TestConfigInit_ -count=1
+        run: go test ./cmd/picoloom -run TestConfigInit_ -count=1
 
       - name: Run config init integration tests
-        run: go test -tags=integration ./cmd/md2pdf -run TestIntegration_ConfigInit -count=1
+        run: go test -tags=integration ./cmd/picoloom -run TestIntegration_ConfigInit -count=1
 
   lint:
     runs-on: ubuntu-latest
@@ -160,7 +160,7 @@ jobs:
             rod-${{ runner.os }}-
 
       - name: Build picoloom
-        run: go build -o picoloom ./cmd/md2pdf
+        run: go build -o picoloom ./cmd/picoloom
 
       - name: Generate example PDFs
         run: |

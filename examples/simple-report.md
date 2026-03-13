@@ -9,7 +9,7 @@ tags: [status, quarterly, metrics]
 
 ## Executive Summary
 
-This document demonstrates go-md2pdf's ability to convert Markdown into professional PDF documents with minimal configuration.
+This document demonstrates Picoloom's ability to convert Markdown into professional PDF documents with minimal configuration.
 
 ## Key Metrics
 
@@ -59,4 +59,4 @@ The project is on track for Q1 objectives. Team morale remains high and technica
 
 ---
 
-*Generated with go-md2pdf*
+*Generated with Picoloom*

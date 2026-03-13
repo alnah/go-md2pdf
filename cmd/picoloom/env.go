@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	md2pdf "github.com/alnah/go-md2pdf"
-	"github.com/alnah/go-md2pdf/internal/config"
+	picoloom "github.com/alnah/picoloom/v2"
+	"github.com/alnah/picoloom/v2/internal/config"
 )
 
 // Environment holds injectable dependencies for testability.
@@ -18,13 +18,13 @@ type Environment struct {
 	Stdout      io.Writer
 	Stderr      io.Writer
 	IsStdinTTY  func() bool
-	AssetLoader md2pdf.AssetLoader
+	AssetLoader picoloom.AssetLoader
 	Config      *config.Config // Loaded once, shared across pipeline
 }
 
 // DefaultEnv returns production environment with embedded assets.
 func DefaultEnv() *Environment {
-	loader, err := md2pdf.NewAssetLoader("")
+	loader, err := picoloom.NewAssetLoader("")
 	if err != nil {
 		// NewAssetLoader("") only fails if basePath validation fails.
 		// Empty string bypasses validation, so this is unreachable.

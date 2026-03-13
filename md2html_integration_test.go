@@ -1,6 +1,6 @@
 //go:build integration
 
-package md2pdf
+package picoloom
 
 // Notes:
 // - Tests GoldmarkConverter HTML generation with various markdown features
@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alnah/go-md2pdf/internal/pipeline"
+	"github.com/alnah/picoloom/v2/internal/pipeline"
 )
 
 // ---------------------------------------------------------------------------

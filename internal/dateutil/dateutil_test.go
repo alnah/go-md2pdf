@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alnah/go-md2pdf/internal/dateutil"
+	"github.com/alnah/picoloom/v2/internal/dateutil"
 )
 
 // ---------------------------------------------------------------------------

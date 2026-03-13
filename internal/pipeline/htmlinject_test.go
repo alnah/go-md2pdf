@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alnah/go-md2pdf/internal/assets"
+	"github.com/alnah/picoloom/v2/internal/assets"
 )
 
 func TestSanitizeCSS(t *testing.T) {

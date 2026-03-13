@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/alnah/go-md2pdf/internal/hints"
+	"github.com/alnah/picoloom/v2/internal/hints"
 )
 
 //go:embed styles/*
