@@ -171,6 +171,11 @@ func getCommands() []commandDef {
 			Flags: nil,
 		},
 		{
+			Name:  "doctor",
+			Desc:  "Check system configuration",
+			Flags: nil,
+		},
+		{
 			Name:  "version",
 			Desc:  "Show version information",
 			Flags: nil,
