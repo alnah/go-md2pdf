@@ -19,7 +19,7 @@ You can expect a response within 7 days. If confirmed, a fix will be released as
 
 ## Scope
 
-go-md2pdf processes Markdown files and generates PDFs using headless Chrome.
+Picoloom processes Markdown files and generates PDFs using headless Chrome.
 
 ### Security Considerations
 
@@ -37,9 +37,9 @@ The tool may make network requests in these cases:
 
 These requests are initiated by the headless Chrome browser, not the Go code directly.
 
-### Config Init (`md2pdf config init`)
+### Config Init (`picoloom config init`)
 
-- Generates a local YAML config file only (default: `./md2pdf.yaml`).
+- Generates a local YAML config file only (default: `./picoloom.yaml`).
 - Does not perform network requests.
 - Uses destination lock files to avoid concurrent write corruption.
 - Uses explicit `--force` for overwrite and applies backup/rollback safeguards to recover interrupted writes.

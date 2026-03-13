@@ -1,6 +1,6 @@
 # Contributing
 
-Contributions are welcome! go-md2pdf aims to be one of the best Markdown-to-PDF tool for professional documents.
+Contributions are welcome! Picoloom aims to be one of the best Markdown-to-PDF tools for professional documents.
 
 ## What I'm Looking For
 
@@ -19,8 +19,8 @@ Contributions are welcome! go-md2pdf aims to be one of the best Markdown-to-PDF 
 ## Setup
 
 ```bash
-git clone https://github.com/alnah/go-md2pdf.git
-cd go-md2pdf
+git clone https://github.com/alnah/picoloom.git
+cd picoloom
 git lfs install  # Required for example PDFs
 git lfs pull     # Download example PDFs
 ```

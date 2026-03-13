@@ -1,9 +1,9 @@
-# go-md2pdf
+# Picoloom
 
 [![Go Reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white)](https://pkg.go.dev/github.com/alnah/go-md2pdf)
 [![Go Report Card](https://img.shields.io/badge/go%20report-A+-brightgreen)](https://goreportcard.com/report/github.com/alnah/go-md2pdf)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/alnah/go-md2pdf/ci.yml?branch=main)](https://github.com/alnah/go-md2pdf/actions)
-[![Coverage](https://img.shields.io/codecov/c/github/alnah/go-md2pdf)](https://codecov.io/gh/alnah/go-md2pdf)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/alnah/picoloom/ci.yml?branch=main)](https://github.com/alnah/picoloom/actions)
+[![Coverage](https://img.shields.io/codecov/c/github/alnah/picoloom)](https://codecov.io/gh/alnah/picoloom)
 [![License](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](LICENSE)
 
 > Go library and CLI for Markdown to PDF conversion using headless Chrome. Auto-downloads Chromium on first run. Features cover pages, automatic table of contents, footers with page numbers, signatures, watermarks, and 8 built-in CSS themes with custom template support. Supports parallel batch processing.
@@ -34,18 +34,20 @@
 go install github.com/alnah/go-md2pdf/cmd/md2pdf@latest
 ```
 
+The Go module path stays `github.com/alnah/go-md2pdf` for now. The public CLI name is moving to `picoloom`.
+
 <details>
 <summary>Other installation methods</summary>
 
 ### Docker
 
 ```bash
-docker pull ghcr.io/alnah/go-md2pdf:latest
+docker pull ghcr.io/alnah/picoloom:latest
 ```
 
 ### Binary Download
 
-Download pre-built binaries from [GitHub Releases](https://github.com/alnah/go-md2pdf/releases).
+Download pre-built binaries from [GitHub Releases](https://github.com/alnah/picoloom/releases).
 
 </details>
 
@@ -61,10 +63,10 @@ Download pre-built binaries from [GitHub Releases](https://github.com/alnah/go-m
 ### CLI
 
 ```bash
-md2pdf convert document.md                # Single file
-md2pdf convert ./docs/ -o ./output/       # Batch convert
-md2pdf convert -c work document.md        # With config
-md2pdf config init                        # Create config with wizard
+picoloom convert document.md                # Single file
+picoloom convert ./docs/ -o ./output/       # Batch convert
+picoloom convert -c work document.md        # With config
+picoloom config init                        # Create config with wizard
 ```
 
 ### Library
@@ -106,7 +108,7 @@ Use `Input.HTMLOnly: true` to skip PDF generation and only produce HTML.
 
 ## Features
 
-- **CLI + Library** - Use as `md2pdf` command or import in Go, with shell completion
+- **CLI + Library** - Use as `picoloom` command or import in Go, with shell completion
 - **Batch conversion** - Process directories with parallel workers
 - **Cover pages** - Title, subtitle, logo, author, organization, date, version
 - **Table of contents** - Auto-generated from headings with configurable depth
@@ -120,18 +122,18 @@ Use `Input.HTMLOnly: true` to skip PDF generation and only produce HTML.
 ## CLI Reference
 
 ```bash
-md2pdf convert document.md                # Single file
-md2pdf convert ./docs/ -o ./output/       # Batch convert
-md2pdf convert -c work document.md        # With config
-md2pdf convert --style technical doc.md   # With style
-md2pdf config init                        # Interactive config wizard
+picoloom convert document.md                # Single file
+picoloom convert ./docs/ -o ./output/       # Batch convert
+picoloom convert -c work document.md        # With config
+picoloom convert --style technical doc.md   # With style
+picoloom config init                        # Interactive config wizard
 ```
 
 <details>
 <summary>All flags</summary>
 
 ```
-md2pdf <command> [flags] [args]
+picoloom <command> [flags] [args]
 
 Commands:
   convert      Convert markdown files to PDF
@@ -141,7 +143,7 @@ Commands:
   version      Show version information
   help         Show help for a command
 
-md2pdf convert <input> [flags]
+picoloom convert <input> [flags]
 
 Input/Output:
   -o, --output <path>       Output file or directory
@@ -227,10 +229,10 @@ Output Control:
   -q, --quiet               Only show errors
   -v, --verbose             Show detailed timing
 
-md2pdf config init [flags]
+picoloom config init [flags]
 
 Config Init:
-      --output <path>       Output path for generated config (default: ./md2pdf.yaml)
+      --output <path>       Output path for generated config (default: ./picoloom.yaml)
       --force               Overwrite destination if it exists
       --no-input            Use defaults without interactive prompts
 ```
@@ -242,43 +244,43 @@ Config Init:
 
 ```bash
 # Single file with custom output
-md2pdf convert -o report.pdf input.md
+picoloom convert -o report.pdf input.md
 
 # Batch with config
-md2pdf convert -c work ./docs/ -o ./pdfs/
+picoloom convert -c work ./docs/ -o ./pdfs/
 
 # Custom CSS, no footer
-md2pdf convert --style ./custom.css --no-footer document.md
+picoloom convert --style ./custom.css --no-footer document.md
 
 # A4 landscape with 1-inch margins
-md2pdf convert -p a4 --orientation landscape --margin 1.0 document.md
+picoloom convert -p a4 --orientation landscape --margin 1.0 document.md
 
 # With watermark
-md2pdf convert --wm-text "DRAFT" --wm-opacity 0.15 document.md
+picoloom convert --wm-text "DRAFT" --wm-opacity 0.15 document.md
 
 # Override document title
-md2pdf convert --doc-title "Final Report" document.md
+picoloom convert --doc-title "Final Report" document.md
 
 # Page breaks before H1 and H2 headings
-md2pdf convert --break-before h1,h2 document.md
+picoloom convert --break-before h1,h2 document.md
 
 # Use embedded style by name
-md2pdf convert --style technical document.md
+picoloom convert --style technical document.md
 
 # Debug: output HTML alongside PDF
-md2pdf convert --html document.md
+picoloom convert --html document.md
 
 # Debug: output HTML only (no PDF)
-md2pdf convert --html-only document.md
+picoloom convert --html-only document.md
 
 # Use custom assets directory
-md2pdf convert --asset-path ./my-assets document.md
+picoloom convert --asset-path ./my-assets document.md
 
 # Interactive config wizard
-md2pdf config init
+picoloom config init
 
 # Non-interactive config generation (CI/scripts)
-md2pdf config init --no-input --output ./configs/work.yaml --force
+picoloom config init --no-input --output ./configs/work.yaml --force
 ```
 
 </details>
@@ -290,16 +292,16 @@ Generate shell completion scripts for tab-completion of commands, flags, and fil
 
 ```bash
 # Bash - add to ~/.bashrc
-eval "$(md2pdf completion bash)"
+eval "$(picoloom completion bash)"
 
 # Zsh - add to ~/.zshrc
-eval "$(md2pdf completion zsh)"
+eval "$(picoloom completion zsh)"
 
 # Fish - save to completions directory
-md2pdf completion fish > ~/.config/fish/completions/md2pdf.fish
+picoloom completion fish > ~/.config/fish/completions/picoloom.fish
 
 # PowerShell - add to $PROFILE
-md2pdf completion powershell | Out-String | Invoke-Expression
+picoloom completion powershell | Out-String | Invoke-Expression
 ```
 
 </details>
@@ -318,7 +320,7 @@ md2pdf completion powershell | Out-String | Invoke-Expression
 Example usage in scripts:
 
 ```bash
-md2pdf convert document.md
+picoloom convert document.md
 case $? in
     0) echo "Success" ;;
     2) echo "Check your flags or config" ;;
@@ -336,8 +338,8 @@ esac
 Diagnose system configuration before running conversions:
 
 ```bash
-md2pdf doctor           # Human-readable output
-md2pdf doctor --json    # JSON output for CI/scripts
+picoloom doctor           # Human-readable output
+picoloom doctor --json    # JSON output for CI/scripts
 ```
 
 Checks performed:
@@ -353,7 +355,7 @@ Example CI usage:
 
 ```bash
 # Fail pipeline early if setup is broken
-md2pdf doctor --json | jq -e '.status != "errors"' || exit 1
+picoloom doctor --json | jq -e '.status != "errors"' || exit 1
 ```
 
 </details>
@@ -363,13 +365,13 @@ md2pdf doctor --json | jq -e '.status != "errors"' || exit 1
 
 ```bash
 # Convert a single file
-docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf convert document.md
+docker run --rm -v $(pwd):/data ghcr.io/alnah/picoloom convert document.md
 
 # Convert with output path
-docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf convert -o output.pdf input.md
+docker run --rm -v $(pwd):/data ghcr.io/alnah/picoloom convert -o output.pdf input.md
 
 # Batch convert directory
-docker run --rm -v $(pwd):/data ghcr.io/alnah/go-md2pdf convert ./docs/ -o ./pdfs/
+docker run --rm -v $(pwd):/data ghcr.io/alnah/picoloom convert ./docs/ -o ./pdfs/
 ```
 
 > **Note:** The official Docker image has all dependencies pre-installed. For custom images, see [Troubleshooting](#troubleshooting).
@@ -382,28 +384,28 @@ Environment variables provide CI/CD-friendly configuration without requiring YAM
 
 **Priority:** CLI flags > config file > environment variables > defaults
 
-### MD2PDF Variables
+### PICOLOOM Variables
 
 | Variable | Description |
 |----------|-------------|
-| `MD2PDF_CONFIG` | Config file path (e.g., `/app/config.yaml`) |
-| `MD2PDF_INPUT_DIR` | Default input directory |
-| `MD2PDF_OUTPUT_DIR` | Default output directory |
-| `MD2PDF_TIMEOUT` | PDF generation timeout (e.g., `2m`, `90s`) |
-| `MD2PDF_STYLE` | CSS style name or path (e.g., `technical`) |
-| `MD2PDF_WORKERS` | Parallel workers (e.g., `4`) |
-| `MD2PDF_AUTHOR_NAME` | Author name for cover/signature |
-| `MD2PDF_AUTHOR_ORG` | Organization name |
-| `MD2PDF_AUTHOR_EMAIL` | Author email |
-| `MD2PDF_DOC_VERSION` | Document version |
-| `MD2PDF_DOC_DATE` | Document date (supports `auto`) |
-| `MD2PDF_DOC_ID` | Document ID |
-| `MD2PDF_PAGE_SIZE` | Page size: `letter`, `a4`, `legal` |
-| `MD2PDF_COVER_LOGO` | Cover logo path/URL (auto-enables cover) |
-| `MD2PDF_WATERMARK_TEXT` | Watermark text (auto-enables watermark) |
-| `MD2PDF_CONTAINER` | Set to `1` to force container detection (for `md2pdf doctor`) |
+| `PICOLOOM_CONFIG` | Config file path (e.g., `/app/config.yaml`) |
+| `PICOLOOM_INPUT_DIR` | Default input directory |
+| `PICOLOOM_OUTPUT_DIR` | Default output directory |
+| `PICOLOOM_TIMEOUT` | PDF generation timeout (e.g., `2m`, `90s`) |
+| `PICOLOOM_STYLE` | CSS style name or path (e.g., `technical`) |
+| `PICOLOOM_WORKERS` | Parallel workers (e.g., `4`) |
+| `PICOLOOM_AUTHOR_NAME` | Author name for cover/signature |
+| `PICOLOOM_AUTHOR_ORG` | Organization name |
+| `PICOLOOM_AUTHOR_EMAIL` | Author email |
+| `PICOLOOM_DOC_VERSION` | Document version |
+| `PICOLOOM_DOC_DATE` | Document date (supports `auto`) |
+| `PICOLOOM_DOC_ID` | Document ID |
+| `PICOLOOM_PAGE_SIZE` | Page size: `letter`, `a4`, `legal` |
+| `PICOLOOM_COVER_LOGO` | Cover logo path/URL (auto-enables cover) |
+| `PICOLOOM_WATERMARK_TEXT` | Watermark text (auto-enables watermark) |
+| `PICOLOOM_CONTAINER` | Set to `1` to force container detection (for `picoloom doctor`) |
 
-Unknown `MD2PDF_*` variables trigger a warning to catch typos.
+Legacy `MD2PDF_*` variables are still accepted as fallback. Unknown `PICOLOOM_*` or `MD2PDF_*` variables trigger a warning to catch typos.
 
 <details>
 <summary>CI/CD Examples</summary>
@@ -412,32 +414,32 @@ Unknown `MD2PDF_*` variables trigger a warning to catch typos.
 ```yaml
 - name: Generate PDFs
   env:
-    MD2PDF_STYLE: technical
-    MD2PDF_AUTHOR_ORG: ${{ github.repository_owner }}
-    MD2PDF_DOC_VERSION: ${{ github.ref_name }}
-    MD2PDF_WATERMARK_TEXT: ${{ github.ref_name == 'main' && '' || 'DRAFT' }}
-  run: md2pdf convert ./docs/ -o ./output/
+    PICOLOOM_STYLE: technical
+    PICOLOOM_AUTHOR_ORG: ${{ github.repository_owner }}
+    PICOLOOM_DOC_VERSION: ${{ github.ref_name }}
+    PICOLOOM_WATERMARK_TEXT: ${{ github.ref_name == 'main' && '' || 'DRAFT' }}
+  run: picoloom convert ./docs/ -o ./output/
 ```
 
 **GitLab CI:**
 ```yaml
 pdf:
   variables:
-    MD2PDF_STYLE: corporate
-    MD2PDF_OUTPUT_DIR: ./artifacts/pdf
-    MD2PDF_DOC_DATE: auto
+    PICOLOOM_STYLE: corporate
+    PICOLOOM_OUTPUT_DIR: ./artifacts/pdf
+    PICOLOOM_DOC_DATE: auto
   script:
-    - md2pdf convert ./docs/
+    - picoloom convert ./docs/
 ```
 
 **Docker:**
 ```bash
 docker run --rm \
-  -e MD2PDF_STYLE=technical \
-  -e MD2PDF_AUTHOR_ORG="Acme Corp" \
+  -e PICOLOOM_STYLE=technical \
+  -e PICOLOOM_AUTHOR_ORG="Acme Corp" \
   -e ROD_NO_SANDBOX=1 \
   -v $(pwd):/data \
-  ghcr.io/alnah/go-md2pdf convert ./docs/
+  ghcr.io/alnah/picoloom convert ./docs/
 ```
 
 </details>
@@ -457,11 +459,13 @@ Config files are searched in the current directory first, then in the user confi
 
 | OS      | User Config Directory                      |
 | ------- | ------------------------------------------ |
-| Linux   | `~/.config/go-md2pdf/`                     |
-| macOS   | `~/Library/Application Support/go-md2pdf/` |
-| Windows | `%APPDATA%\go-md2pdf\`                     |
+| Linux   | `~/.config/picoloom/`                      |
+| macOS   | `~/Library/Application Support/picoloom/`  |
+| Windows | `%APPDATA%\picoloom\`                      |
 
 Supported formats: `.yaml`, `.yml`
+
+Legacy fallbacks are still supported during the migration: `./md2pdf.yaml`, `~/.config/go-md2pdf/`, and `MD2PDF_*`.
 
 ## Config Init Wizard
 
@@ -469,13 +473,13 @@ Use the wizard to generate a valid config file without writing YAML manually:
 
 ```bash
 # Interactive wizard (TTY required)
-md2pdf config init
+picoloom config init
 
 # Custom destination
-md2pdf config init --output ./configs/work.yaml
+picoloom config init --output ./configs/work.yaml
 
 # Non-interactive defaults (CI/scripts)
-md2pdf config init --no-input --output ./configs/work.yaml --force
+picoloom config init --no-input --output ./configs/work.yaml --force
 ```
 
 Wizard behavior:
@@ -542,7 +546,7 @@ Wizard behavior:
 <summary>Example config file</summary>
 
 ```yaml
-# ~/.config/go-md2pdf/work.yaml
+# ~/.config/picoloom/work.yaml
 
 # Input/Output directories
 input:
@@ -967,11 +971,11 @@ Full API documentation with runnable examples: [pkg.go.dev/github.com/alnah/go-m
 
 ## Troubleshooting
 
-Run `md2pdf doctor` to diagnose system configuration issues:
+Run `picoloom doctor` to diagnose system configuration issues:
 
 ```bash
-md2pdf doctor           # Human-readable diagnostics
-md2pdf doctor --json    # JSON output for CI/scripts
+picoloom doctor           # Human-readable diagnostics
+picoloom doctor --json    # JSON output for CI/scripts
 ```
 
 ### Docker and CI/CD
@@ -982,12 +986,12 @@ Chrome requires disabling its sandbox in containerized environments:
 
 ```bash
 export ROD_NO_SANDBOX=1
-md2pdf convert document.md
+picoloom convert document.md
 ```
 
 Or in Docker:
 ```bash
-docker run -e ROD_NO_SANDBOX=1 -v $(pwd):/data ghcr.io/alnah/go-md2pdf convert doc.md
+docker run -e ROD_NO_SANDBOX=1 -v $(pwd):/data ghcr.io/alnah/picoloom convert doc.md
 ```
 
 #### Missing dependencies on Linux
@@ -1027,7 +1031,7 @@ Point to a specific browser binary:
 
 ```bash
 export ROD_BROWSER_BIN=/usr/bin/chromium-browser
-md2pdf convert document.md
+picoloom convert document.md
 ```
 
 ### Common Errors

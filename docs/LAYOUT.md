@@ -1,7 +1,7 @@
 # Project Layout
 
 ```
-go-md2pdf/                      # package md2pdf (library)
+go-md2pdf/                      # package md2pdf (library), public name: Picoloom
 │
 ├── doc.go                      # Package documentation (godoc)
 ├── converter.go                # NewConverter(), Convert(), Close() - facade
@@ -13,7 +13,7 @@ go-md2pdf/                      # package md2pdf (library)
 ├── cssbuilders.go              # Watermark/PageBreaks CSS (depend on public types)
 ├── example_test.go             # Runnable examples for godoc (Example*, ExampleConverterPool, etc.)
 │
-├── cmd/md2pdf/                 # CLI (md2pdf convert|config|doctor|version|help|completion)
+├── cmd/md2pdf/                 # CLI (picoloom convert|config|doctor|version|help|completion)
 │   ├── main.go                 # Entry point, command dispatch
 │   ├── exit_codes.go           # Semantic exit codes (0-4) and exitCodeFor()
 │   ├── convert.go              # Convert command orchestration

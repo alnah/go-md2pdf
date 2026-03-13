@@ -7,8 +7,8 @@ body:
     attributes:
       value: |
         Thanks for your suggestion! Before submitting:
-        - Search [existing issues](https://github.com/alnah/go-md2pdf/issues) for similar requests
-        - Check [Known Limitations](https://github.com/alnah/go-md2pdf#known-limitations) for intentional design decisions
+        - Search [existing issues](https://github.com/alnah/picoloom/issues) for similar requests
+        - Check [Known Limitations](https://github.com/alnah/picoloom#known-limitations) for intentional design decisions
 
   - type: textarea
     id: problem

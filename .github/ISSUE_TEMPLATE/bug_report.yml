@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a bug in go-md2pdf
+description: Report a bug in Picoloom
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -7,8 +7,8 @@ body:
     attributes:
       value: |
         Thanks for reporting! Before submitting:
-        - Check [Known Limitations](https://github.com/alnah/go-md2pdf#known-limitations)
-        - Search [existing issues](https://github.com/alnah/go-md2pdf/issues)
+        - Check [Known Limitations](https://github.com/alnah/picoloom#known-limitations)
+        - Search [existing issues](https://github.com/alnah/picoloom/issues)
 
   - type: checkboxes
     id: checklist
@@ -25,7 +25,7 @@ body:
     attributes:
       label: Bug Description
       description: What happened? Be specific.
-      placeholder: "When I run `md2pdf convert doc.md`, the PDF..."
+      placeholder: "When I run `picoloom convert doc.md`, the PDF..."
     validations:
       required: true
 
@@ -44,7 +44,7 @@ body:
       description: Minimal steps to reproduce the issue
       value: |
         1. Create a file `test.md` with content: ...
-        2. Run: `md2pdf convert test.md`
+        2. Run: `picoloom convert test.md`
         3. Observe: ...
     validations:
       required: true
@@ -53,7 +53,7 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: Where are you running md2pdf?
+      description: Where are you running picoloom?
       options:
         - Local (macOS)
         - Local (Windows)
@@ -75,8 +75,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: md2pdf Version
-      description: Run `md2pdf version` to check
+      label: picoloom Version
+      description: Run `picoloom version` to check
       placeholder: "v1.0.0"
     validations:
       required: true
