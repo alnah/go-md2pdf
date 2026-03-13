@@ -190,16 +190,16 @@ func getCommands() []commandDef {
 
 // GenerateCompletion writes shell completion script to w.
 // Returns error if shell is unsupported or write fails.
-func GenerateCompletion(w io.Writer, shell Shell) error {
+func GenerateCompletion(w io.Writer, shell Shell, cliName string) error {
 	switch shell {
 	case ShellBash:
-		return generateBash(w)
+		return generateBash(w, cliName)
 	case ShellZsh:
-		return generateZsh(w)
+		return generateZsh(w, cliName)
 	case ShellFish:
-		return generateFish(w)
+		return generateFish(w, cliName)
 	case ShellPowerShell:
-		return generatePowerShell(w)
+		return generatePowerShell(w, cliName)
 	default:
 		return fmt.Errorf("%w: %q (supported: bash, zsh, fish, powershell)", ErrUnsupportedShell, shell)
 	}
@@ -208,17 +208,21 @@ func GenerateCompletion(w io.Writer, shell Shell) error {
 // runCompletion handles the completion command.
 func runCompletion(args []string, env *Environment) error {
 	if len(args) == 0 {
-		printCompletionUsage(env.Stdout)
+		printCompletionUsageFor(env.Stdout, envCLIName(env))
 		return nil
 	}
 
 	shell := Shell(args[0])
-	return GenerateCompletion(env.Stdout, shell)
+	return GenerateCompletion(env.Stdout, shell, envCLIName(env))
 }
 
 // printCompletionUsage prints help for the completion command.
 func printCompletionUsage(w io.Writer) {
-	fmt.Fprintln(w, "Usage: md2pdf completion <shell>")
+	printCompletionUsageFor(w, canonicalCLIName)
+}
+
+func printCompletionUsageFor(w io.Writer, cliName string) {
+	fmt.Fprintf(w, "Usage: %s completion <shell>\n", cliName)
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Generate shell completion script for the specified shell.")
 	fmt.Fprintln(w)
@@ -232,16 +236,16 @@ func printCompletionUsage(w io.Writer) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "  Bash:")
 	fmt.Fprintln(w, "    # Add to ~/.bashrc:")
-	fmt.Fprintln(w, "    eval \"$(md2pdf completion bash)\"")
+	fmt.Fprintf(w, "    eval \"$(%s completion bash)\"\n", cliName)
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "  Zsh:")
 	fmt.Fprintln(w, "    # Add to ~/.zshrc (before compinit):")
-	fmt.Fprintln(w, "    eval \"$(md2pdf completion zsh)\"")
+	fmt.Fprintf(w, "    eval \"$(%s completion zsh)\"\n", cliName)
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "  Fish:")
-	fmt.Fprintln(w, "    md2pdf completion fish > ~/.config/fish/completions/md2pdf.fish")
+	fmt.Fprintf(w, "    %s completion fish > ~/.config/fish/completions/%s.fish\n", cliName, cliName)
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "  PowerShell:")
 	fmt.Fprintln(w, "    # Add to $PROFILE:")
-	fmt.Fprintln(w, "    md2pdf completion powershell | Out-String | Invoke-Expression")
+	fmt.Fprintf(w, "    %s completion powershell | Out-String | Invoke-Expression\n", cliName)
 }

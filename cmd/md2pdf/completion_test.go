@@ -31,7 +31,7 @@ func TestGenerateCompletion(t *testing.T) {
 			name:  "bash generates valid script",
 			shell: ShellBash,
 			wantContains: []string{
-				"_md2pdf_completions",
+				"_" + canonicalizeShellFuncName(canonicalCLIName) + "_completions",
 				"complete -F",
 				"compgen",
 				"convert",
@@ -43,8 +43,8 @@ func TestGenerateCompletion(t *testing.T) {
 			name:  "zsh generates valid script",
 			shell: ShellZsh,
 			wantContains: []string{
-				"#compdef md2pdf",
-				"_md2pdf",
+				"#compdef " + canonicalCLIName,
+				"_" + canonicalizeShellFuncName(canonicalCLIName),
 				"_arguments",
 				"_describe",
 				"convert",
@@ -55,9 +55,9 @@ func TestGenerateCompletion(t *testing.T) {
 			name:  "fish generates valid script",
 			shell: ShellFish,
 			wantContains: []string{
-				"complete -c md2pdf",
-				"__fish_md2pdf_needs_command",
-				"__fish_md2pdf_using_command",
+				"complete -c " + canonicalCLIName,
+				"__fish_" + canonicalizeShellFuncName(canonicalCLIName) + "_needs_command",
+				"__fish_" + canonicalizeShellFuncName(canonicalCLIName) + "_using_command",
 				"convert",
 				"-l output", // fish uses -l for long flags
 			},
@@ -67,7 +67,7 @@ func TestGenerateCompletion(t *testing.T) {
 			shell: ShellPowerShell,
 			wantContains: []string{
 				"Register-ArgumentCompleter",
-				"-CommandName md2pdf",
+				"-CommandName " + canonicalCLIName,
 				"CompletionResult",
 				"convert",
 				"--output",
@@ -81,7 +81,7 @@ func TestGenerateCompletion(t *testing.T) {
 			t.Parallel()
 
 			var buf bytes.Buffer
-			err := GenerateCompletion(&buf, tt.shell)
+			err := GenerateCompletion(&buf, tt.shell, canonicalCLIName)
 
 			if err != nil {
 				t.Fatalf("GenerateCompletion(%q) unexpected error: %v", tt.shell, err)
@@ -130,7 +130,7 @@ func TestGenerateCompletion_UnsupportedShell(t *testing.T) {
 			t.Parallel()
 
 			var buf bytes.Buffer
-			err := GenerateCompletion(&buf, tt.shell)
+			err := GenerateCompletion(&buf, tt.shell, canonicalCLIName)
 
 			if err == nil {
 				t.Fatalf("GenerateCompletion(%q) error = nil, want error", tt.shell)
@@ -167,7 +167,7 @@ func TestRunCompletion_NoArgs(t *testing.T) {
 	}
 
 	output := stdout.String()
-	if !strings.Contains(output, "Usage: md2pdf completion") {
+	if !strings.Contains(output, "Usage: "+canonicalCLIName+" completion") {
 		t.Error("expected usage message when no args provided")
 	}
 	if !strings.Contains(output, "bash") {
@@ -189,9 +189,9 @@ func TestRunCompletion_ValidShell(t *testing.T) {
 		shell        string
 		wantContains string
 	}{
-		{"bash", "_md2pdf_completions"},
-		{"zsh", "#compdef md2pdf"},
-		{"fish", "complete -c md2pdf"},
+		{"bash", "_" + canonicalizeShellFuncName(canonicalCLIName) + "_completions"},
+		{"zsh", "#compdef " + canonicalCLIName},
+		{"fish", "complete -c " + canonicalCLIName},
 		{"powershell", "Register-ArgumentCompleter"},
 	}
 
@@ -462,7 +462,7 @@ func TestGenerateCompletion_BashContainsAllCommands(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	err := GenerateCompletion(&buf, ShellBash)
+	err := GenerateCompletion(&buf, ShellBash, canonicalCLIName)
 	if err != nil {
 		t.Fatalf("GenerateCompletion(&buf, ShellBash) unexpected error: %v", err)
 	}
@@ -484,7 +484,7 @@ func TestGenerateCompletion_ZshContainsAllCommands(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	err := GenerateCompletion(&buf, ShellZsh)
+	err := GenerateCompletion(&buf, ShellZsh, canonicalCLIName)
 	if err != nil {
 		t.Fatalf("GenerateCompletion(&buf, ShellZsh) unexpected error: %v", err)
 	}
@@ -506,7 +506,7 @@ func TestGenerateCompletion_FishContainsAllCommands(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	err := GenerateCompletion(&buf, ShellFish)
+	err := GenerateCompletion(&buf, ShellFish, canonicalCLIName)
 	if err != nil {
 		t.Fatalf("GenerateCompletion(&buf, ShellFish) unexpected error: %v", err)
 	}
@@ -528,7 +528,7 @@ func TestGenerateCompletion_PowerShellContainsAllCommands(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	err := GenerateCompletion(&buf, ShellPowerShell)
+	err := GenerateCompletion(&buf, ShellPowerShell, canonicalCLIName)
 	if err != nil {
 		t.Fatalf("GenerateCompletion(&buf, ShellPowerShell) unexpected error: %v", err)
 	}
@@ -550,7 +550,7 @@ func TestGenerateCompletion_ZshEnumCompletion(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	err := GenerateCompletion(&buf, ShellZsh)
+	err := GenerateCompletion(&buf, ShellZsh, canonicalCLIName)
 	if err != nil {
 		t.Fatalf("GenerateCompletion(&buf, ShellZsh) unexpected error: %v", err)
 	}
@@ -574,7 +574,7 @@ func TestGenerateCompletion_BashEnumCompletion(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	err := GenerateCompletion(&buf, ShellBash)
+	err := GenerateCompletion(&buf, ShellBash, canonicalCLIName)
 	if err != nil {
 		t.Fatalf("GenerateCompletion(&buf, ShellBash) unexpected error: %v", err)
 	}
@@ -628,7 +628,7 @@ func TestPrintCompletionUsage(t *testing.T) {
 	output := buf.String()
 
 	expectedContent := []string{
-		"Usage: md2pdf completion",
+		"Usage: " + canonicalCLIName + " completion",
 		"bash",
 		"zsh",
 		"fish",

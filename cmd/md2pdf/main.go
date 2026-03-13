@@ -23,16 +23,20 @@ func main() {
 // runMain is the main entry point, testable via dependency injection.
 func runMain(args []string, env *Environment) int {
 	if len(args) < 2 {
+		if len(args) > 0 {
+			env.CLIName = displayCLIName(args[0])
+		}
 		printUsage(env.Stderr)
 		return ExitUsage
 	}
+	env.CLIName = displayCLIName(args[0])
 
 	cmd := args[1]
 	cmdArgs := args[2:]
 
 	// Legacy detection: if first arg looks like a markdown file, warn and run convert
 	if !isCommand(cmd) && looksLikeMarkdown(cmd) {
-		fmt.Fprintln(env.Stderr, "DEPRECATED: use 'md2pdf convert' instead")
+		fmt.Fprintf(env.Stderr, "DEPRECATED: use '%s convert' instead\n", envCLIName(env))
 		cmd = "convert"
 		cmdArgs = args[1:]
 	}
@@ -51,7 +55,7 @@ func runMain(args []string, env *Environment) int {
 	case "doctor":
 		return runDoctorCmd(cmdArgs, env)
 	case "version":
-		fmt.Fprintf(env.Stdout, "md2pdf %s\n", Version)
+		fmt.Fprintf(env.Stdout, "%s %s\n", envCLIName(env), Version)
 	case "help":
 		runHelp(cmdArgs, env)
 	case "completion":

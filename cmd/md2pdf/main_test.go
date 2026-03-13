@@ -103,7 +103,7 @@ func TestVersion(t *testing.T) {
 	}
 
 	// Capture output to verify version format
-	expected := fmt.Sprintf("go-md2pdf %s\n", Version)
+	expected := fmt.Sprintf("%s %s\n", canonicalCLIName, Version)
 	_ = expected // Used in actual main() but we can't easily test that
 }
 
@@ -369,7 +369,7 @@ func TestRunMain(t *testing.T) {
 			name:         "no args shows usage and exits with ExitUsage",
 			args:         []string{"md2pdf"},
 			wantCode:     ExitUsage,
-			wantInStderr: []string{"Usage: md2pdf"},
+			wantInStderr: []string{"Usage: " + canonicalCLIName},
 		},
 		{
 			name:         "version command exits 0",
@@ -466,7 +466,7 @@ func TestRunMain_DoctorCommand(t *testing.T) {
 
 	// Output should contain doctor header
 	if !strings.Contains(stdout.String(), "md2pdf doctor") {
-		t.Errorf("runMain([md2pdf doctor]) stdout = %q, want substring \"md2pdf doctor\"", stdout.String())
+		t.Errorf("runMain([md2pdf doctor]) stdout = %q, want substring %q", stdout.String(), "md2pdf doctor")
 	}
 }
 
@@ -521,7 +521,7 @@ func TestRunMain_HelpDoctor(t *testing.T) {
 
 	// Should show doctor usage
 	if !strings.Contains(stdout.String(), "Usage: md2pdf doctor") {
-		t.Errorf("runMain([md2pdf help doctor]) stdout = %q, want substring \"Usage: md2pdf doctor\"", stdout.String())
+		t.Errorf("runMain([md2pdf help doctor]) stdout = %q, want substring %q", stdout.String(), "Usage: md2pdf doctor")
 	}
 }
 

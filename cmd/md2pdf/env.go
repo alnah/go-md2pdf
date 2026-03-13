@@ -13,6 +13,7 @@ import (
 // Includes I/O, time, configuration, and asset loading.
 type Environment struct {
 	Now         func() time.Time
+	CLIName     string
 	Stdin       io.Reader
 	Stdout      io.Writer
 	Stderr      io.Writer
@@ -31,6 +32,7 @@ func DefaultEnv() *Environment {
 	}
 	return &Environment{
 		Now:         time.Now,
+		CLIName:     canonicalCLIName,
 		Stdin:       os.Stdin,
 		Stdout:      os.Stdout,
 		Stderr:      os.Stderr,

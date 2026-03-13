@@ -84,7 +84,7 @@ func TestRunDoctorCmd_HumanOutput(t *testing.T) {
 
 	// Should contain required section headers
 	requiredSections := []string{
-		"md2pdf doctor",
+		canonicalCLIName + " doctor",
 		"Chrome/Chromium",
 		"Environment",
 		"System",

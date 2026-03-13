@@ -28,7 +28,7 @@ func TestPrintUsage(t *testing.T) {
 	output := buf.String()
 
 	requiredStrings := []string{
-		"Usage: md2pdf",
+		"Usage: " + canonicalCLIName,
 		"Commands:",
 		"convert",
 		"config",
@@ -151,10 +151,10 @@ func TestPrintConvertUsage(t *testing.T) {
 	}
 
 	examples := []string{
-		"md2pdf convert document.md",
-		"md2pdf convert -o report.pdf",
-		"md2pdf convert ./docs/",
-		"md2pdf convert -c work",
+		canonicalCLIName + " convert document.md",
+		canonicalCLIName + " convert -o report.pdf",
+		canonicalCLIName + " convert ./docs/",
+		canonicalCLIName + " convert -c work",
 		"--style technical --timeout 2m",
 		"-p a4 --orientation landscape --wm-text DRAFT",
 	}
@@ -218,27 +218,27 @@ func TestRunHelp(t *testing.T) {
 		{
 			name:         "no args shows main usage",
 			args:         []string{},
-			wantInStdout: []string{"Usage: md2pdf", "Commands:"},
+			wantInStdout: []string{"Usage: " + canonicalCLIName, "Commands:"},
 		},
 		{
 			name:         "convert shows convert help",
 			args:         []string{"convert"},
-			wantInStdout: []string{"Usage: md2pdf convert", "Author:", "Document:"},
+			wantInStdout: []string{"Usage: " + canonicalCLIName + " convert", "Author:", "Document:"},
 		},
 		{
 			name:         "config shows config help",
 			args:         []string{"config"},
-			wantInStdout: []string{"Usage: md2pdf config", "init"},
+			wantInStdout: []string{"Usage: " + canonicalCLIName + " config", "init"},
 		},
 		{
 			name:         "version shows version help",
 			args:         []string{"version"},
-			wantInStdout: []string{"Usage: md2pdf version"},
+			wantInStdout: []string{"Usage: " + canonicalCLIName + " version"},
 		},
 		{
 			name:         "help shows help help",
 			args:         []string{"help"},
-			wantInStdout: []string{"Usage: md2pdf help"},
+			wantInStdout: []string{"Usage: " + canonicalCLIName + " help"},
 		},
 		{
 			name:         "unknown command shows error",

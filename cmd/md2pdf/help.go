@@ -3,11 +3,16 @@ package main
 import (
 	"fmt"
 	"io"
+	"strings"
 )
 
 // printUsage prints the main usage message.
 func printUsage(w io.Writer) {
-	fmt.Fprintln(w, "Usage: md2pdf <command> [flags] [args]")
+	printUsageFor(w, canonicalCLIName)
+}
+
+func printUsageFor(w io.Writer, cliName string) {
+	fmt.Fprintf(w, "Usage: %s <command> [flags] [args]\n", cliName)
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Commands:")
 	fmt.Fprintln(w, "  convert      Convert markdown files to PDF")
@@ -17,13 +22,17 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, "  version      Show version information")
 	fmt.Fprintln(w, "  help         Show help for a command")
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Run 'md2pdf help <command>' for details on a specific command.")
+	fmt.Fprintf(w, "Run '%s help <command>' for details on a specific command.\n", cliName)
 }
 
 // printConvertUsage prints usage for the convert command.
 func printConvertUsage(w io.Writer) {
+	printConvertUsageFor(w, canonicalCLIName)
+}
+
+func printConvertUsageFor(w io.Writer, cliName string) {
 	for _, line := range convertUsageLines {
-		fmt.Fprintln(w, line)
+		fmt.Fprintln(w, strings.ReplaceAll(line, legacyCLIName, cliName))
 	}
 }
 
@@ -156,7 +165,11 @@ var convertUsageLines = []string{
 
 // printDoctorUsage prints usage for the doctor command.
 func printDoctorUsage(w io.Writer) {
-	fmt.Fprintln(w, "Usage: md2pdf doctor [flags]")
+	printDoctorUsageFor(w, canonicalCLIName)
+}
+
+func printDoctorUsageFor(w io.Writer, cliName string) {
+	fmt.Fprintf(w, "Usage: %s doctor [flags]\n", cliName)
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Check system configuration for PDF generation.")
 	fmt.Fprintln(w)
@@ -169,7 +182,8 @@ func printDoctorUsage(w io.Writer) {
 	fmt.Fprintln(w, "  - System: temp directory writability")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Environment variables:")
-	fmt.Fprintln(w, "  MD2PDF_CONTAINER=1    Force container detection")
+	fmt.Fprintln(w, "  PICOLOOM_CONTAINER=1  Force container detection")
+	fmt.Fprintln(w, "  MD2PDF_CONTAINER=1    Legacy fallback")
 	fmt.Fprintln(w, "  ROD_BROWSER_BIN       Explicit path to Chrome binary")
 	fmt.Fprintln(w, "  ROD_NO_SANDBOX=1      Disable Chrome sandbox (required in containers)")
 	fmt.Fprintln(w)
@@ -180,34 +194,35 @@ func printDoctorUsage(w io.Writer) {
 
 // runHelp prints help for a specific command.
 func runHelp(args []string, env *Environment) {
+	cliName := envCLIName(env)
 	if len(args) == 0 {
-		printUsage(env.Stdout)
+		printUsageFor(env.Stdout, cliName)
 		return
 	}
 
 	switch args[0] {
 	case "convert":
-		printConvertUsage(env.Stdout)
+		printConvertUsageFor(env.Stdout, cliName)
 	case "config":
 		if len(args) > 1 && args[1] == "init" {
-			printConfigInitUsage(env.Stdout)
+			printConfigInitUsageFor(env.Stdout, cliName)
 			return
 		}
-		printConfigUsage(env.Stdout)
+		printConfigUsageFor(env.Stdout, cliName)
 	case "doctor":
-		printDoctorUsage(env.Stdout)
+		printDoctorUsageFor(env.Stdout, cliName)
 	case "completion":
-		printCompletionUsage(env.Stdout)
+		printCompletionUsageFor(env.Stdout, cliName)
 	case "version":
-		fmt.Fprintln(env.Stdout, "Usage: md2pdf version")
+		fmt.Fprintf(env.Stdout, "Usage: %s version\n", cliName)
 		fmt.Fprintln(env.Stdout)
 		fmt.Fprintln(env.Stdout, "Show version information.")
 	case "help":
-		fmt.Fprintln(env.Stdout, "Usage: md2pdf help [command]")
+		fmt.Fprintf(env.Stdout, "Usage: %s help [command]\n", cliName)
 		fmt.Fprintln(env.Stdout)
 		fmt.Fprintln(env.Stdout, "Show help for a command.")
 	default:
 		fmt.Fprintf(env.Stderr, "Unknown command: %s\n", args[0])
-		printUsage(env.Stderr)
+		printUsageFor(env.Stderr, cliName)
 	}
 }

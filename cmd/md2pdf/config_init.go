@@ -110,7 +110,7 @@ func runConfigCmd(args []string, env *Environment) error {
 		printConfigUsage(env.Stdout)
 		return nil
 	default:
-		return fmt.Errorf("%w: unknown subcommand %q (run 'md2pdf help config')", ErrConfigCommandUsage, args[0])
+		return fmt.Errorf("%w: unknown subcommand %q (run '%s help config')", ErrConfigCommandUsage, args[0], envCLIName(env))
 	}
 }
 
@@ -179,7 +179,7 @@ func runConfigInitCmd(args []string, env *Environment) error {
 
 	fmt.Fprintf(env.Stdout, "Configuration file created: %s\n", flags.output)
 	fmt.Fprintln(env.Stdout, "Example:")
-	fmt.Fprintf(env.Stdout, "  md2pdf convert -c %s ./docs/\n", outputPathForExample(flags.output))
+	fmt.Fprintf(env.Stdout, "  %s convert -c %s ./docs/\n", envCLIName(env), outputPathForExample(flags.output))
 	return nil
 }
 
@@ -1013,21 +1013,29 @@ func outputPathForExample(path string) string {
 
 // printConfigUsage documents the config command namespace entry point.
 func printConfigUsage(w io.Writer) {
-	fmt.Fprintln(w, "Usage: md2pdf config <subcommand> [flags]")
+	printConfigUsageFor(w, canonicalCLIName)
+}
+
+func printConfigUsageFor(w io.Writer, cliName string) {
+	fmt.Fprintf(w, "Usage: %s config <subcommand> [flags]\n", cliName)
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Manage md2pdf configuration files.")
+	fmt.Fprintf(w, "Manage %s configuration files.\n", cliName)
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Subcommands:")
 	fmt.Fprintln(w, "  init        Create a config file with an interactive wizard")
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Run 'md2pdf help config init' for command details.")
+	fmt.Fprintf(w, "Run '%s help config init' for command details.\n", cliName)
 }
 
 // printConfigInitUsage documents config-init flags and canonical usage examples.
 func printConfigInitUsage(w io.Writer) {
-	fmt.Fprintln(w, "Usage: md2pdf config init [flags]")
+	printConfigInitUsageFor(w, canonicalCLIName)
+}
+
+func printConfigInitUsageFor(w io.Writer, cliName string) {
+	fmt.Fprintf(w, "Usage: %s config init [flags]\n", cliName)
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Create a new md2pdf configuration file.")
+	fmt.Fprintf(w, "Create a new %s configuration file.\n", cliName)
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Flags:")
 	fmt.Fprintln(w, "      --output <path>   Output path for generated config (default: ./md2pdf.yaml)")
@@ -1035,7 +1043,7 @@ func printConfigInitUsage(w io.Writer) {
 	fmt.Fprintln(w, "      --no-input        Use defaults without interactive prompts")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Examples:")
-	fmt.Fprintln(w, "  md2pdf config init")
-	fmt.Fprintln(w, "  md2pdf config init --output ./configs/work.yaml")
-	fmt.Fprintln(w, "  md2pdf config init --no-input --force")
+	fmt.Fprintf(w, "  %s config init\n", cliName)
+	fmt.Fprintf(w, "  %s config init --output ./configs/work.yaml\n", cliName)
+	fmt.Fprintf(w, "  %s config init --no-input --force\n", cliName)
 }

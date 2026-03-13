@@ -66,7 +66,7 @@ func runDoctorCmd(args []string, env *Environment) int {
 		enc.SetIndent("", "  ")
 		_ = enc.Encode(result)
 	} else {
-		printDoctorResult(env.Stdout, result)
+		printDoctorResult(env.Stdout, result, envCLIName(env))
 	}
 
 	if result.Status == "errors" {
@@ -201,8 +201,8 @@ func checkSystem(result *doctorResult) {
 }
 
 // printDoctorResult outputs human-readable diagnostic results.
-func printDoctorResult(w io.Writer, r *doctorResult) {
-	fmt.Fprintln(w, "md2pdf doctor")
+func printDoctorResult(w io.Writer, r *doctorResult, cliName string) {
+	fmt.Fprintf(w, "%s doctor\n", cliName)
 	fmt.Fprintln(w)
 
 	// Chrome section
