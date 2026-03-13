@@ -52,6 +52,10 @@ Update later with:
 brew upgrade alnah/tap/picoloom
 ```
 
+On a fresh machine without Chrome installed yet, `picoloom doctor` stays strict by
+default. Use `picoloom doctor --allow-managed-browser` to validate the managed
+Chromium bootstrap path used on first run.
+
 ### Docker
 
 ```bash
@@ -354,12 +358,16 @@ Diagnose system configuration before running conversions:
 ```bash
 picoloom doctor           # Human-readable output
 picoloom doctor --json    # JSON output for CI/scripts
+picoloom doctor --allow-managed-browser
 ```
 
 Checks performed:
 - Chrome/Chromium: binary exists, version, sandbox status
 - Environment: container detection (Docker, Podman, Kubernetes)
 - System: temp directory writability
+
+Use `--allow-managed-browser` on fresh Homebrew installs when Chromium may be
+downloaded on first run instead of being installed locally ahead of time.
 
 Exit codes:
 - `0` - All checks passed (including warnings)
@@ -990,6 +998,7 @@ Run `picoloom doctor` to diagnose system configuration issues:
 ```bash
 picoloom doctor           # Human-readable diagnostics
 picoloom doctor --json    # JSON output for CI/scripts
+picoloom doctor --allow-managed-browser
 ```
 
 ### Docker and CI/CD
