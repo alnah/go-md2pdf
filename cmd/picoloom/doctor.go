@@ -27,10 +27,11 @@ type doctorResult struct {
 
 // chromeInfo holds Chrome/Chromium detection results.
 type chromeInfo struct {
-	Found   bool   `json:"found"`
-	Path    string `json:"path,omitempty"`
-	Version string `json:"version,omitempty"`
-	Sandbox bool   `json:"sandbox"`
+	Found           bool   `json:"found"`
+	Path            string `json:"path,omitempty"`
+	Version         string `json:"version,omitempty"`
+	Sandbox         bool   `json:"sandbox"`
+	ManagedFallback bool   `json:"managed_fallback,omitempty"`
 }
 
 // envInfo holds environment detection results.
@@ -49,19 +50,24 @@ type systemInfo struct {
 	TempWritable bool `json:"temp_writable"`
 }
 
+type doctorOptions struct {
+	JSONOutput          bool
+	AllowManagedBrowser bool
+}
+
+type doctorDeps struct {
+	lookPath      func() (string, bool)
+	statPath      func(string) error
+	chromeVersion func(context.Context, string) (string, error)
+}
+
 // runDoctorCmd executes the doctor command and returns an exit code.
 // Exit codes: 0 = OK (including warnings), 1 = errors found.
 func runDoctorCmd(args []string, env *Environment) int {
-	jsonOutput := false
-	for _, arg := range args {
-		if arg == "--json" {
-			jsonOutput = true
-		}
-	}
+	opts := parseDoctorOptions(args)
+	result := runDoctor(opts, defaultDoctorDeps())
 
-	result := runDoctor()
-
-	if jsonOutput {
+	if opts.JSONOutput {
 		enc := json.NewEncoder(env.Stdout)
 		enc.SetIndent("", "  ")
 		_ = enc.Encode(result)
@@ -75,8 +81,21 @@ func runDoctorCmd(args []string, env *Environment) int {
 	return ExitSuccess
 }
 
+func parseDoctorOptions(args []string) doctorOptions {
+	opts := doctorOptions{}
+	for _, arg := range args {
+		switch arg {
+		case "--json":
+			opts.JSONOutput = true
+		case "--allow-managed-browser":
+			opts.AllowManagedBrowser = true
+		}
+	}
+	return opts
+}
+
 // runDoctor performs all diagnostic checks.
-func runDoctor() *doctorResult {
+func runDoctor(opts doctorOptions, deps doctorDeps) *doctorResult {
 	result := &doctorResult{
 		Status: "ready",
 		Env: envInfo{
@@ -87,7 +106,7 @@ func runDoctor() *doctorResult {
 		},
 	}
 
-	checkChrome(result)
+	checkChrome(result, opts, deps)
 	checkEnvironment(result)
 	checkSystem(result)
 
@@ -101,23 +120,52 @@ func runDoctor() *doctorResult {
 	return result
 }
 
+func defaultDoctorDeps() doctorDeps {
+	return doctorDeps{
+		lookPath:      launcher.LookPath,
+		statPath:      statPath,
+		chromeVersion: chromeVersion,
+	}
+}
+
+func statPath(path string) error {
+	_, err := os.Stat(path)
+	return err
+}
+
+func chromeVersion(ctx context.Context, chromePath string) (string, error) {
+	// #nosec G204 -- chromePath comes from launcher.LookPath() or ROD_BROWSER_BIN env var
+	cmd := exec.CommandContext(ctx, chromePath, "--version")
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
 // checkChrome detects Chrome/Chromium installation.
-func checkChrome(result *doctorResult) {
+func checkChrome(result *doctorResult, opts doctorOptions, deps doctorDeps) {
 	chromePath := result.Env.BrowserBin
 
 	if chromePath == "" {
 		// Use rod's launcher to locate Chrome
 		var found bool
-		chromePath, found = launcher.LookPath()
+		chromePath, found = deps.lookPath()
 		if !found {
-			result.Errors = append(result.Errors,
-				"Chrome/Chromium not found. Install Chrome or set ROD_BROWSER_BIN")
+			if opts.AllowManagedBrowser {
+				result.Chrome.ManagedFallback = true
+				result.Warnings = append(result.Warnings,
+					"Chrome/Chromium not found locally. Managed Chromium may be downloaded on first run")
+			} else {
+				result.Errors = append(result.Errors,
+					"Chrome/Chromium not found. Install Chrome or set ROD_BROWSER_BIN")
+			}
 			return
 		}
 	}
 
 	// Verify it exists
-	if _, err := os.Stat(chromePath); err != nil {
+	if err := deps.statPath(chromePath); err != nil {
 		result.Errors = append(result.Errors,
 			fmt.Sprintf("Chrome not found at %s", chromePath))
 		return
@@ -129,11 +177,9 @@ func checkChrome(result *doctorResult) {
 	// Get version by running chrome --version.
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	// #nosec G204 -- chromePath comes from launcher.LookPath() or ROD_BROWSER_BIN env var
-	cmd := exec.CommandContext(ctx, chromePath, "--version")
-	out, err := cmd.Output()
+	version, err := deps.chromeVersion(ctx, chromePath)
 	if err == nil {
-		result.Chrome.Version = strings.TrimSpace(string(out))
+		result.Chrome.Version = version
 	} else {
 		result.Warnings = append(result.Warnings,
 			fmt.Sprintf("Could not get Chrome version: %v", err))
@@ -220,6 +266,8 @@ func printDoctorResult(w io.Writer, r *doctorResult, cliName string) {
 		} else {
 			fmt.Fprintln(w, "  [OK] Sandbox: disabled (ROD_NO_SANDBOX=1)")
 		}
+	} else if r.Chrome.ManagedFallback {
+		fmt.Fprintln(w, "  [WARN] Not found locally (managed Chromium allowed)")
 	} else {
 		fmt.Fprintln(w, "  [ERROR] Not found")
 	}

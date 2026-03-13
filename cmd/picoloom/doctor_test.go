@@ -9,7 +9,9 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"runtime"
 	"strings"
@@ -423,6 +425,79 @@ func TestRunDoctorCmd_ReportsRODNoSandbox(t *testing.T) {
 	}
 }
 
+func TestRunDoctor_AllowManagedBrowserWarning(t *testing.T) {
+	deps := doctorDeps{
+		lookPath: func() (string, bool) {
+			return "", false
+		},
+		statPath: func(string) error {
+			return nil
+		},
+		chromeVersion: func(context.Context, string) (string, error) {
+			return "", nil
+		},
+	}
+
+	result := runDoctor(doctorOptions{AllowManagedBrowser: true}, deps)
+
+	if result.Status != "warnings" {
+		t.Fatalf("runDoctor(allow-managed-browser) status = %q, want %q", result.Status, "warnings")
+	}
+	if !result.Chrome.ManagedFallback {
+		t.Fatal("runDoctor(allow-managed-browser) result.Chrome.ManagedFallback = false, want true")
+	}
+	if len(result.Errors) != 0 {
+		t.Fatalf("runDoctor(allow-managed-browser) errors = %v, want none", result.Errors)
+	}
+	found := false
+	for _, warning := range result.Warnings {
+		if strings.Contains(warning, "Managed Chromium may be downloaded on first run") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("runDoctor(allow-managed-browser) warnings = %v, want managed Chromium guidance", result.Warnings)
+	}
+}
+
+func TestRunDoctor_AllowManagedBrowserDoesNotHideExplicitPathErrors(t *testing.T) {
+	testPath := "/definitely/missing/chrome"
+	os.Setenv("ROD_BROWSER_BIN", testPath)
+	defer os.Unsetenv("ROD_BROWSER_BIN")
+
+	deps := doctorDeps{
+		lookPath: func() (string, bool) {
+			t.Fatal("lookPath should not be called when ROD_BROWSER_BIN is set")
+			return "", false
+		},
+		statPath: func(path string) error {
+			if path != testPath {
+				t.Fatalf("statPath(%q), want %q", path, testPath)
+			}
+			return errors.New("missing")
+		},
+		chromeVersion: func(context.Context, string) (string, error) {
+			return "", nil
+		},
+	}
+
+	result := runDoctor(doctorOptions{AllowManagedBrowser: true}, deps)
+
+	if result.Status != "errors" {
+		t.Fatalf("runDoctor(explicit missing browser) status = %q, want %q", result.Status, "errors")
+	}
+	if result.Chrome.ManagedFallback {
+		t.Fatal("runDoctor(explicit missing browser) result.Chrome.ManagedFallback = true, want false")
+	}
+	if len(result.Errors) == 0 {
+		t.Fatal("runDoctor(explicit missing browser) errors = none, want explicit browser path error")
+	}
+	if !strings.Contains(result.Errors[0], testPath) {
+		t.Fatalf("runDoctor(explicit missing browser) errors[0] = %q, want path %q", result.Errors[0], testPath)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // TestRunDoctorCmd_HumanOutput_Formatting - Verifies human output formatting
 // ---------------------------------------------------------------------------
@@ -527,6 +602,21 @@ func TestRunDoctorCmd_HumanOutput_StatusLine(t *testing.T) {
 	}
 	if !found {
 		t.Error("runDoctorCmd([]string{}) output missing valid status line")
+	}
+}
+
+func TestPrintDoctorUsageFor_AllowManagedBrowserFlag(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	printDoctorUsageFor(&stdout, canonicalCLIName)
+
+	output := stdout.String()
+	if !strings.Contains(output, "--allow-managed-browser") {
+		t.Fatal("printDoctorUsageFor() output missing --allow-managed-browser")
+	}
+	if !strings.Contains(output, "managed Chromium") {
+		t.Fatal("printDoctorUsageFor() output missing managed Chromium guidance")
 	}
 }
 

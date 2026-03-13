@@ -170,6 +170,8 @@ func printDoctorUsageFor(w io.Writer, cliName string) {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Flags:")
 	fmt.Fprintln(w, "  --json    Output in JSON format (for CI/scripts)")
+	fmt.Fprintln(w, "  --allow-managed-browser")
+	fmt.Fprintln(w, "            Allow missing local Chrome when managed Chromium can bootstrap later")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Checks performed:")
 	fmt.Fprintln(w, "  - Chrome/Chromium: binary exists, version, sandbox status")
@@ -183,7 +185,7 @@ func printDoctorUsageFor(w io.Writer, cliName string) {
 	fmt.Fprintln(w, "  ROD_NO_SANDBOX=1      Disable Chrome sandbox (required in containers)")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Exit codes:")
-	fmt.Fprintln(w, "  0  All checks passed (including warnings)")
+	fmt.Fprintln(w, "  0  All checks passed (including warnings and managed-browser mode)")
 	fmt.Fprintln(w, "  1  Errors found (conversion will likely fail)")
 }
 
