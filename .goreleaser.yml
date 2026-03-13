@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 version: 2
 
-project_name: go-md2pdf
+project_name: picoloom
 
 before:
   hooks:
@@ -9,9 +9,9 @@ before:
     - go generate ./...
 
 builds:
-  - id: go-md2pdf
+  - id: picoloom
     main: ./cmd/md2pdf
-    binary: go-md2pdf
+    binary: picoloom
     env:
       - CGO_ENABLED=0
     goos:
@@ -70,7 +70,7 @@ changelog:
 release:
   github:
     owner: alnah
-    name: go-md2pdf
+    name: picoloom
   draft: false
   prerelease: auto
   name_template: "{{.ProjectName}} v{{.Version}}"
@@ -79,4 +79,3 @@ release:
 # Docker: DISABLED - requires Chromium, handled by separate workflow
 # See .github/workflows/docker.yml
 # ------------------------------------------------------------------------------
-

@@ -1,6 +1,7 @@
-BINARY := md2pdf
+BINARY := picoloom
+LEGACY_BINARY := md2pdf
 
-.PHONY: help build test test-integration test-cover test-cover-all bench bench-cpu bench-mem run clean fmt vet lint sec check check-all tools examples
+.PHONY: help build build-legacy test test-integration test-cover test-cover-all bench bench-cpu bench-mem run clean fmt vet lint sec check check-all tools examples
 
 .DEFAULT_GOAL := help
 
@@ -16,6 +17,9 @@ deps: ## Download dependencies from go.mod
 
 build: ## Build the binary
 	go build -o $(BINARY) ./cmd/md2pdf
+
+build-legacy: ## Build the legacy md2pdf alias binary
+	go build -o $(LEGACY_BINARY) ./cmd/md2pdf
 
 test: ## Run unit tests
 	go test -v ./...
@@ -53,7 +57,7 @@ run: build ## Build and run the shell
 	./$(BINARY)
 
 clean: ## Remove build artifacts
-	rm -f $(BINARY) coverage.out coverage.html cpu.prof mem.prof
+	rm -f $(BINARY) $(LEGACY_BINARY) coverage.out coverage.html cpu.prof mem.prof
 
 fmt: ## Format source code
 	go fmt ./...

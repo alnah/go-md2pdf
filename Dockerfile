@@ -20,7 +20,7 @@ ARG VERSION=dev
 RUN CGO_ENABLED=0 go build \
     -trimpath \
     -ldflags="-s -w -X main.Version=${VERSION}" \
-    -o /go-md2pdf ./cmd/md2pdf
+    -o /picoloom ./cmd/md2pdf
 
 # =============================================================================
 # Runtime stage: minimal image with headless Chromium
@@ -60,8 +60,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get purge -y curl unzip \
     && apt-get autoremove -y
 
-# Copy binary
-COPY --from=builder /go-md2pdf /usr/bin/go-md2pdf
+# Copy binary and keep a legacy alias for existing scripts
+COPY --from=builder /picoloom /usr/bin/picoloom
+RUN ln -sf /usr/bin/picoloom /usr/bin/md2pdf
 
 # Create non-root user with home directory (rod needs it for cache)
 RUN useradd -r -u 1000 -m -s /bin/false appuser
@@ -77,4 +78,4 @@ USER appuser
 # Working directory for files
 WORKDIR /data
 
-ENTRYPOINT ["/usr/bin/go-md2pdf"]
+ENTRYPOINT ["/usr/bin/picoloom"]

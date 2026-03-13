@@ -159,13 +159,13 @@ jobs:
           restore-keys: |
             rod-${{ runner.os }}-
 
-      - name: Build md2pdf
-        run: go build -o md2pdf ./cmd/md2pdf
+      - name: Build picoloom
+        run: go build -o picoloom ./cmd/md2pdf
 
       - name: Generate example PDFs
         run: |
-          ./md2pdf convert examples/simple-report.md -o /tmp/simple-test.pdf
-          ./md2pdf convert -c examples/full-featured.yaml examples/full-featured.md -o /tmp/full-test.pdf
+          ./picoloom convert examples/simple-report.md -o /tmp/simple-test.pdf
+          ./picoloom convert -c examples/full-featured.yaml examples/full-featured.md -o /tmp/full-test.pdf
         env:
           ROD_NO_SANDBOX: 1
 
