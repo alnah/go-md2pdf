@@ -8,7 +8,7 @@
 
 > Go library and CLI for Markdown to PDF conversion using headless Chrome. Auto-downloads Chromium on first run. Features cover pages, automatic table of contents, footers with page numbers, signatures, watermarks, and 8 built-in CSS themes with custom template support. Supports parallel batch processing.
 
-> Rebrand note: this project is now **Picoloom**. The name comes from **Piccolo**, my dog, plus **loom** for the layering/twisting idea behind turning markdown, styling, cover pages, TOC, signatures, and rendering into one small PDF tool with real traction. Legacy `md2pdf` names stay supported during the transition.
+> Rebrand note: this project is now **Picoloom**. The name comes from **Piccolo**, my dog, plus **loom** for the layering pipeline turning markdown a PDF. Legacy `md2pdf` names stay supported during the transition.
 
 [See example outputs](examples/)
 
